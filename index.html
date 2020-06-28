@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="ksaui.js"></script>
+    <!--
+    <script src="vue.js"></script>
+    -->
+</head>
+<body>
+<style>
+    div { background: rgba(0,0,0,.2); padding: 20px; color: #fff; margin: 5px;}
+</style>
+<div id="vue">
+    <div v-for="(value,key) in list" v-if="value.name != '张三2'" :ky="key">
+        <span>{{key}}.</span>  {{value.name}} - {{value.sex}}
+    </div>
+</div>
+
+
+<script>
+    var sdt = {
+        name : '张三',
+        sex : '男',
+        school :'江山中学',
+        tel :'18888888888',
+        list : [
+            {name : '张三1', sex : '男'},
+            {name : '张三2', sex : '男'},
+            {name : '张三3', sex : '男'},
+            {name : '张三4', sex : '男'}
+        ]
+    };
+
+    //var V = new Vue({el : '#vue', data : sdt});
+
+</script>
+
+<div id="mvvm">
+
+    <table>
+        <tr><th>姓名</th><td>${name} ${name} ${name}${name}</td></tr>
+        <tr><th>性别</th><td>${sex}</td></tr>
+        <tr><th>学校</th><td>${school}</td></tr>
+        <tr><th>电话</th><td>${tel}</td></tr>
+    </table>
+
+    {loop list key value}
+
+    {if value.name != '张三1'}
+    <div>${key} : ${value.name} ${value.sex}</div>
+    {elseif value.name =='李四'}
+    <div>【elseif】</div>
+    {else}
+    <div>【else】</div>
+    {/if}
+    {/loop}
+
+
+    <div>${name}</div>
+</div>
+<script>
+
+    var AS = KSA('#mvvm').tpl(sdt);
+
+
+    (function () {
+        return ;
+        var obj = {};
+
+        function nodeContainer(node, vm, flag){
+            var flag = flag || document.createDocumentFragment();
+
+            var child;
+            while(child = node.firstChild){
+                compile(child, vm);
+                flag.appendChild(child);
+                if(child.firstChild){
+                    nodeContainer(child, vm, flag);
+                }
+            }
+            return flag;
+        }
+
+        //编译
+        function compile(node, vm){
+            var reg = /\{\{(.*)\}\}/g;
+            if(node.nodeType === 1){
+                var attr = node.attributes;
+                //解析节点的属性
+                for(var i = 0;i < attr.length; i++){
+                    if(attr[i].nodeName == 'v-model'){
+
+                        var name = attr[i].nodeValue;
+                        node.addEventListener('input',function(e){
+                            vm[name] = e.target.value;
+                        });
+
+                        node.value = vm[name];//讲实例中的data数据赋值给节点
+                        node.removeAttribute('v-model');
+                    }
+                }
+            }
+            //如果节点类型为text
+            if(node.nodeType === 3){
+
+                if(reg.test(node.nodeValue)){
+                    // console.dir(node);
+                    var name = RegExp.$1;//获取匹配到的字符串
+                    name = name.trim();
+                    // node.nodeValue = vm[name];
+                    new Watcher(vm,node,name);
+                }
+            }
+        }
+
+        function defineReactive (obj, key, value){
+            var dep = new Dep();
+            Object.defineProperty(obj,key,{
+                get:function(){
+                    console.log(Dep.global);
+                    if(Dep.global){
+                        dep.add(Dep.global);
+                    }
+                    console.log("get了值"+value);
+                    return value;
+                },
+                set:function(newValue){
+                    if(newValue === value){
+                        return;
+                    }
+                    value = newValue;
+                    console.log("set了最新值"+value);
+                    dep.notify();
+                }
+            })
+        }
+
+        function observe (obj,vm){
+            Object.keys(obj).forEach(function(key){
+                defineReactive(vm,key,obj[key]);
+            })
+        }
+
+        function Vue(options){
+            this.data = options.data;
+            var data = this.data;
+            observe(data,this);
+            var id = options.el;
+            var dom = nodeContainer(document.getElementById(id),this);
+            document.getElementById(id).appendChild(dom);
+        }
+
+        function Dep(){
+            this.subs = [];
+        }
+        Dep.prototype ={
+            add:function(sub){
+                this.subs.push(sub);
+            },
+            notify:function(){
+                this.subs.forEach(function(sub){
+                    console.log(sub);
+                    sub.update();
+                })
+            }
+        }
+
+
+        function Watcher(vm,node,name){
+            Dep.global = this;
+            this.name = name;
+            this.node = node;
+            this.vm = vm;
+            this.update();
+            Dep.global = null;
+        }
+
+        Watcher.prototype = {
+            update:function(){
+                this.get();
+                switch (this.node.nodeType) {
+                    case 1:
+                        this.node.value = this.value;
+                        break;
+                    case 3:
+                        this.node.nodeValue = this.value;
+                        break;
+                    default: break;
+                }
+            },
+            get:function(){
+                this.value = this.vm[this.name];
+            }
+        }
+
+
+        var Demo = new Vue({
+            el:'mvvm',
+            data:{
+                text:'HelloWorld',
+                d:'123'
+            }
+        })
+    })();
+    /*
+    var x = $('body').find('.inputs select').nextAll();
+    console.dir(x);*/
+    /*
+    KSA.ajax({
+        url : 'https://shop.ksaos.com/index/index/test',
+        contentType : 'get',
+        dataType : 'JSON',
+        data : {
+            zhangsan : '张三'
+        },
+        success : function(s){
+            console.dir(s);
+        }
+    });
+
+    KSA('.a').on('click', '.xx', function(e){
+        console.dir(this.innerHTML);
+    });
+    KSA('.xx3').on('click', function(e){
+        return false;
+    });
+
+
+var XX = KSA('.b').after('<i>new1</i><span>new2</span>').click(function(){
+    console.dir(this);
+});
+
+
+var XX = KSA('.b').attr('aa cc','12').removeAttr('cc').data({'aa':123}).data('aa');
+
+console.dir(XX);
+*/
+
+</script>
+</body>
+</html>
