@@ -49,8 +49,8 @@ function debug(data){
 	    var dom;
 	    if(code instanceof _A){
             dom = code;
-        }else if(code instanceof HTMLElement || code instanceof Node || code instanceof XMLDocument) {
-			dom = [code];
+        }else if($.isDomAll(code)) {
+			dom = code instanceof  NodeList ? code : [code];
 		}else if($.isArray(code)){
 	    	dom = code;
         //创建一个虚拟dom
@@ -1262,6 +1262,7 @@ function debug(data){
 					if(!ele[0]._KSAIF) {
 						var childIF = ele.children('ksafactor');
 						ele[0]._KSAIF = childIF.html();
+						ele[0]._KSAIFmark = ele.isAttr('if') ? 'if' : (ele.isAttr('elseif') ? 'elseif' : 'else' );
 						childIF.remove();
 					}
 					ele[0]._KSATPL = ele[0]._KSATPL ? ele[0]._KSATPL : ele[0].outerHTML;
@@ -1381,27 +1382,106 @@ function debug(data){
 						}
 
 					}
+					if($.isset(ele._KSAIF)){
+						//把初始化的节点转为占位节点
+						if(ele.tagName =='KSA'){
+							currEle = $.dom('<!---->')[0];
+							currEle._KSAIF = ele._KSAIF;
+							currEle._KSAIFReturn = ele._KSAIFReturn;
+							currEle._KSATPL = ele._KSATPL;
+							currEle._KSAIFmark = ele._KSAIFmark;
+							currEle._KSAChilds = [];
+							ele.childNodes.forEach(function(e){
+								currEle._KSAChilds.push(e);
+							})
+							eles.after(currEle).remove();
+							ele = currEle;
+							eles = $(ele);
+						}
+						debug([ele]);
+						//计算当前节点的条件结果
+						if(ele._KSAIF) {
+							eval('(function(e){ '+evalCode+'  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
+							//如果条件为真 且为占位节点
+							if (ele._KSAIFReturn && ele.nodeType === 8) {
 
+								//设定后续紧邻判断节点的结果为false
+								eles.next('[elseif], [else]').each(function(_, el){
+									el._KSAIFrestPrev = true;
+								});
+
+								//用子节点替换当前
+								eles.after(currEle._KSAChilds).remove();
+
+
+
+								//监测if结果变化
+								_TPLdefPCallFun.globalUpdate(ele, function () {
+									var ths = this;
+									eval('(function(e){ '+evalCode+';  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
+									//如果结果非真 用占位节点替代子节点
+									if(!this._KSAIFReturn){
+										ths._KSAChilds.forEach(function(e, i){
+											//在最后一个加入占位节点
+											if (i == ths._KSAChilds.length - 1) {
+												//debug('add')
+												$(e).after(ths);
+											}
+											$(e).remove();
+										});
+
+										if(this._KSAIFmark && this._KSAIFmark !='else'){
+											var nx = this.nextSibling;
+											if(nx && nx._KSAIFmark){
+												//通知后续节点 当前判断值
+												nx._KSAIFrestPrev = false;
+												//后续紧邻节点渲染
+												$this.analyze(nx, evalCode, true);
+											}
+										}
+
+
+									}else if(!$.inArray(document.compareDocumentPosition(ele),[35,37])){
+										$(this).after(this._KSAChilds).remove();
+									}
+									return true;
+								});
+							}else{
+
+								if(ele._KSAIFmark && ele._KSAIFmark !='else'){
+									var nx = ele.nextSibling;
+									if(nx && nx._KSAIFmark){
+										//通知后续节点 当前判断值
+										nx._KSAIFrestPrev = false;
+										//后续紧邻节点渲染
+										$this.analyze(nx, evalCode, true);
+									}
+								}
+								//ele.nextSibling && $this.analyze(ele.nextSibling, evalCode, true);
+							}
+
+
+
+						}
+
+						if(ele._KSAIFmark =='else' && ele._KSAIFrestPrev === false){
+							eles.after(ele._KSAChilds).remove();
+						}
+
+
+
+
+					}
+/*
 					//if判断节点的处理
 					if($.isset(ele._KSAIF)){
 						//$.inArray(document.compareDocumentPosition(ele),[35,37])
 
 
-						var ifCode = ele._KSAIF;
-						var ifReturn = ele._KSAIFReturn;
-
-						if(ifCode) {
-
-							ifReturn = eval('(function(e){ '+evalCode+'  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
-
-
-
-
-							//debug([ele,ele._KSAIFReturn,'IF:'+ifCode+' == '+ifReturn]);
-
-
+						if(ele._KSAIF) {
+							eval('(function(e){ '+evalCode+'  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
 							//如果条件为真则设定后续紧邻判断节点的结果属性
-							if (ifReturn) {
+							if (ele._KSAIFReturn) {
 								eles.next('[elseif], [else]').each(function(_, el){
 									el._KSAIFReturn = false;
 								});
@@ -1409,8 +1489,8 @@ function debug(data){
 						}
 
 
-    	    			var currEle;
-						//debug([ele, ele._KSAIFReturn, ele._KSAIF, ele._KSATPL]);
+    	    			var currEle,
+							AddNodeChain; //if子节点链
 						//if占位节点 转 真实
 						if(ele._KSAIFReturn) {
 
@@ -1419,34 +1499,52 @@ function debug(data){
 								currEle._KSAIF = ele._KSAIF;
 								currEle._KSAIFReturn = ele._KSAIFReturn;
 								currEle._KSATPL = ele._KSATPL;
-								eles.after(currEle);
-								eles.remove();
+
+								AddNodeChain = $(currEle).childAll();
+
 								$this.analyze(currEle, evalCode, isDefPcall);
+								eles.after($(currEle).childAll());
+								eles.remove();
+
+
+								//在全局监测链中写入更新操作
+								_TPLdefPCallFun.globalUpdate({dom:currEle, element:ele, childNodes:AddNodeChain}, function () {
+									var ths = this;
+										if(this.childNodes) {
+											$.map(this.childNodes, function (e, i) {
+												//在最后一个加入占位节点
+												if (i == ths.childNodes.length - 1) {
+													debug('add')
+													$(e).after(ths.dom);
+												}
+												$(e).remove();
+											});
+										}
+									$this.analyze(ths.dom, evalCode, true);
+								});
+
 							}
 
 						//if真实节点转占位
 						}else if(!ele._KSAIFReturn){
 
 							if(nodeType == 1){
-
 								currEle = $.dom('<!---->')[0];
 								currEle._KSAIF = ele._KSAIF;
 								currEle._KSAIFReturn = ele._KSAIFReturn;
 								currEle._KSATPL = ele._KSATPL;
 								eles.after(currEle).remove();
-							}
-						}
-						if(currEle) {
-							//在全局监测链中写入更新操作
-							_TPLdefPCallFun.globalUpdate(currEle, function () {
-								//debug([this, currEle]);
-								$this.analyze(this, evalCode, true);
-								//debug('条件不成立，生成占位符');
-								return true;
-							});
-						}
-    	    		}
 
+								//在全局监测链中写入更新操作
+								_TPLdefPCallFun.globalUpdate(currEle, function () {
+									$this.analyze(this, evalCode, true);
+								});
+							}
+
+						}
+
+    	    		}
+*/
     	    		return ele;
 				});
 
@@ -1486,7 +1584,7 @@ function debug(data){
 					//回调处理做延迟 以达到值写入成功后再回调
 					window.setTimeout(function(){
 						$.each(_TPLdefPCallFun.GUPDC, function(_, fun){
-							if(fun(v, value, parent, subVars) === true){
+							if(fun(v, value, parent, subVars) !== true){
 								delete _TPLdefPCallFun.GUPDC[_];
 								//debug('删除当前监听回调')
 							}
@@ -1626,7 +1724,7 @@ function debug(data){
 		}
 	}
 	$.S.isDomAll = function(dom){
-		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument
+		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList
 	}
 
 	$.S.isNull = function(v){
