@@ -579,8 +579,15 @@ function debug(data){
 	 * @returns {*}
 	 */
 	$.S.eq = function(n){
+		var self = this;
 		n += 0;
-		return this.slice(n, n + 1);
+		this.each(function(i, ele){
+			if(i != n){
+				self.length --;
+				delete self[i];
+			}
+		})
+		return this;
 	}
 
 	/**
@@ -1105,29 +1112,70 @@ function debug(data){
 // ====================== 元素监听 ====================== //
 	$.S.tpl = function(_DATA){
     	var self = this;
-    	var _$ = function(vars){
-    		return eval('(_DATA.'+vars+')');
-		}
+
 		//匹配变量正则 {xxx}
 		var variableReg = /\$\{((?:.|\r?\n)+?)\}/g;
 
     	//变量监听对象
 		var _TPLdefPCallFun = {
-			SETC : {}, //更新时待监听链表 key=需要拦截的变量名 value=变更回调
+			SETC : {}, //写值时待监听链表 key=需要拦截的变量名 value=变更回调
 			DELC : {}, //删除时待监听链表
-			IFC : [], //待监听的if回调 if内部存在不确定语法，监测原理为只要内部数据发生变动立即处理
+			GETC : {}, //获取时待监听链表,
+			GUPDC : {}, //更新时待监听链表
+			globalUpdateUUID : 0,
 			set : function(key, fun){
 				this.SETC[key] = this.SETC[key] || [];
 				this.SETC[key].push(fun);
 			},
+			get : function(key, fun){
+				this.GETC[key] = this.GETC[key] || [];
+				this.GETC[key].push(fun);
+			},
 			delete : function(key, fun){
 				this.DELC[key] = this.DELC[key] || [];
 				this.DELC[key].push(fun);
+			},
+			globalUpdate : function(setObj, fun){
+				var i = this.globalUpdateUUID ++;
+				this.GUPDC[i] = function(){
+					return fun.call(setObj, arguments);
+				}
+				return i;
+			},
+			clear : function(key){
+				delete this.GUPDC[key];
+				return this;
 			}
 		};
 
-		var evals = function(vars){
-			return vars ? eval('(_DATA.'+vars+')') : _DATA;
+
+		/**
+		 * 字符串转为实际变量
+		 * @param variable 变量字符串
+		 * @param isReturnStr 是否只需要返回解析后的变量字符串
+		 * @returns {*}
+		 */
+		function strTovars(variable, isReturnStr){
+
+			var vars, returnStr = variable;
+			if(!variable){
+				returnStr = '_DATA';
+				vars = _DATA;
+			}else {
+				//先从局部变量中匹配
+				try {
+					returnStr = '_DATA.' + variable;
+					vars = eval(returnStr);
+				} catch (e) {
+					try {
+						vars = eval(variable);
+
+					} catch (e) {
+					}
+				}
+			}
+			console.assert(vars !== 'undefined', variable+'变量不存在');
+			return isReturnStr ? returnStr : vars;
 		}
 
     	var Tpc = {
@@ -1139,25 +1187,7 @@ function debug(data){
 				this.format().treeInit();
 				return this;
 			},
-			//字符串转为实际变量
-			strTovars : function(variable, isReturnStr){
 
-				var vars, returnStr = variable;
-
-				//先从局部变量中匹配
-				try {
-					returnStr = '_DATA.'+variable;
-					vars = eval(returnStr);
-				}catch (e) {
-					try{
-						vars = eval(variable);
-
-					}catch (e) {
-					}
-				}
-				console.assert(vars !== 'undefined', variable+'变量不存在');
-				return isReturnStr ? returnStr : vars;
-			},
 			//模板语法格式化为符合内部要求的语法
 			format : function(){
 				var code = this.el.innerHTML;
@@ -1203,49 +1233,6 @@ function debug(data){
                 });
 				return this;
 			},
-			//渲染文本节点
-			renderNodeText : function(ele, dt){
-				var $this = this,
-					tps = ele.nodeType,
-					nodeValue = ele.nodeValue,
-					_KSAnodeValue = ele._KSAnodeValue,
-					ele = $(ele);
-				dt = dt ? $this.strTovars(dt) : dt;
-
-				//遍历每个节点 分别加上原始语法
-				if(tps ===3){
-
-					if(typeof(_KSAnodeValue) !== 'undefined'){
-						return;
-					}
-					var nodeVal = _KSAnodeValue || nodeValue;
-					//检查文本节点是否存在{xx}变量并做对应处理
-					if($.isset(nodeVal) && variableReg.test(nodeVal)) {
-						//创建原始语法字段
-						ele[0]._KSAnodeValue = nodeValue;
-						//解析节点语法并写入
-						ele.nodeValue(nodeVal);
-						$this.analyze(ele, dt);
-
-						//遍历变量 添加侦听事件，如果变量有更新 则同时更新dom
-						var checkRgv = {};
-						nodeVal.match(variableReg).forEach(function(value, i){
-							value = value.trim().replace(/^\${/g, '').replace(/}$/g, '');
-							if(checkRgv[value]){
-								return;
-							}
-							checkRgv[value] = 1;
-							_TPLdefPCallFun.set(value, function(val){
-								debug('写值回调：'+val+' / 重新解析：'+nodeVal);
-								ele.nodeValue(nodeVal);
-								$this.analyze(ele, dt);
-							});
-						});
-
-					}
-				}
-				return ele[0];
-			},
             //遍历虚拟节点 填充到前台并侦听数据变化
 			renderElement : function(ele, dt){
 				ele = $(ele);
@@ -1254,33 +1241,32 @@ function debug(data){
 
                 if(tps ===1){
 
-					if(ele.isAttr('loop')){
-						$this.loopList(ele);
-					}
+					//if节点整理
+					$this.loopList(ele);
+
+					//ele[0].tagName =='KSA' && debug(ele);
 
 					ele.childAll().each(function(_, el){
 						$this.renderElement(el, dt);
 					});
 
                 }else if(tps ===3){
-					$this.analyze(ele, dt);
+					//$this.analyze(ele, dt);
 				}
                 return ele[0];
             },
 			ifelse : function(ele){
-    	    	var $this = this;
 				ele = $(ele);
-				if(ele[0].nodeType == 1){
-					if(ele.isAttr('if elseif else')){
-						ele[0]._KSAIF = ele.children('ksafactor').html();
-						ele.children('ksafactor').remove();
-					}else{
-						ele.children().each(function(_, el){
-							$this.ifelse(el);
-						});
-					}
-				}
 
+				if(ele[0].nodeType == 1 && ele.isAttr('if elseif else')){
+					if(!ele[0]._KSAIF) {
+						var childIF = ele.children('ksafactor');
+						ele[0]._KSAIF = childIF.html();
+						childIF.remove();
+					}
+					ele[0]._KSATPL = ele[0]._KSATPL ? ele[0]._KSATPL : ele[0].outerHTML;
+				}
+				return this;
 			/*
                                 var code = ele.html();
                                 var factor = ele.children('ksafactor').html();
@@ -1312,100 +1298,63 @@ function debug(data){
                 */
 			},
 			loopList : function(ele, tpl){
-				var $this = this;
-				var loop = $.explode(' ',ele.children('ksafactor').html(),'');
-				ele.children('ksafactor').remove();
+    	    	ele = $(ele);
+				if(ele[0].nodeType == 1 && ele.isAttr('loop')) {
+					var $this = this;
+					var loop = $.explode(' ', ele.children('ksafactor').html(), '');
+					ele.children('ksafactor').remove();
 
-				tpl = tpl ? tpl : ele.html().replace("'","\'");
+					tpl = tpl ? tpl : ele.html().replace("'", "\'");
 
-				var dtStr = loop[0],
-					Kk = loop[2] ? loop[1] : 'key',
-					Vv = loop[2] ? loop[2] : loop[1];
+					var dtStr = loop[0],
+						Kk = loop[2] ? loop[1] : 'key',
+						Vv = loop[2] ? loop[2] : loop[1];
 
 
-				dt = $this.strTovars(dtStr);
-/*
-				//loop变量变化检测
-				!ele[0]._KSAnodeValue && _TPLdefPCallFun.set(dtStr, function(){
-					ele.html('');
-					$this.loopList(ele, tpl);
-				});
-*/
-				ele.empty();
-				$.each(dt, function(k, v){
-					var rek = dtStr+($.isNumber(k) ? ('['+k+']') : ('.'+k));
-					var code = tpl.replace(new RegExp('\\${'+Vv,'g'),  '${'+rek);
-					code = code.replace(new RegExp('\\${'+Kk+'}'), k);
-					//组合局部变量给解析函数解析为实际值
-
-					ele.append(code);
-					$this.analyze(ele, (''+Vv+' = '+$this.strTovars(dtStr, true)+'['+k+']'));
+					dt = strTovars(dtStr);
 					/*
-					var dom = $('<div>'+code+'</div>').childAll();
-					dom.each(function(_, el){
-						el._KSAnodeValue = el.nodeType === 3 ? el.nodeValue : el.innerHTML;
-						//变量更新后重新处理
-						_TPLdefPCallFun.set(rek, function(){
-							$this.renderElement(el, $this.strTovars(dtStr));
-						});
-
-						//变量被删除同时还需移除此节点
-						_TPLdefPCallFun.delete(rek, function(){
-							$(el).remove();
-						});
-						ele.append(el);
+                                    //loop变量变化检测
+                                    !ele[0]._KSAnodeValue && _TPLdefPCallFun.set(dtStr, function(){
+                                        ele.html('');
+                                        $this.loopList(ele, tpl);
+                                    });
+                    */
+					ele.empty();
+					$.each(dt, function (k, v) {
+						var rek = dtStr + ($.isNumber(k) ? ('[' + k + ']') : ('.' + k));
+						var code = tpl.replace(new RegExp('\\${' + Vv, 'g'), '${' + rek);
+						code = code.replace(new RegExp('\\${' + Kk + '}'), k);
+						//组合局部变量给解析函数解析为实际值
+						var tmpdom = $.dom('<ksaloopline>'+code+'</ksaloopline>');
+						ele.append(tmpdom[0]);
+						$this.analyze(tmpdom[0], ('var ' + Vv + ' = ' + strTovars(dtStr, true) + '[' + k + '];'));
 					});
-					*/
-				});
+				}
+				return this;
 			},
             //解析模板
-            analyze : function(element, evalCode){
+            analyze : function(element, evalCode, isDefPcall){
     	    	var $this = this;
-
-				evalCode && eval('('+evalCode+')');
+				//evalCode && eval('('+evalCode+')');
 
 				$(element).each(function(_, ele){
+					var eles = $(ele);
+    	    		var nodeType = ele.nodeType;
 
-    	    		ele = $(ele);
+					//递归解析子级
+					if(nodeType === 1) {
+						$this.ifelse(ele);
+						eles.childAll().each(function (_i, childel) {
+							$this.analyze(childel, evalCode);
+						});
 
-    	    		//非文本节点处理
-    	    		if(ele[0].nodeType === 1){
-						//if判断节点的处理
-						if(ele.isAttr('if elseif else')){
-							$this.ifelse(ele);
+					//文本节点解析
+					}else if(nodeType === 3){
 
-							if(ele[0]._KSAIF) {
-								var ifReturn = eval('(' + ele[0]._KSAIF + ')');
-								ele[0]._KSAIFReturn = ifReturn;
-
-								if (ifReturn) {//如果条件为真则设定后续紧邻判断节点的结果属性
-									ele.nextAll('[elseif], [else]').each(function(_, el){
-										el._KSAIFReturn = false;
-									});
-								}
-							}
-							if(!ele[0]._KSAIFReturn){
-								//如果条件不为真则隐藏当前判断下所有节点
-								var tmpdom = $.dom('<!---->')[0];
-								tmpdom._KSAIF = ele[0]._KSAIF;
-								tmpdom._KSAIFReturn = ifReturn;
-								tmpdom._KSATPL = ele.html();
-								ele.after(tmpdom).remove();
-							}
-						//非判断节点 递归解析子级
-						}else{
-							ele.childAll().each(function (_i, childel) {
-								$this.analyze(childel, evalCode);
-							});
-						}
-
-					//文本节点变量解析
-					}else{
-
-						var tcode = ele[0]._KSATPL || ele.nodeValue();
+						var tcode = ele._KSATPL || ele.nodeValue;
 						//节点增加_KSATPL属性 用于数据变更时的二次渲染
 						if(tcode && variableReg.test(tcode)){
-							ele[0]._KSATPL = tcode;
+							ele._KSATPL = tcode;
 						}
 
 						var varsChain = {};
@@ -1413,55 +1362,94 @@ function debug(data){
 						tcode = tcode.replace(variableReg, function (_vs) {
 							var _vsK = _vs.trim().replace(/^\${/g, '').replace(/}$/g, '');
 							varsChain[_vsK] = _vsK;
-							_vs = $this.strTovars(_vsK);
+
+							_vs = strTovars(_vsK);
 							return _vs === undefined ? '' : _vs;
 						});
-						ele.nodeValue(tcode);
+						eles.nodeValue(tcode);
 
-						//当前节点所有使用到的变量 添加侦听事件，如果变量有更新 则同时更新dom
-						$.each(varsChain, function(keys){
-							_TPLdefPCallFun.set(keys, function(val){
-								debug('写值回调：'+val+' / 重新解析节点');
-								$this.analyze(ele, evalCode);
+						//如果不是监听事件回调的渲染 则添加监听事件
+						if(!isDefPcall){
+							//debug(varsChain);
+							//当前节点所有使用到的变量 添加侦听事件，如果变量有更新 则同时更新dom
+							$.each(varsChain, function(keys){
+								_TPLdefPCallFun.set(keys, function(val){
+									//debug('写值回调：'+val+' / 重新解析节点');
+									$this.analyze(ele, evalCode, true);
+								});
 							});
-						});
-					}
-    	    		return ele[0];
-				});
+						}
 
-
-
-/*
-				var dom = $.dom(code);
-				dom.forEach(function(ele){
-					var tcode = ele.nodeType == 3 ? ele.nodeValue : ele.innerHTML;
-					if(tcode && variableReg.test(tcode)){
-						ele._KSATPL = tcode;
 					}
 
-					tcode = tcode.replace(variableReg, function (value) {
-						value = value.trim().replace(/^\${/g, '').replace(/}$/g, '');
-						value = evals(value);
-						return value === undefined ? '' : value;
-					});
-					debug(tcode);
+					//if判断节点的处理
+					if($.isset(ele._KSAIF)){
+						//$.inArray(document.compareDocumentPosition(ele),[35,37])
+
+
+						var ifCode = ele._KSAIF;
+						var ifReturn = ele._KSAIFReturn;
+
+						if(ifCode) {
+
+							ifReturn = eval('(function(e){ '+evalCode+'  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
+
+
+
+
+							//debug([ele,ele._KSAIFReturn,'IF:'+ifCode+' == '+ifReturn]);
+
+
+							//如果条件为真则设定后续紧邻判断节点的结果属性
+							if (ifReturn) {
+								eles.next('[elseif], [else]').each(function(_, el){
+									el._KSAIFReturn = false;
+								});
+							}
+						}
+
+
+    	    			var currEle;
+						//debug([ele, ele._KSAIFReturn, ele._KSAIF, ele._KSATPL]);
+						//if占位节点 转 真实
+						if(ele._KSAIFReturn) {
+
+							if(nodeType == 8){
+								currEle = $.dom(ele._KSATPL)[0];
+								currEle._KSAIF = ele._KSAIF;
+								currEle._KSAIFReturn = ele._KSAIFReturn;
+								currEle._KSATPL = ele._KSATPL;
+								eles.after(currEle);
+								eles.remove();
+								$this.analyze(currEle, evalCode, isDefPcall);
+							}
+
+						//if真实节点转占位
+						}else if(!ele._KSAIFReturn){
+
+							if(nodeType == 1){
+
+								currEle = $.dom('<!---->')[0];
+								currEle._KSAIF = ele._KSAIF;
+								currEle._KSAIFReturn = ele._KSAIFReturn;
+								currEle._KSATPL = ele._KSATPL;
+								eles.after(currEle).remove();
+							}
+						}
+						if(currEle) {
+							//在全局监测链中写入更新操作
+							_TPLdefPCallFun.globalUpdate(currEle, function () {
+								//debug([this, currEle]);
+								$this.analyze(this, evalCode, true);
+								//debug('条件不成立，生成占位符');
+								return true;
+							});
+						}
+    	    		}
+
+    	    		return ele;
 				});
 
-
-				//处理条件判断语句
-				code = code.replace(/<ksa (if|elseif)="(.*?)"/g, function(){
-
-					return arguments[0]+' ifresult="'+eval(arguments[2])+'"';
-				});
-
-                code = code.replace(variableReg, function (value) {
-                    value = value.trim().replace(/^\${/g, '').replace(/}$/g, '');
-                    value = evals(value);
-                    return value === undefined ? '' : value;
-                });
-                return code;
-
- */
             },
 		};
 
@@ -1484,20 +1472,35 @@ function debug(data){
 				parent = vars.substr(0, lastOF);
 				subVars = fk == lastOF ? vars.substring(lastOF+1, vars.lastIndexOf(']')) : vars.substr(lastOF+1);
 			}
-			//debug('监听：'+subVars +'='+ lastOF);
 
-			parent = evals(parent)  ;
-
-			var value = parent[subVars];
-			Object.defineProperty(parent, subVars, {
+			//debug('监听：'+parent +'='+ subVars);
+			var parentObj = strTovars(parent)  ;
+			var value = parentObj[subVars];
+			Object.defineProperty(parentObj, subVars, {
 				enumerable: true,
 				configurable: true,
 				set : function(v){
+					if(v === value){//值相同时不回调函数
+						return;
+					}
+					//回调处理做延迟 以达到值写入成功后再回调
+					window.setTimeout(function(){
+						$.each(_TPLdefPCallFun.GUPDC, function(_, fun){
+							if(fun(v, value, parent, subVars) === true){
+								delete _TPLdefPCallFun.GUPDC[_];
+								//debug('删除当前监听回调')
+							}
+						});
+
+						callfun.forEach(function(cfval){
+							cfval(v, value, parent, subVars);
+						});
+					},0);
+
+
+					debug('defineProperty SET：'+v);
+
 					value = v;
-					debug('defineProperty SET：'+value);
-					callfun.forEach(function(cfval){
-						cfval(value);
-					});
 				},
 				get : function(v){
 
@@ -1509,7 +1512,7 @@ function debug(data){
 		return {
 			delete : function(key){
 				var $this = this;
-				var vars = evals(key);
+				var vars = strTovars(key);
 				var delname = '_DATA'+($.isNumber(key) ? '['+key+']' : '.'+key);
 
 				if($.isObject(vars)){

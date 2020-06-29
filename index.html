@@ -5,7 +5,7 @@
     <title>Title</title>
     <script src="ksaui.js"></script>
     <!--
-    <script src="vue.js"></script>
+    <script src="./.svn/vue.js"></script>
     -->
 </head>
 <body>
@@ -13,9 +13,9 @@
     div { background: rgba(0,0,0,.2); padding: 20px; color: #fff; margin: 5px;}
 </style>
 <div id="vue">
-    <div v-for="(value,key) in list" v-if="value.name != '张三2'" :ky="key">
+    <template v-for="(value,key) in list" v-if="value.name != '张三1' && value" :ky="key">
         <span>{{key}}.</span>  {{value.name}} - {{value.sex}}
-    </div>
+    </template>
 </div>
 
 
@@ -48,23 +48,64 @@
 
     {loop list key value}
 
-    {if value.name != '张三1'}
-    <div>${key} : ${value.name} ${value.sex}</div>
-    {elseif value.name =='李四'}
-    <div>【elseif】</div>
-    {else}
-    <div>【else】</div>
-    {/if}
+        {if value.name != '张三1'}
+            <div>${key} : ${value.name} ${value.sex}</div>
+        {elseif value.name =='李四'}
+            <div>【elseif】</div>
+        {else}
+            <div>【else】</div>
+        {/if}
     {/loop}
 
 
     <div>${name}</div>
 </div>
+<input value="
+    a == window.b+('+1'+(c+'\'23\'')) && a[0] == 1 || a > 0 ||typeof selector !== 'string' || !selector ||
+nodeType !== 1 && nodeType !== 9 && nodeType !== 11 || nodeType !== 11 && (match = rquickExpr.exec(selector))
+">
 <script>
 
     var AS = KSA('#mvvm').tpl(sdt);
 
+/*
+    //提取if条件中所有的变量名
+    var code = $('input').val();
+    code = code.replace('"',"'");
+    code = code.replace(/\\'/g,'');
+    code = code.replace(/'.*?'/g,'\'\'');
+    code = code.replace(/(\|\||\&&|\+)/g,'\'\'');
+    //code = code.replace(/([\d\w]+\.[\d\w]+)/g, function(){var a = argumentsdebug(a);});
 
+    debug(code);
+    //end
+*/
+/*
+//获取被触发的函数名
+    var abc = {
+        name : 123
+    };
+    Object.defineProperty(abc, 'name', {
+        enumerable: true,
+        configurable: true,
+        set : function(v){
+        },
+        get : function(v){
+            debug(new Error());
+            //debug(new Error().stack.split("\n")[2].trim().split(" ")[4]);
+            return v;
+        }
+    });
+    var xx = ' (function(){return abc.name})() ';
+    function a(){
+        debug(new Error().stack);
+        //debug((new Error()).stack.split("\n")[2].trim().split(" ")[1]);
+    }
+    function ifelseEvel(){
+        eval('('+xx+')');
+    }
+    ifelseEvel();
+*/
     (function () {
         return ;
         var obj = {};
