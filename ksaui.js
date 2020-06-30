@@ -1257,7 +1257,7 @@ function debug(data){
 					});
 
                 }else if(tps ===3){
-					//$this.analyze(ele, dt);
+					$this.analyze(ele, dt);
 				}
                 return ele[0];
             },

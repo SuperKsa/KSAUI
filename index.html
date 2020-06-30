@@ -21,16 +21,16 @@
 
 <script>
     var sdt = {
-        name : '一级张三',
+        name : '二大爷',
         sex : '男',
         school :'江山中学',
         tel :'18888888888',
         list : {
-            0 : {name : '张三1', sex : '男'},
+            0 : {name : '张二娃', sex : '男'},
 
-            1 : {name : '张三2', sex : '男'},
-            2 : {name : '张三3', sex : '男'},
-            99 : {name : '张三99', sex : '男'}
+            1 : {name : '李老五', sex : '男'},
+            2 : {name : '王同学', sex : '男'},
+            99 : {name : '梅老坎99', sex : '男'}
 
 
         }
@@ -43,7 +43,7 @@
 <div id="mvvm">
 
     <table>
-        <tr><th>姓名</th><td>${name} ${name} ${name}${name}</td></tr>
+        <tr><th>姓名</th><td>${name}</td></tr>
         <tr><th>性别</th><td>${sex}</td></tr>
         <tr><th>学校</th><td>${school}</td></tr>
         <tr><th>电话</th><td>${tel}</td></tr>
@@ -63,10 +63,7 @@
 
     <div>${name}</div>
 </div>
-<input value="
-    a == window.b+('+1'+(c+'\'23\'')) && a[0] == 1 || a > 0 ||typeof selector !== 'string' || !selector ||
-nodeType !== 1 && nodeType !== 9 && nodeType !== 11 || nodeType !== 11 && (match = rquickExpr.exec(selector))
-">
+
 <script>
 
     var AS = KSA('#mvvm').tpl(sdt);
