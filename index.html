@@ -21,19 +21,19 @@
 
 <script>
     var sdt = {
-        name : '张三',
+        name : '一级张三',
         sex : '男',
         school :'江山中学',
         tel :'18888888888',
-        list : [
-            {name : '张三1', sex : '男'},
+        list : {
+            0 : {name : '张三1', sex : '男'},
 
-            {name : '张三2', sex : '男'},
-            {name : '张三3', sex : '男'},
-            {name : '张三4', sex : '男'}
+            1 : {name : '张三2', sex : '男'},
+            2 : {name : '张三3', sex : '男'},
+            99 : {name : '张三99', sex : '男'}
 
 
-        ]
+        }
     };
 
     //var V = new Vue({el : '#vue', data : sdt});
@@ -52,9 +52,9 @@
     {loop list key value}
 
         {if value.name != '张三1'}
-            <div>${key} : ${value.name} ${value.sex}</div>
-        {elseif value.name =='李四'}
-            <div>【elseif】</div>
+            <div>${key} : ${value.name} ${value.sex} ${name}</div>
+        {elseif value.name =='张三1'}
+            <div>【elseif】 张三1</div>
         {else}
             <div>【else】</div>
         {/if}

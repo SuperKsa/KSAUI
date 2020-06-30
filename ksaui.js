@@ -90,10 +90,10 @@ function debug(data){
 			} else if (self.isDomAll(selector)) {
 				selector = [selector];
 
-			}else if($.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
+			}else if(self.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
 				selector = createDom(selector);
 
-			} else {
+			}else if(self.isString(selector)) {
 				selector = [].slice.call(document.querySelectorAll(selector));
 			}
 
@@ -1118,11 +1118,16 @@ function debug(data){
 
     	//变量监听对象
 		var _TPLdefPCallFun = {
+			ADDC : {}, //添加值时待监听链表
 			SETC : {}, //写值时待监听链表 key=需要拦截的变量名 value=变更回调
 			DELC : {}, //删除时待监听链表
 			GETC : {}, //获取时待监听链表,
 			GUPDC : {}, //更新时待监听链表
 			globalUpdateUUID : 0,
+			add : function(key, fun){
+				this.ADDC[key] = this.ADDC[key] || [];
+				this.ADDC[key].push(fun);
+			},
 			set : function(key, fun){
 				this.SETC[key] = this.SETC[key] || [];
 				this.SETC[key].push(fun);
@@ -1191,13 +1196,14 @@ function debug(data){
 			//模板语法格式化为符合内部要求的语法
 			format : function(){
 				var code = this.el.innerHTML;
-				code = code.replace(/\{(if|loop) ([^\\]+?)\}/ig, '<ksa $1><ksafactor>$2</ksafactor>');
+				code = code.replace(/\{(if|loop) ([^\\]+?)\}/ig, '<ksascope><ksa $1><ksafactor>$2</ksafactor>');
 				code = code.replace(/\{(elseif) ([^\\]+?)\}/ig, '</ksa><ksa $1><ksafactor>$2</ksafactor>');
 				code = code.replace(/\{else\}/ig, '</ksa><ksa else>');
 
 				code = code.replace(/\{eval\}/ig, '<ksa eval>');
+				code = code.replace(/\{\/eval\}/ig, '</ksa>');
 				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksa eval>$1</ksa>');
-				code = code.replace(/\{\/(if|loop|eval)\}/ig, '</ksa>');
+				code = code.replace(/\{\/(if|loop)\}/ig, '</ksa></ksascope>');
 				this.code = code;
 				return this;
 			},
@@ -1255,49 +1261,6 @@ function debug(data){
 				}
                 return ele[0];
             },
-			ifelse : function(ele){
-				ele = $(ele);
-
-				if(ele[0].nodeType == 1 && ele.isAttr('if elseif else')){
-					if(!ele[0]._KSAIF) {
-						var childIF = ele.children('ksafactor');
-						ele[0]._KSAIF = childIF.html();
-						ele[0]._KSAIFmark = ele.isAttr('if') ? 'if' : (ele.isAttr('elseif') ? 'elseif' : 'else' );
-						childIF.remove();
-					}
-					ele[0]._KSATPL = ele[0]._KSATPL ? ele[0]._KSATPL : ele[0].outerHTML;
-				}
-				return this;
-			/*
-                                var code = ele.html();
-                                var factor = ele.children('ksafactor').html();
-                                ele.children('ksafactor').remove();
-                                ele[0]._KSAIF = factor;
-                                var ifresult = ele.attr('ifresult') ==='true' ? true : false;
-
-
-
-                                var dom;
-                                if(factor){
-                                    //提取条件中的变量名
-                                    var factorVars = factor.replace(/[^\\]['"][\s\S]*?[^\\]['"]/g,'');//先过滤掉字符串
-                                    //debug(factorVars);
-                                }
-
-
-                                ifresult = 1;
-                                if(ifresult){
-                                    dom = ele.childAll();
-                                    ele.html(dom);
-                                }else{
-                                    dom = $.dom('<!---->')[0];
-                                    dom._KSAnodeValue = code;
-                                    dom._KSAfactor = factor;
-                                    ele.after(dom);
-                                    ele.remove();
-                                }
-                */
-			},
 			loopList : function(ele, tpl){
     	    	ele = $(ele);
 				if(ele[0].nodeType == 1 && ele.isAttr('loop')) {
@@ -1321,32 +1284,261 @@ function debug(data){
                                     });
                     */
 					ele.empty();
+
+
+					/**
+					 * 根据数据创建一个loop子节点
+					 * @param k 键名
+					 * @param v 值
+					 * @returns {*|ChildNode}
+					 * @private
+					 */
+					function _newloopNode(k, v){
+						var rek = dtStr + ($.isNumber(k) ? ('[' + k + ']') : ('.' + k));
+						var code = tpl.replace(new RegExp('\\${' + Vv, 'g'), '${' + rek);
+						code = code.replace(new RegExp('\\${' + Kk + '}'), k);
+						return $.dom('<ksaloopline>'+code+'</ksaloopline>')[0];
+					}
+
+					//根据数据组合dom
+					var DomChins = {};
+					$.each(dt, function (k, v) {
+						DomChins[k] = _newloopNode(k,v);
+					});
+
+
+					function _loopNodeRender(k, el){
+						var dk = ($.isNumber(k) ? ('[' + k + ']') : ('.' + k)); //当前loop子键名
+						var rek = dtStr + dk; //当前loop数据主键名
+						var lineCode = ('var ' + Vv + ' = ' + strTovars(dtStr, true) + dk+';');
+
+						$this.analyze(el);
+						$this.renderIF(el, lineCode);
+
+						var insertDom = [];
+						el.childNodes.forEach(function(e){
+							insertDom.push(e);
+						});
+
+
+
+						//当前loop变量被删除监控
+						_TPLdefPCallFun.delete(rek, function(){
+							insertDom.forEach(function(e){
+								$(e).remove();
+							})
+						});
+						DomChins[k] = insertDom;
+						return insertDom;
+					}
+
+					$.each(DomChins, function(k, el){
+						ele.append(_loopNodeRender(k, el));
+					});
+
+					//主变量写入检测
+					_TPLdefPCallFun.add(dtStr, function(){
+						//遍历所有list数据找出差异并加入到dom中
+						var fastK;
+						$.each(dt, function(k, val){
+							//找到差异项 并在前一个loop循环最后插入新节点
+							if(!DomChins[k]){
+								var dms = _loopNodeRender(k, _newloopNode(k, val));
+								var indexDom = DomChins[fastK].pop();
+								$(indexDom).after(dms);
+							}
+							fastK = k;
+						});
+					});
+
+					/*
 					$.each(dt, function (k, v) {
 						var rek = dtStr + ($.isNumber(k) ? ('[' + k + ']') : ('.' + k));
 						var code = tpl.replace(new RegExp('\\${' + Vv, 'g'), '${' + rek);
 						code = code.replace(new RegExp('\\${' + Kk + '}'), k);
 						//组合局部变量给解析函数解析为实际值
 						var tmpdom = $.dom('<ksaloopline>'+code+'</ksaloopline>');
-						ele.append(tmpdom[0]);
-						$this.analyze(tmpdom[0], ('var ' + Vv + ' = ' + strTovars(dtStr, true) + '[' + k + '];'));
+
+						$this.analyze(tmpdom[0]);
+
+						$this.renderIF(tmpdom[0], ('var ' + Vv + ' = ' + strTovars(dtStr, true) + '[' + k + '];'));
+
+						var insertDom = [];
+						tmpdom[0].childNodes.forEach(function(e){
+							insertDom.push(e);
+						});
+						ele.append(insertDom);
+
+						//当前loop变量被删除监控
+						_TPLdefPCallFun.delete(rek, function(){
+							insertDom.forEach(function(e){
+								$(e).remove();
+							})
+						});
 					});
+					*/
 				}
 				return this;
 			},
-            //解析模板
-            analyze : function(element, evalCode, isDefPcall){
+			renderIF : function(element, evalCode){
     	    	var $this = this;
-				//evalCode && eval('('+evalCode+')');
+				var R = {
+					//把初始化的节点全部转为占位节点
+					def2comment : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							var eles = $(ele);
+							if(ele.nodeType == 1 && eles.isAttr('if elseif else')){
 
+								var childIF = eles.children('ksafactor');
+								var comnode = $.dom('<!---->')[0];
+								comnode._KSAIF = {
+									mark : eles.isAttr('if') ? 'if' : (eles.isAttr('elseif') ? 'elseif' : 'else' ), //判断类型
+									ifcode : childIF.html(), //条件判断源码
+									return : false, //条件解析结果
+									eval : '(function(e){ '+evalCode+' e._KSAIF.return = eval(e._KSAIF.ifcode);})', //封装解析语法到属性中
+									childs : [], //子节点
+									isPush : false, //子节点是否已经添加到dom中
+									scope : [] //当前域下所有节点 包含自己
+								};
+								childIF.remove();
+								ele.childNodes.forEach(function(e){
+									comnode._KSAIF.childs.push(e);
+								})
+
+								eles.after(comnode).remove();
+
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.def2comment(e);
+								})
+							}
+						});
+						return this;
+					},
+					//上下级关系绑定 此环节ksascope标签还存在
+					sliblings : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							if(ele._KSAIF){
+								//所有作用域中的if节点 包含自己
+								ele.parentNode.childNodes.forEach(function(e){
+									ele._KSAIF.scope.push(e);
+								});
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.sliblings(e);
+								})
+							}
+						});
+						return this;
+					},
+					//移除作用域标签
+					removeScope : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							if(ele.tagName ==='KSASCOPE'){
+								$(ele).after(ele.childNodes).remove();
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.removeScope(e);
+								})
+							}
+						});
+						return this;
+					},
+					render : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							var eles = $(ele);
+
+							if(ele._KSAIF && ele.nodeType ===8){
+
+								//解析if语句结果
+								ele._KSAIF.eval && eval(ele._KSAIF.eval).call(ele, ele);
+
+								var scopeIsTrue = false; //当前域下是否有结果
+								//如果当前if结果为真 通知域下所有节点当前结果
+								ele._KSAIF.scope.forEach(function(e){
+									//不处理自己节点
+									if(ele === e){
+										return;
+									}
+									//如果当前节点不是else 并且判断结果为true 则同域下所有节点为false
+									if(ele._KSAIF.return === true){
+										e._KSAIF.return = false;
+									}
+									if(e._KSAIF.return === true){
+										scopeIsTrue = true;
+									}
+								});
+
+								//如果当前节点是else 并且同域下没有true 则默认为true
+								if(ele._KSAIF.mark ==='else' && scopeIsTrue === false){
+									ele._KSAIF.return = true;
+								}
+
+								//如果条件为真 并且节点存在于dom中
+								if(ele._KSAIF.return === true){
+									if(!ele._KSAIF.isPush) {
+										//用子节点替换当前
+										eles.after(ele._KSAIF.childs).remove();
+										ele._KSAIF.isPush = true; //属性标注为已push到DOM
+										if (ele._KSAIF.mark !== 'else') {
+											//全局检测 如果任意变量发生变化，则重新解析当前域
+											_TPLdefPCallFun.globalUpdate(ele, function () {
+												if (this._KSAIF.mark === 'else') {
+													return;
+												}
+												var ts = this, childlength = ts._KSAIF.childs.length;
+												ts._KSAIF.eval && eval(ts._KSAIF.eval).call(ts, ts);
+												//如果编译结果非真 则删除所有节点
+												if (ts._KSAIF.return === false) {
+													ts._KSAIF.childs.forEach(function (e, i) {
+														if (!$.inArray(document.compareDocumentPosition(e), [35, 37])) {
+															//在最后一个加入占位节点 并且标注为未push到DOM
+															if (i == childlength - 1) {
+																$(e).after(ts);
+																ts._KSAIF.isPush = false;
+															}
+															e.remove();
+														}
+													});
+													ths.render(ts._KSAIF.scope);
+												}
+												return true;
+											});
+										}
+									}
+								}
+							//如果是元素节点则一直渲染子节点
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.render(e);
+								})
+							}
+						});
+
+						return this;
+					}
+				};
+
+				R.def2comment(element).sliblings(element).removeScope(element).render(element);
+
+			},
+            //解析模板
+            analyze : function(element, isDefPcall){
+    	    	var $this = this;
+
+				//此处只解析文本节点中的变量
 				$(element).each(function(_, ele){
 					var eles = $(ele);
     	    		var nodeType = ele.nodeType;
 
 					//递归解析子级
 					if(nodeType === 1) {
-						$this.ifelse(ele);
 						eles.childAll().each(function (_i, childel) {
-							$this.analyze(childel, evalCode);
+							$this.analyze(childel);
 						});
 
 					//文本节点解析
@@ -1376,102 +1568,15 @@ function debug(data){
 							$.each(varsChain, function(keys){
 								_TPLdefPCallFun.set(keys, function(val){
 									//debug('写值回调：'+val+' / 重新解析节点');
-									$this.analyze(ele, evalCode, true);
+									$this.analyze(ele, true);
 								});
 							});
 						}
-
 					}
-					if($.isset(ele._KSAIF)){
-						//把初始化的节点转为占位节点
-						if(ele.tagName =='KSA'){
-							currEle = $.dom('<!---->')[0];
-							currEle._KSAIF = ele._KSAIF;
-							currEle._KSAIFReturn = ele._KSAIFReturn;
-							currEle._KSATPL = ele._KSATPL;
-							currEle._KSAIFmark = ele._KSAIFmark;
-							currEle._KSAChilds = [];
-							ele.childNodes.forEach(function(e){
-								currEle._KSAChilds.push(e);
-							})
-							eles.after(currEle).remove();
-							ele = currEle;
-							eles = $(ele);
-						}
-						debug([ele]);
-						//计算当前节点的条件结果
-						if(ele._KSAIF) {
-							eval('(function(e){ '+evalCode+'  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
-							//如果条件为真 且为占位节点
-							if (ele._KSAIFReturn && ele.nodeType === 8) {
-
-								//设定后续紧邻判断节点的结果为false
-								eles.next('[elseif], [else]').each(function(_, el){
-									el._KSAIFrestPrev = true;
-								});
-
-								//用子节点替换当前
-								eles.after(currEle._KSAChilds).remove();
-
-
-
-								//监测if结果变化
-								_TPLdefPCallFun.globalUpdate(ele, function () {
-									var ths = this;
-									eval('(function(e){ '+evalCode+';  e._KSAIFReturn = eval(e._KSAIF);})').call(ele, ele);
-									//如果结果非真 用占位节点替代子节点
-									if(!this._KSAIFReturn){
-										ths._KSAChilds.forEach(function(e, i){
-											//在最后一个加入占位节点
-											if (i == ths._KSAChilds.length - 1) {
-												//debug('add')
-												$(e).after(ths);
-											}
-											$(e).remove();
-										});
-
-										if(this._KSAIFmark && this._KSAIFmark !='else'){
-											var nx = this.nextSibling;
-											if(nx && nx._KSAIFmark){
-												//通知后续节点 当前判断值
-												nx._KSAIFrestPrev = false;
-												//后续紧邻节点渲染
-												$this.analyze(nx, evalCode, true);
-											}
-										}
-
-
-									}else if(!$.inArray(document.compareDocumentPosition(ele),[35,37])){
-										$(this).after(this._KSAChilds).remove();
-									}
-									return true;
-								});
-							}else{
-
-								if(ele._KSAIFmark && ele._KSAIFmark !='else'){
-									var nx = ele.nextSibling;
-									if(nx && nx._KSAIFmark){
-										//通知后续节点 当前判断值
-										nx._KSAIFrestPrev = false;
-										//后续紧邻节点渲染
-										$this.analyze(nx, evalCode, true);
-									}
-								}
-								//ele.nextSibling && $this.analyze(ele.nextSibling, evalCode, true);
-							}
-
-
-
-						}
-
-						if(ele._KSAIFmark =='else' && ele._KSAIFrestPrev === false){
-							eles.after(ele._KSAChilds).remove();
-						}
 
 
 
 
-					}
 /*
 					//if判断节点的处理
 					if($.isset(ele._KSAIF)){
@@ -1548,16 +1653,50 @@ function debug(data){
     	    		return ele;
 				});
 
+
             },
 		};
 
 
-
+		//初始化模板语法
     	this.map(function(ele){
     		Tpc.init(ele);
 		});
 
 
+    	//对象变量名分割为数据 xxx.name / xxx[1].name / xxx.list[1]
+
+		/**
+		 * 对象变量名解析为格式化字符
+		 * Author: cr180
+		 *
+		 * 如：
+		 * xxx			= [xxx, xxx, '']
+		 * xxx.name 	= [xxx, xxx, name]
+		 * xxx[1].name 	= [xxx, xxx[1], name]
+		 * xxx.list[1]	= [xxx, xxx.list, 1]
+		 * @param {string} vars 需要解析的变量名字符串 xxx.name / xxx[1].name / xxx.list[1]
+		 * @returns {array} [祖先变量名 , 主变量名, 结束变量名]
+		 */
+    	function variableNameEx(vars){
+			vars = vars.toString();
+			var lk  = vars.indexOf('[');
+			var ld = vars.indexOf('.');
+			var fk = vars.lastIndexOf('[');
+			var fd = vars.lastIndexOf('.');
+			var lastOF = Math.max(fd, fk);
+
+			var ancestor = vars; firstName = vars, lastName = '';
+
+			//提取最后一个键名
+			if(lastOF !== -1){
+				ancestor = vars.substr(0, (lk >0 && ld >0 ? Math.min(lk,ld) : Math.max(lk,ld)));
+				firstName = vars.substr(0, lastOF);
+				//如果最后是[] 则取括号中间的字符 否则取.之后的字符
+				lastName = fk > fd ? vars.substring(lastOF+1, vars.lastIndexOf(']')) : vars.substr(lastOF+1);
+			}
+			return [ancestor, firstName, lastName];
+		}
 
     	//拦截变量 Object.defineProperty
 		$.each(_TPLdefPCallFun.SETC, function(vars, callfun){
@@ -1608,6 +1747,20 @@ function debug(data){
 		});
 
 		return {
+			add : function(key, value){
+				var kys = variableNameEx(key);
+				var vars = strTovars(key, 1);
+				eval('(function(v){'+vars+' = v;})').call(null,value);
+				if(_TPLdefPCallFun.ADDC){
+					$.each(_TPLdefPCallFun.ADDC, function(_k, callfun){
+						if(_k == kys[1]){
+							callfun.forEach(function(cfval){
+								cfval();
+							});
+						}
+					});
+				}
+			},
 			delete : function(key){
 				var $this = this;
 				var vars = strTovars(key);
@@ -1653,9 +1806,16 @@ function debug(data){
 	$.S.isArray = function(){
 		return v && v.constructor == Array;
 	}
+
+	/**
+	 * 模拟php isset
+	 * @param key
+	 * @param str 指定需要检测的字符串 可选
+	 * @returns {boolean}
+	 */
 	$.S.isset = function(key, str){
         if(str !== undefined){
-            return key.indexOf(str) === -1 ? false : true;
+            return key.indexOf(str) === -1;
         }else{
             return typeof(key) !== 'undefined';
         }
