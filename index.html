@@ -4,22 +4,42 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <script src="ksaui.js"></script>
-    <!--
-    <script src="./.svn/vue.js"></script>
-    -->
+    <script src="./data/vue.js"></script>
 </head>
 <body>
 <style>
     div { background: rgba(0,0,0,.2); padding: 20px; color: #fff; margin: 5px;}
 </style>
-<div id="vue">
-    <template v-for="(value,key) in list" v-if="value.name != '张三1' && value" :ky="key">
-        <span>{{key}}.</span>  {{value.name}} - {{value.sex}}
+<template id="vue-template">
+    <table>
+        <tr><th>姓名</th><td>{{name}}</td></tr>
+        <tr><th>性别</th><td>{{sex}}</td></tr>
+        <tr><th>学校</th><td>{{school}}</td></tr>
+        <tr><th>电话</th><td>{{tel}}</td></tr>
+    </table>
+    ###
+    <div>
+    <template v-for="(value,key) in list">
+        <template v-if="value.name != '张三1'">
+            <div>{{key}} : {{value.name}} {{value.sex}} {{name}}</div>
+        </template>
+        <template v-else-if="value.name == '张三1'">
+            <div>【elseif】 {{value.name}}</div>
+        </template>
+        <template v-else>
+            <div>【else】</div>
+        </template>
     </template>
-</div>
+    </div>
+</template>
+
+<div id="vuedom"></div>
 
 
 <script>
+
+    var LOOPMAX = 1;
+
     var sdt = {
         name : '二大爷',
         sex : '男',
@@ -35,39 +55,157 @@
 
         }
     };
+</script>
+<script>
 
-    //var V = new Vue({el : '#vue', data : sdt});
+
+    Vue.config.devtools = false;
+    Vue.config.productionTip = false;
+    var template = $('#vue-template').html();
+    var pushDOM = $('#vuedom');
+
+    for(var i =0; i<LOOPMAX; i++){
+        (function(){
+            var dom = $.dom('<div>'+template.replace('###',i)+'</div>');
+            pushDOM.append(dom);
+        })();
+    }
+    console.time("VUE");
+    var VUE = new Vue({el : '#vuedom', data : sdt});
+    debug(VUE);
+    console.timeEnd("VUE");
 
 </script>
 
-<div id="mvvm">
+<template id="template">
 
-    <table>
+    <table class="as">
         <tr><th>姓名</th><td>${name}</td></tr>
         <tr><th>性别</th><td>${sex}</td></tr>
         <tr><th>学校</th><td>${school}</td></tr>
         <tr><th>电话</th><td>${tel}</td></tr>
     </table>
 
-    {loop list key value}
+    <div>
+        {loop list key value}
 
         {if value.name != '张三1'}
-            <div>${key} : ${value.name} ${value.sex} ${name}</div>
-        {elseif value.name =='张三1'}
-            <div>【elseif】 张三1</div>
+        <div>${key} : ${value.name} ${value.sex} ${name}</div>
+        {elseif value.name =='张三10'}
+        <div>【elseif】 ${value.name}</div>
         {else}
-            <div>【else】</div>
+        <div>【else】</div>
         {/if}
-    {/loop}
+        {/loop}
+    </div>
+</template>
 
-
-    <div>${name}</div>
-</div>
+<div id="mvvm" onclick="debug(214);"></div>
 
 <script>
+    var KTPL;
+    (function(){
+        var template = $('#template').html();
+        var pushDOM = $('#mvvm');
 
+        for(var i =0; i<LOOPMAX; i++){
+            (function(){
+                var dom = $.dom(template);
+                pushDOM.append(dom);
+            })();
+        }
+        console.time('KSA');
+        KTPL = pushDOM.tpl(sdt);
+        console.timeEnd('KSA');
+    })();
+
+
+    function parseFilters (exp) {
+        var inSingle = false;
+        var inDouble = false;
+        var inTemplateString = false;
+        var inRegex = false;
+        var curly = 0;
+        var square = 0;
+        var paren = 0;
+        var lastFilterIndex = 0;
+        var c, prev, i, expression, filters;
+
+        for (i = 0; i < exp.length; i++) {
+            prev = c;
+            c = exp.charCodeAt(i);
+            if (inSingle) {
+                if (c === 0x27 && prev !== 0x5C) { inSingle = false; }
+            } else if (inDouble) {
+                if (c === 0x22 && prev !== 0x5C) { inDouble = false; }
+            } else if (inTemplateString) {
+                if (c === 0x60 && prev !== 0x5C) { inTemplateString = false; }
+            } else if (inRegex) {
+                if (c === 0x2f && prev !== 0x5C) { inRegex = false; }
+            } else if (
+                c === 0x7C && // pipe
+                exp.charCodeAt(i + 1) !== 0x7C &&
+                exp.charCodeAt(i - 1) !== 0x7C &&
+                !curly && !square && !paren
+            ) {
+                if (expression === undefined) {
+                    // first filter, end of expression
+                    lastFilterIndex = i + 1;
+                    expression = exp.slice(0, i).trim();
+                } else {
+                    pushFilter();
+                }
+            } else {
+                switch (c) {
+                    case 0x22: inDouble = true; break         // "
+                    case 0x27: inSingle = true; break         // '
+                    case 0x60: inTemplateString = true; break // `
+                    case 0x28: paren++; break                 // (
+                    case 0x29: paren--; break                 // )
+                    case 0x5B: square++; break                // [
+                    case 0x5D: square--; break                // ]
+                    case 0x7B: curly++; break                 // {
+                    case 0x7D: curly--; break                 // }
+                }
+                if (c === 0x2f) { // /
+                    var j = i - 1;
+                    var p = (void 0);
+                    // find first non-whitespace prev char
+                    for (; j >= 0; j--) {
+                        p = exp.charAt(j);
+                        if (p !== ' ') { break }
+                    }
+                    if (!p || !validDivisionCharRE.test(p)) {
+                        inRegex = true;
+                    }
+                }
+            }
+        }
+
+        if (expression === undefined) {
+            expression = exp.slice(0, i).trim();
+        } else if (lastFilterIndex !== 0) {
+            pushFilter();
+        }
+
+        function pushFilter () {
+            (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim());
+            lastFilterIndex = i + 1;
+        }
+
+        if (filters) {
+            for (i = 0; i < filters.length; i++) {
+                expression = wrapFilter(expression, filters[i]);
+            }
+        }
+
+        return expression
+    }
+/*
+    console.time("timer");
     var AS = KSA('#mvvm').tpl(sdt);
-
+    console.timeEnd("timer");
+    */
 /*
     //提取if条件中所有的变量名
     var code = $('input').val();
