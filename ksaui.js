@@ -1415,6 +1415,112 @@ function debugTime(key){
 				this.Dom = $.dom(this.Code);
 				return this;
 			},
+			createDomLoop : function(ele, tree, eleKey, parentKey){
+            	var ths = this,
+					loopN = 0,
+					farr = $.explode(' ', tree.factor, '');
+
+            	function __defdel(key, dt){
+					//监听 变量被删除
+					ths.def.del(dt, function(){
+						var ts = this,
+							chil = ts.children[key];
+						if(!chil){
+							return;
+						}
+						var num = $.count(this.children),
+							chilnodes = chil.ele._childNodes,
+							length = chilnodes.length;
+						chilnodes.forEach(function(e, i){
+							e = $(e);
+							if(i === length-1){
+								ts.ele = document.createComment('');
+								e.after(ts.ele);
+							}
+							e.remove();
+						})
+						delete ts.children[key]; //删除当前VDOM
+						//如果当前子级删除后为空
+						ts.isEmpty = num === 1;
+					}, tree);
+				}
+
+				farr[0] = strTovars(farr[0]);
+				tree.children = {};
+				$.loop(farr[0], function(k, value, _i1){
+					var d = {};
+					d[farr[1]] = k;
+					d[farr[2]] = value;
+
+					var _n = '_'+_i1;
+					tree.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
+					/*
+					//监听 变量被删除
+					ths.def.del(value, function(){
+						this.children[_n].ele._childNodes.forEach(function(e){
+							$(e).remove();
+						});
+						delete this.children[_n]; //删除当前VDOM
+					}, tree);
+					*/
+					__defdel(_n, value);
+					loopN ++;
+				});
+				//loop为空
+				if(!loopN){
+					tree.isEmpty = true;
+				}
+
+				//监听 子变量添加
+				ths.def.add(farr[0], function(key, dt){
+					var _n = '_'+key;
+					var d = {};
+					d[farr[1]] = key;
+					d[farr[2]] = dt;
+					//找到当前节点最后一个
+					var end;
+
+					if(this.isEmpty){
+						end = this.ele;
+					}else{
+						$.loop(this.children, function(_, e){
+							end = e;
+						});
+						end = end.ele._childNodes[end.ele._childNodes.length -1];
+					}
+					
+					this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
+					var dom = ths.createDom([this.children[_n]]);
+
+					$(end).after(dom);
+					if(this.isEmpty){
+						$(end).remove();
+						this.isEmpty = false;
+					}
+					ths.parseIf(this.children[_n].children);
+					__defdel(_n, dt);
+					/*
+					//监听 变量被删除
+					ths.def.del(dt, function(){
+						var ts = this,
+							num = $.count(this.children),
+							chil = ts.children[_n],
+							chilnodes = chil.ele._childNodes,
+							length = chilnodes.length;
+						chilnodes.forEach(function(e, i){
+							if(i === length-1){
+								ts.ele = document.createComment('');
+								$(e).after(ts.ele);
+							}
+							$(e).remove();
+						})
+						delete ts.children[_n]; //删除当前VDOM
+						//如果当前子级删除后为空
+						ts.isEmpty = num === 1;
+					}, this);
+					*/
+				}, tree);
+			},
             createVDOM : function(eleList, parentKey, data){
                 parentKey = parentKey ? parentKey+'.children.' : '';
                 var ths = this;
@@ -1493,83 +1599,7 @@ function debugTime(key){
                     }
                     //循环节点单独创建VDOM树
                     if(tree.tag =='loop'){
-                        var farr = $.explode(' ', tree.factor, '');
-						farr[0] = strTovars(farr[0]);
-                        tree.children = {};
-                        var loopN = 0;
-                        $.loop(farr[0], function(k, value, _i1){
-							var d = {};
-								d[farr[1]] = k;
-								d[farr[2]] = value;
-
-                            var _n = '_'+_i1;
-							tree.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
-
-							//监听 变量被删除
-							ths.def.del(value, function(){
-								this.children[_n].ele._childNodes.forEach(function(e){
-									$(e).remove();
-								});
-								delete this.children[_n]; //删除当前VDOM
-							}, tree);
-							loopN ++;
-                        });
-						var loopEndNode;
-                        //loop为空
-                        if(!loopN){
-							tree.isEmpty = true;
-						}
-
-						//监听 子变量添加
-						ths.def.add(farr[0], function(key, dt){
-							var _n = '_'+key;
-							var d = {};
-							d[farr[1]] = key;
-							d[farr[2]] = dt;
-							//找到当前节点最后一个
-							var end;
-
-							if(this.isEmpty){
-								end = this.ele;
-							}else{
-								$.loop(this.children, function(_, e){
-									end = e;
-								});
-								end = end.ele._childNodes[end.ele._childNodes.length -1];
-							}
-
-
-							this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
-							var dom = ths.createDom([this.children[_n]]);
-
-							$(end).after(dom);
-							if(this.isEmpty){
-								$(end).remove();
-								this.isEmpty = false;
-							}
-							ths.parseIf(this.children[_n].children);
-
-							//监听 变量被删除
-							ths.def.del(dt, function(){
-								var ts = this,
-									num = $.count(this.children),
-									chil = ts.children[_n],
-									chilnodes = chil.ele._childNodes,
-									length = chilnodes.length;
-
-								chilnodes.forEach(function(e, i){
-									if(i === length-1){
-										ts.ele = document.createComment('');
-										$(e).after(ts.ele);
-									}
-									$(e).remove();
-								})
-								delete ts.children[_n]; //删除当前VDOM
-								//如果当前子级删除后为空
-								ts.isEmpty = num === 1;
-							}, this);
-
-						}, tree);
+                        ths.createDomLoop(ele, tree, eleKey, parentKey);
 
                     //如果存在子节点则遍历
                     }else if(ele.childNodes && ele.childNodes.length){
