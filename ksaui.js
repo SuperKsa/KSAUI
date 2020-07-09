@@ -270,7 +270,7 @@ function debugTime(key){
             });
         }
 	    //是否只有一个key
-	    var iskeyone = $.countArray(key) == 1 ? true : false;
+	    var iskeyone = $.count(key) == 1 ? true : false;
 
 	    var dt = {};
         this.map(function (ele) {
@@ -1265,7 +1265,6 @@ function debugTime(key){
                 this.VDOM = this.replace().createVDOM(this.Dom);
 
                 this.createDom(this.VDOM);
-                //this.renderVDOM(this.VDOM);
                 this.pushDom(this.VDOM);
                 this.parseIf(this.VDOM);
 
@@ -1497,6 +1496,7 @@ function debugTime(key){
                         var farr = $.explode(' ', tree.factor, '');
 						farr[0] = strTovars(farr[0]);
                         tree.children = {};
+                        var loopN = 0;
                         $.loop(farr[0], function(k, value, _i1){
 							var d = {};
 								d[farr[1]] = k;
@@ -1512,7 +1512,13 @@ function debugTime(key){
 								});
 								delete this.children[_n]; //删除当前VDOM
 							}, tree);
+							loopN ++;
                         });
+						var loopEndNode;
+                        //loop为空
+                        if(!loopN){
+							tree.isEmpty = true;
+						}
 
 						//监听 子变量添加
 						ths.def.add(farr[0], function(key, dt){
@@ -1522,18 +1528,47 @@ function debugTime(key){
 							d[farr[2]] = dt;
 							//找到当前节点最后一个
 							var end;
-							$.loop(this.children, function(_, e){
-								end = e;
-							});
+
+							if(this.isEmpty){
+								end = this.ele;
+							}else{
+								$.loop(this.children, function(_, e){
+									end = e;
+								});
+								end = end.ele._childNodes[end.ele._childNodes.length -1];
+							}
 
 
 							this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
-							var dom = ths.createDom(this.children[_n].children);
+							var dom = ths.createDom([this.children[_n]]);
 
-							$(end.ele._childNodes[end.ele._childNodes.length -1]).after(dom);
+							$(end).after(dom);
+							if(this.isEmpty){
+								$(end).remove();
+								this.isEmpty = false;
+							}
 							ths.parseIf(this.children[_n].children);
-							//ths.pushDom(this.children[_n].children);
-							//ths.parseIf(this.children[_n].children);
+
+							//监听 变量被删除
+							ths.def.del(dt, function(){
+								var ts = this,
+									num = $.count(this.children),
+									chil = ts.children[_n],
+									chilnodes = chil.ele._childNodes,
+									length = chilnodes.length;
+
+								chilnodes.forEach(function(e, i){
+									if(i === length-1){
+										ts.ele = document.createComment('');
+										$(e).after(ts.ele);
+									}
+									$(e).remove();
+								})
+								delete ts.children[_n]; //删除当前VDOM
+								//如果当前子级删除后为空
+								ts.isEmpty = num === 1;
+							}, this);
+
 						}, tree);
 
                     //如果存在子节点则遍历
@@ -1580,7 +1615,7 @@ function debugTime(key){
                         dom._nodeValue = tree.parseCode;
                         ths.parseNodes(dom, tree);
                     }else if(nodeType === 1){
-                        if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa'])) {
+                        if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa','ksaloopline'])) {
                             dom = document.createDocumentFragment();
 
                         }else{
@@ -1591,11 +1626,14 @@ function debugTime(key){
                                 });
                             }
                         }
-                        if(tree.children){
+                        if(tree.tag === 'loop' && tree.isEmpty){
+							dom = document.createComment('');
+						}else if(tree.children){
                             var subdom = ths.createDom(tree.children);
                             dom.appendChild(subdom);
                         }
                     }
+
                     if(dom) {
 						if(dom.childNodes){
 							dom._childNodes = [];
@@ -1742,159 +1780,6 @@ function debugTime(key){
 				}
 				return r;
 			},
-			/**
-			 * 建立虚拟DOM树
-			 * @constructor
-			 */
-			createTree : function(){
-				var ths = this;
-
-
-				function __thisObject(key){
-					var r;
-					try {
-						r = eval('ths.VDOM.'+key)
-					}catch (e) {
-
-					}
-					return r;
-				}
-
-				function __newTree(ele, eleKey, parentVars){
-					if(ele.tagName ==='KSAFACTOR'){
-						return;
-					}
-
-					var tree = {
-						tag : ele.tagName ? ele.tagName.toLowerCase() : '', //标签名小写 文本节点为空
-						nodeType: ele.nodeType, //节点类型
-						eleKey : eleKey,
-                        variables : {}, //当前节点使用的变量值
-						//返回父级树
-						parent : function(){
-							var n = eleKey.lastIndexOf('.children.');
-							var a = eleKey.substr(0,n);
-							return __thisObject(a);
-						},
-						//返回后一个树
-						next : function(){
-							var n = eleKey.lastIndexOf('.');
-							var a = eleKey.substr(0,n);
-							var b = eleKey.substr(n+1);
-							var bn = parseInt(b.substr(1))+1;
-							return __thisObject((n>0 ? (a + '.') : '') +'_' + bn);
-						},
-						//取前一个树
-						prev : function(){
-							var n = eleKey.lastIndexOf('.');
-							var a = eleKey.substr(0,n);
-							var b = eleKey.substr(n+1);
-							var bn = parseInt(b.substr(1))-1;
-							if(bn >=0){
-								return __thisObject(a + '._' + bn);
-							}
-						}
-					};
-
-
-
-					if(parentVars) {
-						$.loop(parentVars, function (k, v) {
-							tree.variables[k] = v;
-						});
-					}
-					//文本节点
-					if(ele.nodeType === 3){
-						tree.text = ele.nodeValue;
-
-						var exp = ths.parseText(tree.text);
-						if(exp){
-							//文本节点解析结果
-							if(exp.parseCode) tree.parseCode = exp.parseCode;
-							//节点中使用了哪些变量
-							if(exp.variableList){
-							    tree.variableList = exp.variableList;
-                            }
-						}
-
-					}else {
-						//遍历属性名
-						if (ele.attributes && ele.attributes.length) {
-							var attrs = {};
-							$.map(ele.attributes, function (v) {
-								//判断与循环标签的处理
-								if($.inArray(v.name, ['if','elseif','else','loop'])){
-									tree.tag = v.name; //标签名为条件名
-									if(v.name !='else' && ele.childNodes[0].tagName === 'KSAFACTOR') {//增加判断条件 条件值=第一个子级html
-										tree.factor = ele.childNodes[0].innerHTML;
-									}
-								}else{
-									attrs[v.name] = v.value;
-								}
-							});
-							if(Object.keys(attrs).length){
-								tree.attrs = attrs;
-							}
-						}
-
-						//遍历语句处理
-						if(tree.tag == 'loop'){
-							//格式化loop 键名：list key value
-							var farr = $.explode(' ', tree.factor, '');
-							farr = [strTovars(farr[0],true), (farr[2] ? farr[1] : 'key'), farr[2] ? farr[2] : farr[1]];
-							tree.factor = $.implode(' ', farr);
-							tree.children = {};
-							tree.html = ele.innerHTML;
-							var fori = 0;
-							$.loop(new Function('_DATA','return '+farr[0]+';')(_DATA), function(k, value, _i1){
-								var vs = {};
-								vs[farr[1]] = k;
-								vs[farr[2]] = value;
-
-                                ele.childNodes.forEach(function (e) {
-                                    var _n = '_'+fori;
-                                    var o1 = __newTree(e, (eleKey+'.children.'+_n), vs);
-                                    if(o1){
-                                        tree.children[_n] = o1;
-                                    }
-                                    fori ++;
-                                });
-							});
-						//遍历子节点
-						}else if (ele.childNodes) {
-							tree.children = {};
-							tree.childrenEnd = function(){
-							    var r;
-							    $.loop(this.children, function(_, _v){
-							        r = _v;
-                                });
-							    return r;
-                            };
-							ele.childNodes.forEach(function (e,i) {
-								i = '_'+i;
-								var o1 = __newTree(e, (eleKey+'.children.'+i), tree.variables);
-								if(o1){
-									tree.children[i] = o1;
-								}
-							});
-						}
-
-					}
-
-					return tree;
-				}
-
-				var pvk;
-				$.map(this.Dom, function(ele, i){
-					var k = '_'+i;
-					var o1 = __newTree(ele, k);
-					if(o1){
-						ths.VDOM[k] = o1;
-					}
-					pvk = k;
-				});
-				return this;
-			},
 
 			/**
 			 * 初次渲染虚拟DOM树
@@ -1951,123 +1836,6 @@ function debugTime(key){
 				return this;
 			},
 
-
-			/**
-			 * 将虚拟dom树输出到前台
-			 */
-            renderDom : function(){
-				var ths = this;
-				var Vdom = document.createDocumentFragment();
-
-				function __pushDom(tree){
-					var dom;
-					switch (tree.nodeType) {
-						case 3:
-							dom = document.createTextNode(tree.text);
-
-							break;
-						case 1:
-							if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope'])) {
-								dom = document.createDocumentFragment();
-							}else{
-								dom = document.createElement(tree.tag);
-								if(tree.attrs){
-									$.each(tree.attrs, function(k, v){
-										dom.setAttribute(k, v);
-									});
-								}
-							}
-							break;
-					}
-					if(dom){
-						tree.ele = dom;
-					}
-					return dom;
-				}
-
-				function __tree2dom(tree){
-				    var rdom;
-                    var dom = __pushDom(tree);
-
-
-					if($.inArray(dom.nodeType, [1,11]) && tree.children){
-						$.each(tree.children, function(k, v){
-							v = __tree2dom(v);
-							if(v){
-								dom.appendChild(v);
-							}
-						});
-					}
-                    if($.inArray(tree.tag, ['if','elseif','else'])){
-
-                        tree.ifDom = [];
-                        dom.childNodes.forEach(function (e) {
-                            tree.ifDom.push(e);
-                        });
-
-
-                        tree.ifComment = document.createComment(tree.eleKey);
-                        var p = tree.parent();
-                        if(p.renderTree && p.renderTree.eleKey == tree.eleKey){
-                            rdom = dom;
-                        }else{
-                            rdom = tree.ifComment;
-                        }
-
-                        //if节点条件判断检测 全局任意写入事件监听
-                        ths.def.upd(tree, function(){
-                            var ts = this;
-                            var r = ths.newFunction(ts.factor, ts.variables);
-                            if(p.renderTree.eleKey > ts.eleKey){
-                                p.renderTree.eleKey = ts;
-                            }
-                            //if解析结果与原结果不同
-                            if(r != ts.factorResult){
-                                //如果解析结果为真 则删除占位节点并在其后面添加解析好的节点
-                                if(r === true){
-                                    $(ts.ifComment).after(ts.ifDom).remove();
-                                //如果解析结果为假 则删除节点并在后面添加占位节点
-                                }else{
-                                    var childlength = ts.ifDom.length;
-
-                                    ts.ifDom.forEach(function (e, i) {
-                                        //在最后一个加入占位节点 并且标注为未push到DOM
-                                        if (i == childlength - 1) {
-                                            $(e).after(ts.ifComment);
-                                        }
-                                        e.remove();
-                                    });
-                                }
-                            }
-
-                            ts.factorResult = r;
-                            return true;
-                        });
-
-                    }else{
-                        rdom = dom;
-                    }
-
-					return rdom;
-				}
-
-
-
-				$.each(this.VDOM, function(_, tree){
-					var v = __tree2dom(tree);
-					if(v){
-						Vdom.appendChild(v);
-					}
-				});
-
-
-				this.E.innerHTML = '';
-				this.E.appendChild(Vdom);
-
-
-				return this;
-
-			},
             parseTextIndex : {},
 			/**
 			 * 解析文本节点内容
@@ -2459,6 +2227,8 @@ function debugTime(key){
 
 
     	return {
+    		data : _DATA,
+    		VDOM : Tpc.VDOM,
     		del : function(obj){
     			var evn = Tpc.def.DelEvent;
 				evn.object.forEach(function(o, key){
@@ -2469,6 +2239,7 @@ function debugTime(key){
 				delete obj;
 			},
 			add : function(obj, addkey, data){
+				obj[addkey] = data;
 				var evn = Tpc.def.AddEvent;
 				evn.object.forEach(function(o, key){
 					if(o === obj){
@@ -2679,7 +2450,7 @@ function debugTime(key){
 		});
 		return S;
 	}
-	$.S.countArray = function(dt){
+	$.S.count = function(dt){
 		var S = 0;
 		$.each(dt,function(){
 			S ++;
