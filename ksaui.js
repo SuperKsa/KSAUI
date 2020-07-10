@@ -1488,7 +1488,7 @@ function debugTime(key){
 						});
 						end = end.ele._childNodes[end.ele._childNodes.length -1];
 					}
-					
+
 					this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
 					var dom = ths.createDom([this.children[_n]]);
 
@@ -1525,7 +1525,7 @@ function debugTime(key){
                 parentKey = parentKey ? parentKey+'.children.' : '';
                 var ths = this;
                 var newTree = {};
-                $.loop(eleList, function(eleKey, ele){
+                eleList.forEach(function(ele, eleKey){
                     if(ele.tagName ==='KSAFACTOR' || !$.isDomAll(ele)) {
                         return ;
                     }
