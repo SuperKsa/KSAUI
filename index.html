@@ -72,7 +72,7 @@
     }
     console.time("VUE");
     var VUE = new Vue({el : '#vuedom', data : sdt});
-    debug(VUE);
+    //debug(VUE);
     console.timeEnd("VUE");
 
 </script>
@@ -85,7 +85,7 @@
         <tr><th>学校</th><td>${school}</td></tr>
         <tr><th>电话</th><td>${tel}</td></tr>
     </table>
-
+<!-- ${name} -->
     <div>
         {loop list key value}
 
@@ -101,8 +101,10 @@
 </template>
 
 <div id="mvvm"></div>
-
+<div class="a" cid="v" data-da="1"></div>
+<div class="a" cid="v" data-da="2"></div>
 <script>
+    debug($('.a').data('clascs da',1234));
     var KTPL;
     (function(){
         var template = $('#template').html();
