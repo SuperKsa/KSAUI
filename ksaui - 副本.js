@@ -1,22 +1,46 @@
 /**
  * KSA核心JS
+ * Author : cr180.com
  */
+function debug(data){
+	if(typeof data ==='object'){
+		console.dir(data);//debug
+	}else{
+		console.log('%cKSAUI-Debug','background:#00c; color:#fff',data);//debug
+	}
+}
+var consoleGroupN = {};
+function debugTime(key){
+    consoleGroupN[key] = consoleGroupN[key] >=0 ? consoleGroupN[key] +1 : 0;
+    key = key+'-'+consoleGroupN[key];
+    console.time(key);
+    return function(){
+        console.timeEnd(key);
+    };
+}
+
 (function(document, undefined) {
 
-	function debug(data){
-		if(typeof data ==='object'){
-			console.dir(data);//debug
-		}else{
-			console.log('%cKSAUI-Debug','background:#00c; color:#fff',data);//debug
-		}
-	}
 
-	function array2object(arr){
-		var obj = {};
-		for(var k in arr){
-			obj[k] = arr[k];
-		}
-		return obj;
+
+	function newFragment(){
+        return document.createDocumentFragment();
+    }
+
+	/**
+	 * 字符串转虚拟dom
+	 * @param code
+	 * @returns {ActiveX.IXMLDOMNodeList | NodeListOf<ChildNode>}
+	 */
+	function createDom(code){
+		//创建虚拟dom并写入字符串
+		dom = document.createRange().createContextualFragment(code);
+		//返回虚拟dom中生成的节点
+		var doms = [];
+		dom.childNodes.forEach(function(ele){
+			doms.push(ele);
+		});
+		return doms;
 	}
 
 	/**
@@ -27,69 +51,78 @@
 	 * @returns {tempDom}
 	 */
 	function tempDom(code, callback, reOrder){
-		//创建一个虚拟dom
-		var dom = document.createRange().createContextualFragment(code);
-		//拿到虚拟dom中生成的节点
-		var news = dom.childNodes;
+	    var dom;
+	    if(code instanceof $){
+            dom = code;
+        }else if($.isDomAll(code)) {
+			dom = code instanceof  NodeList ? code : [code];
+		}else if($.isArray(code)){
+	    	dom = code;
+        //创建一个虚拟dom
+        }else{
+            dom = createDom(code);
+        }
+
 		//将传入的html或dom对象添加到虚拟dom中
-		K.map(this, function (ele) {
-			var n = !reOrder ? news.length : 0;
-			var i = reOrder ? news.length -1 : 0;
+		$.map(this, function (ele) {
+			var n = !reOrder ? dom.length : 0;
+			var i = reOrder ? dom.length -1 : 0;
 			while (reOrder ? i >=0 : i < n){
-				var node = news[i];
-				callback.call(ele, ele, node.cloneNode(true));
+				var node = dom[i];
+				//callback.call(ele, ele, node.cloneNode(true), node);
+				if(node) {
+					callback.call(ele, ele, node);
+				}
 				reOrder ? i -- : i++;
 			}
 		});
 		return this;
 	}
 
-	var K = function(selector){
-		return new K.S.A(selector);
+	var $ = function(selector){
+		return new K.A(selector);
 	}
 
-	K.S = K.__proto__ = {
-		version : '1.0'
+	var K = {
+		version : '1.0',
+        A : function(selector){
+            var self = this;
+
+            if(selector) {
+                if (selector instanceof $) {
+                    return selector;
+                } else if (self.isDomAll(selector)) {
+                    selector = [selector];
+
+                }else if(self.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
+                    selector = createDom(selector);
+
+                }else if(self.isString(selector)) {
+                    selector = [].slice.call(document.querySelectorAll(selector));
+                }
+
+                var length = selector.length;
+
+                var obj = {};
+                for(var k in selector){
+                    if(self.isDomAll(selector[k])) {
+                        obj[k] = selector[k];
+                    }
+                }
+                selector = obj;
+                selector.length = length;
+            }else{
+                selector = {length:0};
+            }
+
+            self = $.arrayMerge(self, selector);
+            return self;
+        }
 	};
 
-	var _A = K.S.A = function(selector){
-		if(selector) {
-			if (selector instanceof K) {
-				return selector;
-			} else if (selector instanceof HTMLElement) {
+    $.__proto__ = K.A.prototype = K;
 
-				selector = [selector];
-			} else if (selector instanceof XMLDocument) {
-				selector = [selector];
-			}else if(K.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
-				selector = document.createRange().createContextualFragment(selector);
-				selector = selector.childNodes;
-
-			} else {
-				selector = [].slice.call(document.querySelectorAll(selector));
-			}
-
-			var length = selector.length;
-
-			var obj = {};
-			for(var k in selector){
-				if(selector[k] instanceof HTMLElement) {
-					obj[k] = arr[k];
-				}
-			}
-			selector = obj;
-			selector.length = length;
-		}else{
-			selector = {length:0};
-		}
-		var self = this;
-		self = K.arrayMerge(self, selector);
-		return self;
-	}
-
-	_A.prototype = K.S;
-
-    K.S.ready = function(callback) {
+    K.ready = function(callback) {
         if (/complete|loaded|interactive/.test(document.readyState)) {
             callback($);
         } else {
@@ -99,7 +132,10 @@
         }
         return this;
     }
-
+// ====================== 创建虚拟DOM ====================== //
+	K.dom = function(code){
+		return createDom(code);
+	}
 // ====================== 文档操作 ====================== //
 
 	/**
@@ -108,15 +144,15 @@
 	 * @param name 需要添加的class值，多个以空格分割
 	 * @returns {$}
 	 */
-	K.S.addClass = function(name){
-		name = K.explode(' ', name, '');
+	K.addClass = function(name){
+		name = $.explode(' ', name, '');
 		if(name){
 			this.map(function(ele){
-				var classList = K.explode(' ', ele.getAttribute('class'),' ');
-				var addname = K.map(name, function (v) {
-					return !K.inArray(v, classList) ? v : null;
+				var classList = $.explode(' ', ele.getAttribute('class'),' ');
+				var addname = $.map(name, function (v) {
+					return !$.inArray(v, classList) ? v : null;
 				});
-				addname = K.implode(' ',addname);
+				addname = $.implode(' ',addname);
 				if(addname){
 					ele.className = ele.className + (ele.className ? ' ' : '') +addname;
 				}
@@ -131,146 +167,184 @@
 	 * @param name 需要删除的class值，多个以空格分割
 	 * @returns {$}
 	 */
-	K.S.removeClass = function(name){
-		name = K.explode(' ', name, '');
+	K.removeClass = function(name){
+		name = $.explode(' ', name, '');
 		if(name){
-			K.map(this,function(ele){
-				var classList = K.explode(' ', ele.getAttribute('class'),' ');
-				classList = K.map(classList, function (v) {
-					return !K.inArray(v, name) ? v : null;
+			$.map(this,function(ele){
+				var classList = $.explode(' ', ele.getAttribute('class'),' ');
+				classList = $.map(classList, function (v) {
+					return !$.inArray(v, name) ? v : null;
 				});
-				classList = K.implode(' ',classList);
+				classList = $.implode(' ',classList);
 				classList ? ele.setAttribute('class', classList) : ele.removeAttribute('class');
 			});
 		}
 		return this;
 	}
 
-	K.S.attr = function (key, value) {
-	    if(key) {
-            if (K.isset(key, ' ') && value) {
-                var kd = {};
-                K.each(K.explode(' ', key, ''), function (_, v) {
-                    kd[v] = value;
-                });
-                key = kd;
-                kd = null;
-                value = null;
-            }
-            var isvalue = K.isset(value);
-            var values = [];
-            this.map(function (ele) {
-                if (value === '') {
-                    ele.removeAttribute(key, value);
-                }else if(!isvalue){
-                    values.push(ele.getAttribute(key));
-                } else if (!value && K.isObject(key)) {
-                    K.each(key, function (k, v) {
+	K.isAttr = function (key) {
+		key = $.explode(' ', key, '');
+
+		for(var k in key){
+			if(this[0].getAttribute(key[k]) !== null){
+				return true;
+			}
+		}
+		return false;
+	}
+
+    /**
+     * attr操作
+     * key与value都不传值时表示读取所有属性 以object方式返回
+     * 如选择器有多个节点，则根据节点序号以数组方式返回
+     * @param {string|object} key 属性名支持单个值、多个值(空格分开)、对象（写入模式，键名=属性名 键值=属性值）
+     * @param value 属性值 不传入=读取模式 null|空值=删除模式
+     * @returns {K|[]}
+     */
+	K.attr = function (key, value) {
+        var isKey = $.isset(key);
+        var keyIsobj = $.isObject(key);
+        if (isKey && !keyIsobj) {
+            key = $.explode(' ', key, ' ');
+        }
+        var isvalue = $.isset(value);
+        var attrs = [];
+
+        value = value === '' ? null : value;
+
+        this.map(function (ele) {
+            var ats = {};
+            if(!isvalue && !isKey){
+                var a = ele.attributes;
+                for(var i=a.length-1; i>=0; i--) {
+                    ats[a[i].name] = a[i].value;
+                }
+            }else{
+                var setDt = {}, setDtCount =0;
+                $.loop(key, function(k, v){
+                    //移除属性
+                    if (value === null) {
+                        ele.removeAttribute(v);
+                        //读取属性
+                    }else if(!isvalue){
+                        ats[v] = ele.getAttribute(v);
+                    }else if(isvalue && keyIsobj){
                         ele.setAttribute(k, v);
+                        if (k.indexOf('data-') == 0) {
+                            setDt[k] = v; setDtCount ++;
+                        }
+                    }else if(isvalue){
+                        if (v.indexOf('data-') == 0) {
+                            setDt[v] = value; setDtCount ++;
+                        }
+                        ele.setAttribute(v, value);
+                    }
+                });
+                //写入data属性
+                if(setDtCount >0){
+                    if (!ele._KSADATA) {ele._KSADATA = {};}
+                    $.loop(setDt, function(k, v){
+                        ele._KSADATA[k.substr(5)] = v;
                     });
-                } else {
-                    ele.setAttribute(key, value);
                 }
-                return ele;
-            });
-            if(!isvalue){
-                if(values.length == 1){
-                    values = values[0];
-                }
-                return values;
             }
+            if($.count(ats) == 1){
+                ats = Object.values(ats)[0];
+            }
+            attrs.push(ats);
+        });
+        if(!isvalue){
+            if(attrs.length == 1){
+                attrs = attrs[0];
+            }
+            return attrs;
         }
 	    return this;
 	}
 
-    K.S.removeAttr = function (key) {
+    K.removeAttr = function (key) {
 	    if(key) {
-            key = K.explode(' ', key, '');
-            this.map(function (ele) {
-                if (K.isArray(key)) {
-                    K.each(key, function (_, v) {
-                        ele.removeAttribute(v);
-                    });
-                } else {
-                    ele.removeAttribute(key);
-                }
-                return ele;
-            });
+            this.attr(key, null);
         }
         return this;
     }
 
-    K.S.data = function(key, value){
-	    var keyisobj = K.isObject(key), isvalue = K.isset(value), isdel = key && value ==='';
-	    if(!isvalue) {
-            this.removeAttr(key);
-        }
-	    if(keyisobj){
-	        var newkey = {};
-	        K.each(key, function(k, v){
-	            newkey['data-'+k] = v;
-            })
-            key = newkey;
-	        newkey = null;
-        }else{
-            key = K.explode(' ', key, '');
-            K.each(key, function(k, v){
-                key[k] = 'data-'+v;
+    K.data = function(key, value){
+	    var keyisobj = $.isObject(key),
+            isvalue = $.isset(value),
+            isdel = key && value ==='';
+
+	    var setData = keyisobj ? key : (isvalue ? {} : null);
+	    var getKey = [];
+
+	    if(!keyisobj && key){
+            key = $.explode(' ', key, '');
+            $.each(key, function(k, v){
+                if(isvalue){
+                    setData[v] = value;
+                }else{
+                    getKey.push(v);
+                }
             });
         }
-	    //是否只有一个key
-	    var iskeyone = K.countArray(key) == 1 ? true : false;
 
-	    var dt = {};
+	    var getData = [];
         this.map(function (ele) {
-            if(keyisobj){
-                K.each(key, function(k, v){
-                    ele[k] = v;
+            if(!ele._KSADATA){
+                ele._KSADATA = {};
+            }
+            var getdt = {};
+            if(setData){
+                $.loop(setData, function(k, v){
+                    if(!$.isObject(v) && ele.attributes['data-'+k]){
+                        ele.setAttribute('data-'+k, v);
+                    }
+                    ele._KSADATA[k] = v;
                 });
-            }else if(K.isArray(key)){
-                K.each(key, function(_, k){
-                    if(isdel){
-                        delete ele[k];
-                    }else if(isvalue){
-                        ele[k] = value;
-                    }else{
-                        var val = ele[k];
-                        if(K.isset(val)){
-                            dt[k.substr(5)] = val;
-                        }
+            }else if(getKey.length){
+                $.loop(getKey, function(_, k){
+                    var v = ele._KSADATA[k] || (ele.getAttribute('data-'+k) || undefined);
+                    if($.isset(v)) {
+                        getdt[k] = v;
                     }
                 });
-            }else{
-                if(isdel){
-                    delete ele[key];
-                }else if(isvalue){
-                    ele[key] = value;
-                }else{
-                    var val = ele[key];
-                    if(K.isset(val)){
-                        dt[key.substr(5)] = val;
+
+
+            }else if(!key && !isvalue){
+                getdt = ele._KSADATA;
+                var a = ele.attributes;
+                for(var i=a.length-1; i>=0; i--) {
+                    if(a[i].name.indexOf('data-') ===0){
+                        getdt[a[i].name.substr(5)] = a[i].value;
                     }
                 }
+
+            }else if(isdel){
+                $.loop(key, function(_, k){
+                    delete ele._KSADATA[k];
+                });
             }
-            return ele;
+
+            if($.count(getdt) == 1){
+                getdt = Object.values(getdt)[0];
+            }
+            getData.push(getdt);
         });
 
-        //读取模式返回数值
-        if(!isvalue && !keyisobj){
-            if(iskeyone){
-                for(k in dt){
-                    return dt[k];
-                }
+        if(!keyisobj && !isvalue){
+            if(getData.length == 1){
+                getData = getData[0];
             }
-            return dt;
+            return getData;
         }
+
 	    return this;
     }
 
 	/**
 	 * 清空节点
 	 */
-	K.S.empty = function(){
+	K.empty = function(){
 		this.map(function(ele){
 			ele.innerHTML = '';
 		});
@@ -282,8 +356,8 @@
 	 * @param value
 	 * @returns {K|[]}
 	 */
-	K.S.val = function(value){
-		if(K.isset(value)){
+	K.val = function(value){
+		if($.isset(value)){
 			this.map(function(ele){
 				if (ele.nodeType === 1) {
 					var tg = ele.tagName;
@@ -291,7 +365,7 @@
 						case 'INPUT':
 							ele.value = value; break;
 						case 'SELECT':
-							K.each(ele.options, function(_, el){
+							$.each(ele.options, function(_, el){
 								el.selected = el.value == value;
 							});
 							break;
@@ -330,8 +404,8 @@
 	 * @param {html|Node} value 传值表示写入
 	 * @returns {string|$}
 	 */
-	K.S.text = function(value){
-		if(K.isset(value)){
+	K.text = function(value){
+		if($.isset(value)){
 			this.map(function(ele){
 				if (ele.nodeType === 1 || ele.nodeType === 11 || ele.nodeType === 9) {
 					ele.textContent = value;
@@ -340,8 +414,32 @@
 			return this;
 		}else {
 			var t = [];
-			K.each(this, function (k, value) {
+			$.each(this, function (k, value) {
 				t[k] = value.innerText;
+			});
+			return t.join("\n");
+		}
+	};
+
+	/**
+	 * 读写文本节点
+	 * @param value
+	 * @returns {string|K}
+	 */
+	K.nodeValue = function(value){
+
+		if($.isset(value)){
+			value = $.isArray(value) ? value[0].nodeValue : value;
+			this.map(function(ele){
+				if (ele.nodeType === 3) {
+					ele.nodeValue = value;
+				}
+			});
+			return this;
+		}else {
+			var t = [];
+			$.each(this, function (k, value) {
+				value.nodeType == 3 && t.push(value.nodeValue);
 			});
 			return t.join("\n");
 		}
@@ -352,10 +450,10 @@
 	 * @param {html|Node} value 传值表示写入
 	 * @returns {string|$}
 	 */
-	K.S.html = function(value){
-		if(K.isset(value)){
+	K.html = function(value){
+		if($.isset(value)){
 			this.map(function(ele){
-				if(K.isObject(value)){
+				if($.isObject(value)){
 					$(ele).empty().append(value);
 				}else{
 					ele.innerHTML = value;
@@ -378,9 +476,9 @@
 	 * 移除节点
 	 * @returns {$}
 	 */
-	K.S.remove = function(){
+	K.remove = function(){
 		this.map(function(ele){
-			ele.parentNode.removeChild(ele);
+			ele.parentNode && ele.parentNode.removeChild(ele);
 		});
 		return this;
 	}
@@ -390,9 +488,9 @@
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
-	K.S.after = function (html) {
+	K.after = function (html) {
 		return tempDom.call(this, html, function(ele, node){
-			ele.parentNode.insertBefore(node, ele.nextSibling);
+			ele.parentNode && ele.parentNode.insertBefore(node, ele.nextSibling);
 		}, true);
 	}
 
@@ -401,9 +499,9 @@
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
-	K.S.before = function (html) {
+	K.before = function (html) {
 		return tempDom.call(this, html, function(ele, node){
-			ele.parentNode.insertBefore(node, ele);
+			ele.parentNode && ele.parentNode.insertBefore(node, ele);
 		});
 	}
 
@@ -412,9 +510,14 @@
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
-	K.S.append = function (html) {
+	K.append = function (html, callback) {
 		return tempDom.call(this, html, function(ele, node){
-			ele.appendChild(node);
+			if(!node){
+				return;
+			}
+
+			var el = ele.appendChild(node);
+            callback && callback.call(ele, el);
 		});
 	}
 
@@ -423,7 +526,7 @@
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
-	K.S.prepend = function (html) {
+	K.prepend = function (html, callback) {
 		return tempDom.call(this, html, function(ele, node){
 			ele.insertBefore(node, ele.firstChild);
 		}, true);
@@ -431,27 +534,42 @@
 
 // ====================== 遍历 ====================== //
 
+    /**
+     * 循环函数
+     * @param {object} dt 数组或对象
+     * @param {func} 每次循环的函数 function(key,value){...}
+     */
+    K.loop = function(dt,fun){
+        var val, i=0;
+        for(var k in dt){
+            val = dt[k];
+            fun(k,val,i);
+            i++;
+        }
+    }
+
 	/**
 	 * 循环遍历
 	 * @param obj
 	 * @param callback
 	 * @returns {*}
 	 */
-	K.S.each = function(obj, callback) {
+	K.each = function(obj, callback) {
 		var k, i=0;
-		if (K.isArray(obj) || K.isObject(obj)) {
+		if ($.isArray(obj) || $.isObject(obj)) {
 			for (k in obj) {
 				callback(k, obj[k], i);
 				i ++;
 			}
 		} else {
 			callback = callback || (typeof(obj) =='function' ? obj : null);
-			obj = K.isFunction(obj) ? this : obj;
+			obj = $.isFunction(obj) ? this : obj;
 
 			for (k in obj) {
 				var value = obj[k];
-				if(value instanceof HTMLElement) {
-					callback(k, value, k);
+				if($.isDomAll(value)) {
+					callback.call(value, k, value, i);
+					i ++;
 				}
 			}
 		}
@@ -465,14 +583,14 @@
 	 * @param callback
 	 * @returns {[]}
 	 */
-    K.S.map = function(elements, callback){
-    	if(!callback && K.isFunction(elements)){
+    K.map = function(elements, callback){
+    	if(!callback && $.isFunction(elements)){
 			callback = elements;
 			elements = this;
 		}
         var value, values = [], i, key;
 
-        if (K.isArrayLike(elements)) {
+        if ($.isArrayLike(elements)) {
 			for(i = 0; i < elements.length; i++){
 				value = callback(elements[i], i);
 				if(value != null){
@@ -497,7 +615,7 @@
 	 * @param end 结束
 	 * @returns {*[]}
 	 */
-	K.S.slice = function(start, end){
+	K.slice = function(start, end){
 		return [].slice.apply(this, [start, end]);
 	}
 
@@ -506,16 +624,23 @@
 	 * @param n
 	 * @returns {*}
 	 */
-	K.S.eq = function(n){
+	K.eq = function(n){
+		var self = this;
 		n += 0;
-		return this.slice(n, n + 1);
+		this.each(function(i, ele){
+			if(i != n){
+				self.length --;
+				delete self[i];
+			}
+		})
+		return this;
 	}
 
 	/**
 	 * 取匹配集合第一个
 	 * @returns {any}
 	 */
-	K.S.first = function(){
+	K.first = function(){
 		return $(this[0]);
 	}
 
@@ -523,7 +648,7 @@
 	 * 取匹配集合最后一个
 	 * @returns {any}
 	 */
-	K.S.last = function(){
+	K.last = function(){
 		var n = this.length > 1  ? this.length -1 : 0	;
 		return $(this[n]);
 	}
@@ -533,9 +658,9 @@
 	 * @param selector
 	 * @returns {boolean} 返回 false | true
 	 */
-	K.S.is = function(selector){
+	K.is = function(selector){
 		var s = false;
-		K.map(this,function(ele){
+		$.map(this,function(ele){
 
 			if(isSelectDom(ele, selector)){
 				s = true;
@@ -571,7 +696,7 @@
 	 */
     var dir = function (element, key, selector) {
         var rdom = [];
-		K.map(element,function(el){
+		$.map(element,function(el){
 			while ((el = el[key]) && el.nodeType !== 9) {
 				el.nodeType === 1 && (!selector || isSelectDom(el, selector)) && rdom.push(el);
 			}
@@ -584,11 +709,11 @@
      * @param selector
      * @returns
      */
-    K.S.find = function(selector){
+    K.find = function(selector){
         selector = selector || '*';
-        var rdom = K(), ri =0;
+        var rdom = $(), ri =0;
 		this.map(function(ele){
-			K.map(ele.querySelectorAll(selector), function(el){
+			$.map(ele.querySelectorAll(selector), function(el){
 				rdom[ri] = el;
 				ri ++;
 			});
@@ -601,10 +726,10 @@
      * 直接子级遍历
      * @param selector
      */
-	K.S.children = function(selector){
+	K.children = function(selector){
         selector = selector || '*';
-	    var self = this, rdom = K(), ri =0;
-	    this.map(this, function(ele){
+	    var self = this, rdom = $(), ri =0;
+	    this.map(function(ele){
             self.map(ele.childNodes, function(el){
                 if (isSelectDom(el, selector)) {
                     rdom[ri] = el;
@@ -617,16 +742,31 @@
     }
 
     /**
+     * 遍历所有子级（包括文本节点）
+     */
+    K.childAll = function(){
+        var self = this, rdom = $(), ri =0;
+        this.map(function(ele){
+            self.map(ele.childNodes, function(el){
+                rdom[ri] = el;
+                ri ++;
+            });
+        });
+        rdom.length = ri;
+        return rdom;
+    }
+
+    /**
      * 所有同辈
      * @param selector
      * @returns {*}
      */
-    K.S.siblings = function(selector){
+    K.siblings = function(selector){
         selector = selector || '*';
-        var rdom = K(), ri=0;
+        var rdom = $(), ri=0;
         this.map(this, function(ele){
             //同父级下所有直接子级（不包含自己）
-            K.map(ele.parentNode.childNodes, function(el){
+            $.map(ele.parentNode.childNodes, function(el){
                 if (el != ele && isSelectDom(el, selector)) {
 					rdom[ri] = el;
 					ri ++;
@@ -642,9 +782,9 @@
      * @param selector
      * @returns {*}
      */
-    K.S.parent = function(selector){
+    K.parent = function(selector){
         selector = selector || '*';
-		var rdom = K(), ri=0;
+		var rdom = $(), ri=0;
         this.map(this, function(ele){
             var el = ele.parentNode;
             if (el != ele && isSelectDom(el, selector)) {
@@ -661,9 +801,9 @@
      * @param selector
      * @returns {*}
      */
-    K.S.parents = function(selector){
-		var rdom = K(), ri=0;
-		K.map(dir(this, 'parentNode', selector), function(el){
+    K.parents = function(selector){
+		var rdom = $(), ri=0;
+		$.map(dir(this, 'parentNode', selector), function(el){
 			rdom[ri] = el;
 			ri ++;
 		});
@@ -676,9 +816,9 @@
 	 * @param selector
 	 * @returns {*}
 	 */
-	K.S.prev = function(selector){
+	K.prev = function(selector){
         selector = selector || '*';
-		var rdom = K(), ri=0;
+		var rdom = $(), ri=0;
         this.map(this,function(ele, i){
             if(isSelectDom(ele.previousElementSibling, selector)){
             	rdom[ri] = ele.previousElementSibling;
@@ -694,9 +834,9 @@
 	 * @param selector
 	 * @returns {*}
 	 */
-	K.S.prevAll = function(selector){
-		var rdom = K(), ri=0;
-		K.map(dir(this, 'previousElementSibling', selector), function(el){
+	K.prevAll = function(selector){
+		var rdom = $(), ri=0;
+		$.map(dir(this, 'previousElementSibling', selector), function(el){
 			rdom[ri] = el;
 			ri ++;
 		});
@@ -709,9 +849,9 @@
 	 * @param selector
 	 * @returns {*}
 	 */
-    K.S.next = function(selector){
+    K.next = function(selector){
         selector = selector || '*';
-		var rdom = K(), ri=0;
+		var rdom = $(), ri=0;
         this.map(this,function(ele){
             if(isSelectDom(ele.nextElementSibling, selector)){
 				rdom[ri] = ele.nextElementSibling;
@@ -727,8 +867,8 @@
 	 * @param selector
 	 * @returns {*}
 	 */
-	K.S.nextAll = function(selector){
-		var rdom = K(), ri=0;
+	K.nextAll = function(selector){
+		var rdom = $(), ri=0;
 		this.map(dir(this, 'nextElementSibling', selector),function(ele){
 			rdom[ri] = ele;
 			ri ++;
@@ -751,9 +891,9 @@
 	 * @param callback
 	 * @returns {$}
 	 */
-	K.S.on = function (event, selector, callback) {
+	K.on = function (event, selector, callback) {
 		var self = this;
-		if(K.isFunction(selector) && !callback){
+		if($.isFunction(selector) && !callback){
 			callback = selector;
 			selector = null;
 		}
@@ -772,7 +912,7 @@
 				var func = function(e){
 					//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
 					if(selector){
-						if(!K.inArray(e.target, ele.querySelectorAll(selector))){
+						if(!$.inArray(e.target, ele.querySelectorAll(selector))){
 							return;
 						}
 					}
@@ -806,7 +946,7 @@
 	 * @param callback
 	 * @returns {$}
 	 */
-	K.S.off = function(event, callback) {
+	K.off = function(event, callback) {
 		var self = this, isCall = callback ? 1 : 0;
 		callback = callback ? callback : function(){return false};
 		return self.each(function (_, ele) {
@@ -824,13 +964,13 @@
 					});
 
 					ele.removeEventListener(evn, callback, evnDt.useCapture);
-					K.isEmpty(bindEventData[kid][evn]) && delete bindEventData[kid][evn];
+					$.isEmpty(bindEventData[kid][evn]) && delete bindEventData[kid][evn];
 				}else{
 					ele.removeEventListener(evn, callback, false);
 					ele.removeEventListener(evn, callback, true);
 				}
 			})
-			K.isset(bindEventData[kid]) && K.isEmpty(bindEventData[kid]) && delete bindEventData[kid];
+			$.isset(bindEventData[kid]) && $.isEmpty(bindEventData[kid]) && delete bindEventData[kid];
 
 		});
 	};
@@ -841,11 +981,11 @@
      * @param b
      * @returns {*}
      */
-    K.S.hover = function(a, b){
+    K.hover = function(a, b){
         return this.mouseenter(a).mouseleave(b || a);
     }
 // ====================== 当前或指定url格式化为对象 ====================== //
-    K.S.urls = function(url){
+    K.urls = function(url){
     	var P = {}, u = [];
     	if(url){
 			u = url.match(/(([a-z]+)\:\/\/)?([^:/]*?)(:(\d+)?)([^?]*)([^#]*)(#.*)?/i);
@@ -863,7 +1003,7 @@
 			hash : url ? u[8] : location.hash
 		}
 		if(P.search) {
-			K.each(P.search.substr(1).split("&"),function(k,val){
+			$.each(P.search.substr(1).split("&"),function(k,val){
 				val = val.split('=');
 				P.get[val['0']] = val['1'];
 			});
@@ -873,7 +1013,7 @@
 			//去掉前后/
 			pn = pn.replace(/^\/+/,'');
 			pn = pn.replace(/\/+$/,'');
-			K.each(pn.split("/"),function(k,val){
+			$.each(pn.split("/"),function(k,val){
 				P.paths[k] = val;
 			});
 		}
@@ -886,7 +1026,7 @@
 	 * @param query 参数：xxx=value
 	 * @returns {string}
 	 */
-	K.S.urlsAdd = function(url, query){
+	K.urlsAdd = function(url, query){
     	return url + (url.indexOf('?') !== -1 ? '&' : '?') + query;
 	}
 
@@ -895,13 +1035,13 @@
 	 * @param url
 	 * @returns {*}
 	 */
-	K.S.urlsParam = function(url){
-		if(K.isObject(url) || K.isArray(url)){
+	K.urlsParam = function(url){
+		if($.isObject(url) || $.isArray(url)){
 			var u = [];
-			K.each(url, function(key, value){
+			$.each(url, function(key, value){
 				u.push(encodeURIComponent(key) + "=" + encodeURIComponent(value == null ? "" : value));
 			});
-			url = K.implode('&',u);
+			url = $.implode('&',u);
 		}
 		return url;
 	}
@@ -913,7 +1053,7 @@
 	 * 注：data值不再做任何二次处理，直接放入FormData提交，所以POST时支持文件与参数同时传递，无需其他设置
 	 * @param option
 	 */
-    K.S.ajax = function(option){
+    K.ajax = function(option){
 		var getType = option.contentType ? option.contentType.toUpperCase() : 'GET',
 			headers = option.headers || {},
 			dataType = option.dataType ? option.dataType.toLowerCase() : 'html',
@@ -925,12 +1065,12 @@
 		//JSONP直接创建script插入到dom后回调
 		if(dataType =='jsonp'){
 			//复制回调函数名
-			var copyCallback = K.isFunction(jsonpCallback) ? ('jsonpCallback' + (jsonpID++)) : jsonpCallback;
+			var copyCallback = $.isFunction(jsonpCallback) ? ('jsonpCallback' + (jsonpID++)) : jsonpCallback;
 
 			window[copyCallback] = function () {
 				responseData = arguments;
 			}
-			option.url = K.urlsAdd(option.url,'jsonpCallback='+copyCallback);
+			option.url = $.urlsAdd(option.url,'jsonpCallback='+copyCallback);
 			var script = document.createElement('script');
 			script.src = option.url;
 			script.type = 'text/javascript';
@@ -946,9 +1086,9 @@
 				}
 
 				if(e.type =='error'){
-					K.isFunction(option.error) && option.error.call(this, result);
+					$.isFunction(option.error) && option.error.call(this, result);
 				}else{
-					K.isFunction(option.success) && option.success.call(this, result);
+					$.isFunction(option.success) && option.success.call(this, result);
 				}
 			});
 			document.head.appendChild(script);
@@ -959,12 +1099,12 @@
 
 			if(getType =='POST'){
 				_data = new FormData();
-				K.each(option.data, function(k, val){
+				$.each(option.data, function(k, val){
 					_data.append(k, val);
 				});
 			}else if(getType =='GET'){
-				_data = K.urlsParam(option.data);
-				option.url = K.urlsAdd(option.url, _data);
+				_data = $.urlsParam(option.data);
+				option.url = $.urlsAdd(option.url, _data);
 				_data = '';
 			}
 
@@ -972,7 +1112,7 @@
 
 			A.open(getType, option.url,true);
 
-			K.each(headers, function(k, val){
+			$.each(headers, function(k, val){
 				A.setRequestHeader(k,val);
 			});
 
@@ -988,15 +1128,15 @@
 					}else if (dataType == 'json'){
 						result = /^\s*$/.test(result) ? null : JSON.parse(result);
 					}
-					K.isFunction(option.success) && option.success.call(this, result);
+					$.isFunction(option.success) && option.success.call(this, result);
 				}else{
-					K.isFunction(option.error) && option.error.call(this, result);
+					$.isFunction(option.error) && option.error.call(this, result);
 				}
 			}
 		}
     }
 // ====================== 元素监听 ====================== //
-	K.S.monitor = function(){
+	K.monitor = function(){
     	this.map(function(ele){
 			var value = ele.value;
 			Object.defineProperty(ele, 'value', {
@@ -1013,41 +1153,1256 @@
 			});
 		});
 	}
+
+
+// ====================== 元素监听 ====================== //
+	K.tpl = function(_DATA){
+    	var self = this;
+		//匹配变量正则 {xxx}
+		var variableReg = /\$\{((?:.|\r?\n)+?)\}/g;
+
+
+
+
+
+		/**
+		 * 字符串转为实际变量
+		 * @param variable 变量字符串
+		 * @param isReturnStr 是否只需要返回解析后的变量字符串
+		 * @returns {*}
+		 */
+		function strTovars(variable, isReturnStr){
+
+			var vars, returnStr = variable;
+			if(!variable){
+				returnStr = '_DATA';
+				vars = _DATA;
+			}else {
+				//先从局部变量中匹配
+				try {
+					returnStr = '_DATA.' + variable;
+					vars = eval(returnStr);
+					if(vars == undefined){
+						returnStr = variable;
+						vars = eval(variable);
+					}
+				} catch (e) {
+					returnStr = variable;
+					try {
+						vars = eval(variable);
+					} catch (e) {
+					}
+				}
+			}
+			console.assert(vars !== 'undefined', variable+'变量不存在');
+			return isReturnStr ? returnStr : vars;
+		}
+
+		/**
+		 * 对象变量名解析为格式化字符
+		 * Author: cr180
+		 *
+		 * 如：
+		 * xxx			= [xxx, xxx, '']
+		 * xxx.name 	= [xxx, xxx, name]
+		 * xxx[1].name 	= [xxx, xxx[1], name]
+		 * xxx.list[1]	= [xxx, xxx.list, 1]
+		 * @param {string} vars 需要解析的变量名字符串 xxx.name / xxx[1].name / xxx.list[1]
+		 * @returns {array} [祖先变量名 , 主变量名, 结束变量名]
+		 */
+		function variableNameEx(vars){
+		    if(!vars){
+		        return [];
+            }
+			vars = strTovars(vars.toString(),true);
+			var lk  = vars.indexOf('[');
+			var ld = vars.indexOf('.');
+			var fk = vars.lastIndexOf('[');
+			var fd = vars.lastIndexOf('.');
+			var lastOF = Math.max(fd, fk);
+
+			var ancestor = vars; firstName = vars, lastName = '';
+
+			//提取最后一个键名
+			if(lastOF !== -1){
+				ancestor = strTovars(vars.substr(0, (lk >0 && ld >0 ? Math.min(lk,ld) : Math.max(lk,ld))), true);
+				firstName = vars.substr(0, lastOF);
+
+				//如果最后是[] 则取括号中间的字符 否则取.之后的字符
+				lastName = fk > fd ? vars.substring(lastOF+1, vars.lastIndexOf(']')) : vars.substr(lastOF+1);
+			}
+			return [ancestor, firstName, lastName];
+		}
+
+
+		var Tpc = {
+			E : '', //前台渲染区DOM对象
+			Dom : '', //虚拟节点
+			VDOM : {},
+            VARS : {}, //变量规则替换MAP索引
+			Code : '',
+			init : function(ele){
+
+				this.E = ele;
+				this.def.ths = this;
+                this.VDOM = this.replace().createVDOM(this.Dom);
+
+                this.createDom(this.VDOM);
+                this.pushDom(this.VDOM);
+                this.parseIf(this.VDOM);
+
+			},
+
+            /**
+             * 变量监听函数
+             */
+            def : {
+                ths : null,
+                updIndex : 0,
+                updMap : {},
+				DelEvent : {object:[],func:[]},
+				AddEvent : {object:[],func:[]},
+                /**
+                 * 全局更新函数
+                 * @param inobj this指向
+                 * @param func
+                 */
+                upd : function(inobj, func){
+                    var i = this.updIndex ++;
+                    this.updMap[i] = function(){
+                        return func.apply(inobj, arguments);
+                    }
+                },
+                /**
+                 * 变量监听 虚拟dom引擎TPC2使用
+                 * @param obj
+                 * @param keyName
+                 * @param setFun
+                 * @param getFun
+                 * @private
+                 */
+                set : function(obj, keyName, setFun, getFun){
+                    var ths = this.ths, _ths = this;
+                    if($.isString(obj) && $.isFunction(keyName)){
+                        getFun = !getFun && setFun ? setFun : getFun;
+
+                        setFun = keyName;
+                        if(ths.VARS[obj]){
+                            keyName = ths.VARS[obj][1];
+                            obj = ths.VARS[obj][3];
+
+                        }else {
+                            keyName = '';
+                            var p ='';
+                            obj.replace(/(.*?)(\[(\d+)\]|\.(\w+))$/, function () {
+                                keyName = arguments[4] || arguments[3];
+                                p = arguments[1];
+                            });
+                            ths.VARS[obj] = [p, keyName, strTovars(p)];
+                        }
+
+                        if(!$.isObject(obj) && !$.isArray(obj)){
+                            return;
+                        }
+                    }
+
+                    if(!$.isObject(obj) || !keyName){
+                        return;
+                    }
+
+                    var setTer = Object.getOwnPropertyDescriptor(obj, keyName).set;
+                    var setFunction = function(v){
+                        setTer && setTer(v);
+                        setFun(v);
+                    };
+
+                    var _Svalue = obj[keyName];
+
+                    Object.defineProperty(obj, keyName, {
+                        enumerable: true,
+                        configurable: true,
+                        set : function(v){
+                            if(v === _Svalue){//值相同时不回调函数
+                                return;
+                            }
+                            //回调处理做延迟 以达到值写入成功后再回调
+                            window.setTimeout(function(){
+                                $.loop(_ths.updMap, function(_, fun){
+                                    if(fun(v, _Svalue) !== true){
+                                        delete _ths.updMap[_];
+                                        //debug('删除当前监听回调')
+                                    }
+                                });
+                                setFunction(v);
+                            },0);
+
+
+                            debug('new SET：'+v);
+
+                            _Svalue = v;
+                        },
+                        get : function(v){
+
+                            return _Svalue;
+                        }
+                    });
+                },
+				del : function(obj, func, tothis){
+                	this.DelEvent.object.push(obj);
+					this.DelEvent.func.push(function(){
+						func.call(tothis);
+					});
+				},
+				add : function(obj, func, tothis){
+					this.AddEvent.object.push(obj);
+					this.AddEvent.func.push(function(){
+						func.apply(tothis, arguments);
+					});
+				},
+            },
+            /**
+             * 创建匿名回调函数解析模板实际值
+             * @param evalCode 需要解析的js
+             * @param {object} addVariables 附加回调参数 键名=参数名 键值=回调值
+             */
+            newFunction : function(evalCode, addVariables, tree){
+                if(!evalCode){
+                    return;
+                }
+                var __vkey = addVariables ? Object.keys(addVariables).join(',') : '';
+                var __vValue = addVariables ? Object.values(addVariables) : [];
+                eval('function _Vcall('+__vkey+'){ return '+evalCode+'}');
+                return _Vcall.apply('', __vValue);
+            },
+			//模板语法格式化为符合内部要求的语法
+			replace : function(){
+				var code = this.E.innerHTML;
+				code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksa loop><ksafactor>$1</ksafactor><ksaloopline>');
+				code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksa if><ksafactor>$1</ksafactor>');
+				code = code.replace(/\{(elseif) ([^\\]+?)\}/ig, '</ksa><ksa $1><ksafactor>$2</ksafactor>');
+				code = code.replace(/\{else\}/ig, '</ksa><ksa else>');
+
+
+				code = code.replace(/\{\/if\}/ig, '</ksa></ifscope>');
+				code = code.replace(/\{\/loop\}/ig, '</ksaloopline></ksa>');
+
+				code = code.replace(/\{eval\}/ig, '<ksa eval>');
+				code = code.replace(/\{\/eval\}/ig, '</ksa>');
+				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksa eval>$1</ksa>');
+				this.Code = code;
+				this.Dom = $.dom(this.Code);
+				return this;
+			},
+			createDomLoop : function(ele, tree, eleKey, parentKey){
+            	var ths = this,
+					loopN = 0,
+					farr = $.explode(' ', tree.factor, '');
+
+            	function __defdel(key, dt){
+					//监听 变量被删除
+					ths.def.del(dt, function(){
+						var ts = this,
+							chil = ts.children[key];
+						if(!chil){
+							return;
+						}
+						var num = $.count(this.children),
+							chilnodes = chil.ele._childNodes,
+							length = chilnodes.length;
+						chilnodes.forEach(function(e, i){
+							e = $(e);
+							if(i === length-1){
+								ts.ele = document.createComment('');
+								e.after(ts.ele);
+							}
+							e.remove();
+						})
+						delete ts.children[key]; //删除当前VDOM
+						//如果当前子级删除后为空
+						ts.isEmpty = num === 1;
+					}, tree);
+				}
+
+				farr[0] = strTovars(farr[0]);
+				tree.children = {};
+				$.loop(farr[0], function(k, value, _i1){
+					var d = {};
+					d[farr[1]] = k;
+					d[farr[2]] = value;
+
+					var _n = '_'+_i1;
+					tree.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
+
+					__defdel(_n, value);
+					loopN ++;
+				});
+				//loop为空
+				if(!loopN){
+					tree.isEmpty = true;
+				}
+
+				//监听 子变量添加
+				ths.def.add(farr[0], function(key, dt){
+					var _n = '_'+key;
+					var d = {};
+					d[farr[1]] = key;
+					d[farr[2]] = dt;
+					//找到当前节点最后一个
+					var end;
+
+					if(this.isEmpty){
+						end = this.ele;
+					}else{
+						$.loop(this.children, function(_, e){
+							end = e;
+						});
+						end = end.ele._childNodes[end.ele._childNodes.length -1];
+					}
+
+					this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
+					var dom = ths.createDom([this.children[_n]]);
+
+					$(end).after(dom);
+					if(this.isEmpty){
+						$(end).remove();
+						this.isEmpty = false;
+					}
+					ths.parseIf(this.children[_n].children);
+					__defdel(_n, dt);
+				}, tree);
+			},
+            createVDOM : function(eleList, parentKey, data){
+                parentKey = parentKey ? parentKey+'.children.' : '';
+                var ths = this;
+                var newTree = {};
+                eleList.forEach(function(ele, eleKey){
+                    if(ele.tagName ==='KSAFACTOR' || !$.isDomAll(ele)) {
+                        return ;
+                    }
+                    eleKey = '_'+eleKey;
+                    var tree = {
+                        tag : ele.tagName ? ele.tagName.toLowerCase() : '', //标签名小写 文本节点为空
+                        nodeType: ele.nodeType, //节点类型
+						data : data,
+                        eleKey : parentKey+eleKey,
+                        variables : {}, //当前节点使用的变量值
+                        //返回父级树
+                        parent : function(){
+                            var n = this.eleKey.lastIndexOf('.children.');
+
+                            var a = this.eleKey.substr(0,n);
+                            return ths.__thisObject(a);
+                        },
+                        //返回后一个树
+                        next : function(){
+                            var n = eleKey.lastIndexOf('.');
+                            var a = eleKey.substr(0,n);
+                            var b = eleKey.substr(n+1);
+                            var bn = parseInt(b.substr(1))+1;
+                            return ths.__thisObject((n>0 ? (a + '.') : '') +'_' + bn);
+                        },
+                        //取前一个树
+                        prev : function(){
+                            var n = eleKey.lastIndexOf('.');
+                            var a = eleKey.substr(0,n);
+                            var b = eleKey.substr(n+1);
+                            var bn = parseInt(b.substr(1))-1;
+                            if(bn >=0){
+                                return ths.__thisObject(a + '._' + bn);
+                            }
+                        }
+                    };
+
+                    //文本节点
+                    if(ele.nodeType === 3 || ele.nodeType === 8){
+                        tree.text = ele.nodeValue;
+                        var exp = ths.parseText(tree.text);
+                        if(exp){
+                            //文本节点解析结果
+                            if(exp.parseCode){
+                                tree.parseCode = exp.parseCode;
+                            }
+                            //节点中使用了哪些变量
+                            if(exp.variableList){
+                                tree.variableList = exp.variableList;
+                            }
+                        }
+                    }
+                    //遍历属性名
+                    if (ele.attributes && ele.attributes.length) {
+                        var attrs = {};
+                        $.map(ele.attributes, function (v) {
+                            //判断与循环标签的处理
+                            if($.inArray(v.name, ['if','elseif','else','loop'])){
+                                tree.tag = v.name; //标签名为条件名
+                                if(v.name !='else' && ele.childNodes[0].tagName === 'KSAFACTOR') {//增加判断条件 条件值=第一个子级html
+                                    tree.factor = ele.childNodes[0].innerHTML;
+                                }
+                            }else{
+                                attrs[v.name] = v.value;
+                            }
+                        });
+                        if(Object.keys(attrs).length){
+                            tree.attrs = attrs;
+                        }
+                        attrs = null;
+                    }
+                    //循环节点单独创建VDOM树
+                    if(tree.tag =='loop'){
+                        ths.createDomLoop(ele, tree, eleKey, parentKey);
+
+                    //如果存在子节点则遍历
+                    }else if(ele.childNodes && ele.childNodes.length){
+
+                        tree.children = ths.createVDOM(ele.childNodes, (parentKey+eleKey), data);
+                        //增加取所有子级函数
+                        tree.childrenAll = function(callFun){
+                            var ths = this;
+                            if(!ths.children || !callFun){
+                                return;
+                            }
+                            function f(el){
+                                callFun.call(this, el);
+                                if(el.children){
+                                    $.loop(el.children, function(_, e){
+                                        f(e);
+                                    });
+                                }
+                            }
+                            $.loop(ths.children, function(_, e){
+                                f(e);
+                            });
+                        };
+                    }
+                    newTree[eleKey] = tree;
+                    tree = null;
+                });
+
+                return newTree;
+            },
+            /**
+             * 根据虚拟DOM创建节点
+             * 此环节 变量语法等还未解析
+             */
+            createDom : function(treeList){
+                var ths = this;
+                var Vdom = newFragment();
+                $.loop(treeList,function(_, tree){
+                    var nodeType = tree.nodeType;
+                    var dom;
+                    if(nodeType === 3 || nodeType === 8){
+                        dom = nodeType === 3 ? document.createTextNode(tree.text) : document.createComment(tree.text);
+                        dom._nodeValue = tree.parseCode;
+                        ths.parseNodes(dom, tree);
+                    }else{
+                        if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa','ksaloopline'])) {
+                            dom = newFragment();
+
+                        }else{
+                            dom = document.createElement(tree.tag);
+                            if(tree.attrs){
+                                $.each(tree.attrs, function(k, v){
+                                    dom.setAttribute(k, v);
+                                });
+                            }
+                        }
+                        if(tree.tag === 'loop' && tree.isEmpty){
+							dom = document.createComment('');
+						}else if(tree.children){
+                            var subdom = ths.createDom(tree.children);
+                            dom.appendChild(subdom);
+                        }
+                    }
+
+                    if(dom) {
+						if(dom.childNodes){
+							dom._childNodes = [];
+							dom.childNodes.forEach(function(e){
+								dom._childNodes.push(e);
+							})
+						}
+                        tree.ele = dom;
+                        Vdom.appendChild(dom);
+                    }
+                });
+
+                return Vdom;
+            },
+			/**
+			 * 节点push到前台后 IF节点的处理
+			 * @param treeList
+			 */
+			parseIf : function(treeList){
+            	var ths = this;
+            	function ifCalc(tree){
+					var ifR = false;
+					var deleteEles = [];//待删除节点列表
+					var accordTree; //符合条件的节点
+					if(!tree.comNode) {
+						//创建虚拟节点
+						tree.comNode = document.createComment('');
+					}
+					$.loop(tree.children, function(_, t){
+						var r = false;
+						if(t.tag !='else') {
+							r = ths.newFunction(t.factor, t.data) === true;
+							if(r){
+								ifR = r;
+								if(!accordTree){
+									accordTree = t;
+								}
+							}
+						}
+						//如果是else 并且整个域没有符合的条件 则展示else节点
+						if(t.tag ==='else' && !ifR){
+							r = true;
+						}
+						if(!r){
+							//整理待删除列表 待删除的节点必须是已存在于前台dom中
+							t.ele._childNodes.forEach(function(t1){
+								if(!$.inArray(document.compareDocumentPosition(t1), [35, 37])) {
+									deleteEles.push(t1);
+								}
+							})
+						}
+					});
+
+					//如果整个节点没有符合的条件 则创建一个占位节点
+					if(!ifR && !tree.comNodePush){
+						$(tree.ele._childNodes[0]).before(tree.comNode);
+						tree.ifscopePushDom = [tree.comNode];
+						tree.comNodePush = true;
+					//如果当前条件成立 但节点为占位节点时 用真实节点替换占位节点
+					}else if(ifR && tree.comNodePush){
+						$(tree.comNode).before(accordTree.ele._childNodes).remove();
+						tree.comNodePush = false;
+					//如果当前条件成立 且占位节点不存在 用新节点替换原节点
+					}else if(ifR && !tree.comNodePush){
+						$(deleteEles[0]).before(accordTree.ele._childNodes);
+					}
+
+					deleteEles.forEach(function(e){
+						$(e).remove();
+					});
+
+					return ifR;
+				}
+
+				$.loop(treeList,function(_, tree){
+					if(tree.tag ==='ifscope'){
+						ifCalc(tree);
+						ths.def.upd(tree, function(){
+							ifCalc(tree);
+							return true; //一直监听
+						});
+
+					}else if(tree.children){
+						ths.parseIf(tree.children);
+					}
+				});
+			},
+            /**
+             * 解析节点中的变量
+             *
+             */
+            parseNodes : function(eleList, tree){
+                var ths = this;
+                if(!eleList.forEach){
+                    eleList = [eleList];
+                }
+                eleList.forEach(function(ele){
+                    //文本节点渲染
+                    if((ele.nodeType === 3 || ele.nodeType === 8) && ele._nodeValue){
+                        ele.nodeValue = ths.newFunction(ele._nodeValue, tree.data);
+
+                        $.loop(tree.variableList, function(_, val){
+							ths.def.set(val, function(){
+								ele.nodeValue = ths.newFunction(ele._nodeValue, tree.data);
+							});
+						});
+						$.loop(tree.data, function(_, val){
+							$.loop(val, function(kn){
+								ths.def.set(val, kn,function(){
+									ele.nodeValue = ths.newFunction(ele._nodeValue, tree.data);
+								});
+							});
+						});
+                    }
+                    if(ele.childNodes){
+                        ths.parseNodes(ele.childNodes, tree.data);
+                    }
+                });
+            },
+            /**
+             * 将虚拟DOM写入到前台DOM
+             */
+            pushDom : function(){
+                var E = $(this.E);
+                E.empty();
+                var Vdom = newFragment();
+                $.loop(this.VDOM, function(_, e){
+                    Vdom.appendChild(e.ele);
+                });
+                E.html(Vdom);
+            },
+			/**
+			 * DOM树 键名字符串转对象
+			 * @param key
+			 * @returns {*}
+			 * @private
+			 */
+			__thisObject : function(key){
+				var r;
+				try {
+					r = eval('this.VDOM.'+key);
+				}catch (e) {
+
+				}
+				return r;
+			},
+
+			/**
+			 * 初次渲染虚拟DOM树
+			 * if loop条件处理
+			 */
+			renderTree : function(){
+				var ths = this;
+				function __eachtree(tree){
+				    //文本节点渲染
+					if(tree.nodeType === 3 && tree.parseCode){
+						tree.text = ths.newFunction(tree.parseCode, tree.variables);
+                        //监听变量
+                        if(tree.variables && tree.variables.value) {
+                            $.each(tree.variables, function(_key, _value){
+                                if($.isObject(_value)){
+                                    $.each(_value, function(_k, _v){
+                                        ths.def.set(_value, _k, function (v) {
+                                            if(tree.nodeType === 3 && tree.ele) {
+                                                tree.ele.nodeValue = ths.newFunction(tree.parseCode, tree.variables);
+                                            }
+                                        });
+                                    });
+                                }
+                            });
+                        }
+                        if(tree.variableList) {
+                            $.each(tree.variableList, function (_, _kname) {
+                                ths.def.set(_kname, function (v) {
+                                    if (tree.nodeType === 3 && tree.ele) {
+                                        tree.ele.nodeValue = ths.newFunction(tree.parseCode, tree.variables);
+                                    }
+                                });
+                            });
+                        }
+					}
+					if($.inArray(tree.tag,['if','elseif']) && tree.factor){
+						tree.factorResult = ths.newFunction(tree.factor, tree.variables);
+						//初次渲染 如果结果为true 则通知父级
+						if(tree.factorResult === true && !tree.parent().renderTree){
+						    tree.parent().renderTree = tree;
+                        }
+					}
+
+					if(tree.children){
+						$.each(tree.children, function(key, value){
+							__eachtree(value);
+						});
+					}
+				}
+
+				$.each(this.VDOM, function(key, value){
+					__eachtree(value);
+				});
+				return this;
+			},
+
+            parseTextIndex : {}, //parseText变量缓存map
+			/**
+			 * 解析文本节点内容
+			 * @param text
+			 * @returns {{expression: string, tokens: []}}
+			 */
+			parseText : function  (text) {
+			    var ths = this;
+			    if(!text.trim()){
+			        return;
+                }
+			    if(ths.parseTextIndex[text]){
+			        return ths.parseTextIndex[text];
+                }
+				var tagRE = variableReg;
+				var parseCode = [];
+				var variableList = [];
+				var lastIndex = tagRE.lastIndex = 0;
+				var match, index;
+				while ((match = tagRE.exec(text))) {
+					index = match.index;
+					if (index > lastIndex) {
+						parseCode.push('"' + text.slice(lastIndex, index) + '"');
+					}
+                    var kname = strTovars(match[1].trim(),true);
+					parseCode.push(kname);
+					variableList.push(kname);
+					lastIndex = index + match[0].length;
+
+				}
+				parseCode = parseCode.length ? parseCode.join('+') : null;
+				variableList = variableList.length ? variableList : null;
+                ths.parseTextIndex[text] = {parseCode:parseCode, variableList:variableList};
+                return ths.parseTextIndex[text];
+			},
+		};
+
+        //初始化模板语法
+        this.map(function(ele){
+            Tpc.init(ele);
+        });
+
+
+        return {
+            data : _DATA,
+            VDOM : Tpc.VDOM,
+            del : function(obj){
+                var evn = Tpc.def.DelEvent;
+                evn.object.forEach(function(o, key){
+                    if(o === obj){
+                        evn.func[key]();
+                    }
+                });
+                delete obj;
+            },
+            add : function(obj, addkey, data){
+                obj[addkey] = data;
+                var evn = Tpc.def.AddEvent;
+                evn.object.forEach(function(o, key){
+                    if(o === obj){
+                        evn.func[key](addkey, data);
+                    }
+                });
+            }
+        };
+
+        //变量监听对象
+		var _TPLdefPCallFun = {
+			ADDC : {}, //添加值时待监听链表
+			SETC : {}, //写值时待监听链表 key=需要拦截的变量名 value=变更回调
+			DELC : {}, //删除时待监听链表
+			GETC : {}, //获取时待监听链表,
+			GUPDC : {}, //更新时待监听链表
+			globalUpdateUUID : 0,
+			add : function(key, fun){
+				this.ADDC[key] = this.ADDC[key] || [];
+				this.ADDC[key].push(fun);
+			},
+			set : function(key, fun){
+				this.SETC[key] = this.SETC[key] || [];
+				this.SETC[key].push(fun);
+			},
+			get : function(key, fun){
+				this.GETC[key] = this.GETC[key] || [];
+				this.GETC[key].push(fun);
+			},
+			delete : function(key, fun){
+				this.DELC[key] = this.DELC[key] || [];
+				this.DELC[key].push(fun);
+			},
+			globalUpdate : function(setObj, fun){
+				var i = this.globalUpdateUUID ++;
+				this.GUPDC[i] = function(){
+					return fun.call(setObj, arguments);
+				}
+				return i;
+			},
+			clear : function(key){
+				delete this.GUPDC[key];
+				return this;
+			}
+		};
+
+
+        var Tpc1 = {
+            el : null, //前台渲染区dom对象
+            dom : newFragment(), //准备渲染到前台的节点
+            VDOM : {}, //虚拟dom树 virtualDOM tree
+            VDOMindex : 0,
+            init : function(el){
+                this.el = el; //el变量传递
+                this.format().treeInit();
+                return this;
+            },
+
+            //模板语法格式化为符合内部要求的语法
+            format : function(){
+                var $this = this;
+                var code = this.el.innerHTML;
+                code = code.replace(/\{(if|loop) ([^\\]+?)\}/ig, '<ksascope><ksa $1><ksafactor>$2</ksafactor>');
+                code = code.replace(/\{(elseif) ([^\\]+?)\}/ig, '</ksa><ksa $1><ksafactor>$2</ksafactor>');
+                code = code.replace(/\{else\}/ig, '</ksa><ksa else>');
+
+                code = code.replace(/\{eval\}/ig, '<ksa eval>');
+                code = code.replace(/\{\/eval\}/ig, '</ksa>');
+                code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksa eval>$1</ksa>');
+                code = code.replace(/\{\/(if|loop)\}/ig, '</ksa></ksascope>');
+                $(code).map(function(e){
+                    $this.dom.appendChild(e);
+                });
+                return this;
+            },
+
+            //创建虚拟节点
+            treeInit : function(){
+                var $this = this;
+
+                //遍历虚拟节点
+                $.map(this.dom.childNodes, function(ele){
+                    $this.renderElement(ele);
+                });
+                //清空前台dom 并重新填充
+                $(this.el).empty().html($this.dom);
+
+                return this;
+            },
+            //遍历虚拟节点 填充到前台并侦听数据变化
+            renderElement : function(ele, dt){
+                ele = $(ele);
+                var $this = this,
+                    tps = ele[0].nodeType;
+
+                if(tps ===1){
+
+                    //if节点整理
+                    $this.loopList(ele);
+
+
+                    ele.childAll().each(function(_, el){
+                        $this.renderElement(el, dt);
+                    });
+
+                }else if(tps ===3){
+                    $this.analyze(ele, dt);
+                }
+                return ele[0];
+            },
+            loopList : function(ele, tpl){
+                ele = $(ele);
+                if(ele[0].nodeType == 1 && ele.isAttr('loop')) {
+                    var $this = this;
+                    var loop = $.explode(' ', ele.children('ksafactor').html(), '');
+                    ele.children('ksafactor').remove();
+
+                    tpl = tpl ? tpl : ele.html().replace("'", "\'");
+
+                    var dtStr = loop[0],
+                        Kk = loop[2] ? loop[1] : 'key',
+                        Vv = loop[2] ? loop[2] : loop[1];
+
+
+                    var dt = strTovars(dtStr);
+                    ele.empty();
+
+
+                    /**
+                     * 根据数据创建一个loop子节点
+                     * @param k 键名
+                     * @param v 值
+                     * @returns {*|ChildNode}
+                     * @private
+                     */
+					function _newloopNode(k, v){
+						var rek = dtStr + ($.isNumber(k) ? ('[' + k + ']') : ('.' + k));
+						var code = tpl.replace(new RegExp('\\${' + Vv, 'g'), '${' + rek);
+						code = code.replace(new RegExp('\\${' + Kk + '}'), k);
+						return $.dom('<ksaloopline>'+code+'</ksaloopline>')[0];
+					}
+
+					//根据数据组合dom
+					var DomChins = {};
+					$.each(dt, function (k, v) {
+						DomChins[k] = _newloopNode(k,v);
+					});
+
+
+					function _loopNodeRender(k, el){
+						var dk = ($.isNumber(k) ? ('[' + k + ']') : ('.' + k)); //当前loop子键名
+						var rek = dtStr + dk; //当前loop数据主键名
+						var lineCode = ('var ' + Vv + ' = ' + strTovars(dtStr, true) + dk+';');
+
+						$this.analyze(el);
+						$this.renderIF(el, lineCode);
+
+						var insertDom = [];
+						el.childNodes.forEach(function(e){
+							insertDom.push(e);
+						});
+
+						//当前loop变量被删除监控
+						_TPLdefPCallFun.delete(rek, function(){
+							insertDom.forEach(function(e){
+								$(e).remove();
+							})
+						});
+						DomChins[k] = insertDom;
+						return insertDom;
+					}
+					$.each(DomChins, function(k, el){
+						ele.append(_loopNodeRender(k, el));
+					});
+					ele.after(ele.childAll()).remove();
+					//主变量写入检测
+					_TPLdefPCallFun.add(dtStr, function(){
+						//遍历所有list数据找出差异并加入到dom中
+						var fastK;
+						$.each(dt, function(k, val){
+							//找到差异项 并在前一个loop循环最后插入新节点
+							if(!DomChins[k]){
+								var dms = _loopNodeRender(k, _newloopNode(k, val));
+								var indexDom = DomChins[fastK].pop();
+								$(indexDom).after(dms);
+							}
+							fastK = k;
+						});
+					});
+				}
+				return this;
+			},
+			renderIF : function(element, evalCode){
+    	    	var $this = this;
+				var R = {
+					//把初始化的节点全部转为占位节点
+					def2comment : function(doms){
+						var ths = this;
+
+						$(doms).each(function(_, ele){
+							var eles = $(ele);
+							if(ele.nodeType == 1 && eles.isAttr('if elseif else')){
+
+								var childIF = eles.children('ksafactor');
+								var comnode = document.createComment('');
+								comnode._KSAIF = {
+									mark : eles.isAttr('if') ? 'if' : (eles.isAttr('elseif') ? 'elseif' : 'else' ), //判断类型
+									ifcode : childIF.html(), //条件判断源码
+									return : false, //条件解析结果
+									eval : '(function(e){ '+evalCode+' e._KSAIF.return = eval(e._KSAIF.ifcode);})', //封装解析语法到属性中
+									childs : [], //子节点
+									isPush : false, //子节点是否已经添加到dom中
+									scope : [] //当前域下所有节点 包含自己
+								};
+								childIF.remove();
+								ele.childNodes.forEach(function(e){
+									comnode._KSAIF.childs.push(e);
+								});
+								eles.after(comnode).remove();
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.def2comment(e);
+								});
+							}
+						});
+						return this;
+					},
+					//上下级关系绑定 此环节ksascope标签还存在
+					sliblings : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							if(ele._KSAIF){
+								//所有作用域中的if节点 包含自己
+								ele.parentNode.childNodes.forEach(function(e){
+									ele._KSAIF.scope.push(e);
+								});
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.sliblings(e);
+								})
+							}
+						});
+						return this;
+					},
+					//移除作用域标签
+					removeScope : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							if(ele.tagName ==='KSASCOPE'){
+								$(ele).after(ele.childNodes).remove();
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.removeScope(e);
+								})
+							}
+						});
+						return this;
+					},
+					render : function(doms){
+						var ths = this;
+						$(doms).each(function(_, ele){
+							var eles = $(ele);
+
+							if(ele._KSAIF && ele.nodeType ===8){
+
+								//解析if语句结果
+								ele._KSAIF.eval && eval(ele._KSAIF.eval).call(ele, ele);
+
+								var scopeIsTrue = false; //当前域下是否有结果
+								//如果当前if结果为真 通知域下所有节点当前结果
+								ele._KSAIF.scope.forEach(function(e){
+									//不处理自己节点
+									if(ele === e){
+										return;
+									}
+									//如果当前节点不是else 并且判断结果为true 则同域下所有节点为false
+									if(ele._KSAIF.return === true){
+										e._KSAIF.return = false;
+									}
+									if(e._KSAIF.return === true){
+										scopeIsTrue = true;
+									}
+								});
+
+								//如果当前节点是else 并且同域下没有true 则默认为true
+								if(ele._KSAIF.mark ==='else' && scopeIsTrue === false){
+									ele._KSAIF.return = true;
+								}
+
+								//如果条件为真 并且节点存在于dom中
+								if(ele._KSAIF.return === true){
+									if(!ele._KSAIF.isPush) {
+										//用子节点替换当前
+										eles.after(ele._KSAIF.childs).remove();
+										ele._KSAIF.isPush = true; //属性标注为已push到DOM
+										if (ele._KSAIF.mark !== 'else') {
+											//全局检测 如果任意变量发生变化，则重新解析当前域
+											_TPLdefPCallFun.globalUpdate(ele, function () {
+												if (this._KSAIF.mark === 'else') {
+													return;
+												}
+												var ts = this, childlength = ts._KSAIF.childs.length;
+												ts._KSAIF.eval && eval(ts._KSAIF.eval).call(ts, ts);
+												//如果编译结果非真 则删除所有节点
+												if (ts._KSAIF.return === false) {
+													ts._KSAIF.childs.forEach(function (e, i) {
+														if (!$.inArray(document.compareDocumentPosition(e), [35, 37])) {
+															//在最后一个加入占位节点 并且标注为未push到DOM
+															if (i == childlength - 1) {
+																$(e).after(ts);
+																ts._KSAIF.isPush = false;
+															}
+															e.remove();
+														}
+													});
+													ths.render(ts._KSAIF.scope);
+												}
+												return true;
+											});
+										}
+									}
+								}
+							//如果是元素节点则一直渲染子节点
+							}else if(ele.nodeType == 1){
+								ele.childNodes.forEach(function(e){
+									ths.render(e);
+								})
+							}
+						});
+
+						return this;
+					}
+				};
+
+				R.def2comment(element).sliblings(element).removeScope(element).render(element);
+
+			},
+            //解析模板
+            analyze : function(element, isDefPcall){
+    	    	var $this = this;
+
+				//此处只解析文本节点中的变量
+				$(element).each(function(_, ele){
+					var eles = $(ele);
+    	    		var nodeType = ele.nodeType;
+
+					//递归解析子级
+					if(nodeType === 1) {
+						eles.childAll().each(function (_i, childel) {
+							$this.analyze(childel);
+						});
+
+					//文本节点解析
+					}else if(nodeType === 3){
+
+						var tcode = ele._KSATPL || ele.nodeValue;
+						//节点增加_KSATPL属性 用于数据变更时的二次渲染
+						if(tcode && variableReg.test(tcode)){
+							ele._KSATPL = tcode;
+						}
+
+						var varsChain = {};
+						//字符串变量转换为实际变量值
+						tcode = tcode.replace(variableReg, function (_vs) {
+							var _vsK = _vs.trim().replace(/^\${/g, '').replace(/}$/g, '');
+							varsChain[_vsK] = _vsK;
+
+							_vs = strTovars(_vsK);
+							return _vs === undefined ? '' : _vs;
+						});
+						eles.nodeValue(tcode);
+
+						//如果不是监听事件回调的渲染 则添加监听事件
+						if(!isDefPcall){
+							//当前节点所有使用到的变量 添加侦听事件，如果变量有更新 则同时更新dom
+							$.each(varsChain, function(keys){
+								_TPLdefPCallFun.set(keys, function(val){
+									$this.analyze(ele, true);
+								});
+							});
+						}
+					}
+    	    		return ele;
+				});
+
+
+            },
+		};
+
+
+
+
+
+    	//拦截变量 Object.defineProperty
+		$.each(_TPLdefPCallFun.SETC, function(vars, callfun){
+			var varsKeys = variableNameEx(vars);
+
+			var parentObj = strTovars(varsKeys[1]);
+			//debug('监听：'+varsKeys[1] +' = '+ varsKeys[2]);
+
+			if(!$.isObject(parentObj) && !$.isArray(parentObj)){
+				return;
+			}
+
+			var value = parentObj[varsKeys[2]];
+
+			Object.defineProperty(parentObj, varsKeys[2], {
+				enumerable: true,
+				configurable: true,
+				set : function(v){
+					if(v === value){//值相同时不回调函数
+						return;
+					}
+					//回调处理做延迟 以达到值写入成功后再回调
+					window.setTimeout(function(){
+						$.each(_TPLdefPCallFun.GUPDC, function(_, fun){
+							if(fun(v, value, varsKeys[1], varsKeys[2]) !== true){
+								delete _TPLdefPCallFun.GUPDC[_];
+								//debug('删除当前监听回调')
+							}
+						});
+
+						callfun.forEach(function(cfval){
+							cfval(v, value, varsKeys[1], varsKeys[2]);
+						});
+					},0);
+
+
+					debug('defineProperty SET：'+v);
+
+					value = v;
+				},
+				get : function(v){
+
+					return value;
+				}
+			});
+		});
+
+		return {
+			add : function(key, value){
+				var kys = variableNameEx(key);
+				var vars = strTovars(key, 1);
+				eval('(function(v){'+vars+' = v;})').call(null,value);
+				if(_TPLdefPCallFun.ADDC){
+					$.each(_TPLdefPCallFun.ADDC, function(_k, callfun){
+						if(_k == kys[1]){
+							callfun.forEach(function(cfval){
+								cfval();
+							});
+						}
+					});
+				}
+			},
+			delete : function(key){
+				var $this = this;
+				var vars = strTovars(key);
+				var delname = '_DATA'+($.isNumber(key) ? '['+key+']' : '.'+key);
+
+				if($.isObject(vars)){
+					$.each(vars, function(k, _){
+						k = key + ($.isNumber(k) ? '['+k+']' : '.'+k);
+						$this.delete(k);
+					});
+				}
+				if(_TPLdefPCallFun.SETC){
+					$.each(_TPLdefPCallFun.SETC, function(_k, callfun){
+						if(_k == key){
+							callfun.forEach(function(cfval){
+								cfval('');
+							});
+						}
+					});
+				}
+
+				if(_TPLdefPCallFun.DELC[key]){
+					debug('删除：'+key);
+					$.each(_TPLdefPCallFun.DELC[key], function(_, callfun){
+						callfun();
+					});
+				}
+				eval('('+delname+' = "")');
+
+			}
+		};
+
+	}
+
 // ====================== 判断与重写函数类 ====================== //
-	K.S.isWindow = function isWindow(obj) {
+	K.isWindow = function isWindow(obj) {
 		return obj != null && obj === obj.window;
 	};
 
-    K.S.isDocument = function(obj){
+    K.isDocument = function(obj){
         return obj != null && obj.nodeType == obj.DOCUMENT_NODE;
     }
 
-	K.S.isArray = function(){
+	K.isArray = function(){
 		return v && v.constructor == Array;
 	}
-	K.S.isset = function(key, str){
+
+	/**
+	 * 模拟php isset
+	 * @param key
+	 * @param str 指定需要检测的字符串 可选
+	 * @returns {boolean}
+	 */
+	K.isset = function(key, str){
         if(str !== undefined){
-            return key.indexOf(str) === -1 ? false : true;
+            return key.indexOf(str) === -1;
         }else{
             return typeof(key) !== 'undefined';
         }
 	}
-	K.S.isTrue = function(v) {
+	K.isTrue = function(v) {
 		return v === true;
 	}
-	K.S.isFalse = function(v) {
+	K.isFalse = function(v) {
 		return v === false;
 	}
-	K.S.isArray = function(v){
+	K.isArray = function(v){
 		return v && v.constructor == Array;
 	}
-    K.S.isArrayLike = function(obj) {
+    K.isArrayLike = function(obj) {
 
         // Support: real iOS 8.2 only (not reproducible in simulator)
         // `in` check used to prevent JIT error (gh-2145)
         // hasOwn isn't used here due to false negatives
         // regarding Nodelist length in IE
-		if (K.isFunction(obj) || K.isWindow(obj) || K.isString(obj)) {
+		if ($.isFunction(obj) || $.isWindow(obj) || $.isString(obj)) {
 			return false;
 		}
 
@@ -1056,35 +2411,35 @@
         return type === "array" || length === 0 ||
             typeof length === "number" && length > 0 && (length - 1) in obj;
     };
-	K.S.isNumber = function(v){
-		return v && in_array(typeof(v),['number','string']) && /^-?[0-9]+\.?[0-9]+$/.test(v.toString());
+	K.isNumber = function(v){
+		return v && /^[0-9]+$/.test(v.toString());
 	}
 
-	K.S.isBool = function(v){
+	K.isBool = function(v){
 		return typeof(v) === 'boolean';
 	}
 
-	K.S.isObject = function(v){
+	K.isObject = function(v){
 		return v && typeof(v) === 'object';
 	}
 
-	K.S.isObjectPlain = function(v) {
-		return K.isObject(v) && !K.isWindow(v) && Object.getPrototypeOf(v) === Object.prototype;
+	K.isObjectPlain = function(v) {
+		return $.isObject(v) && !$.isWindow(v) && Object.getPrototypeOf(v) === Object.prototype;
 	}
 
-	K.S.isString = function(v){
+	K.isString = function(v){
 		return typeof(v) === 'string';
 	}
-	K.S.isFunction = function(v){
+	K.isFunction = function(v){
 		return v && typeof(v) === 'function';
 	}
 
-	K.S.isWindow = function(v) {
+	K.isWindow = function(v) {
 		return v != null && v === v.window;
 	}
 
-	K.S.isEmpty = function(v=[]){
-		if(K.isObject(v) || K.isArray(v)){
+	K.isEmpty = function(v=[]){
+		if($.isObject(v) || $.isArray(v)){
 			for(var s in v) {
 				if(v !== undefined){
 					return false;
@@ -1095,31 +2450,34 @@
 			return v === '' || v === 0 || v ==='0' || v === false || v === null || v === undefined;
 		}
 	}
+	K.isDomAll = function(dom){
+		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList
+	}
 
-	K.S.isNull = function(v){
+	K.isNull = function(v){
 		return v === null;
 	}
-	K.S.inArray = function(val,dt, rkey){
+	K.inArray = function(val,dt, rkey){
 		var S = false;
-		K.each(dt,function(k,v){
+		$.each(dt,function(k,v){
 			if(val == v){
 				S = rkey ? k : true;
 			}
 		});
 		return S;
 	}
-	K.S.countArray = function(dt){
+	K.count = function(dt){
 		var S = 0;
-		K.each(dt,function(){
+		$.each(dt,function(){
 			S ++;
 		});
 		return S;
 	}
-	K.S.arrayMerge = function(){
-		var arr = arguments[0];
-		K.each(arguments, function(key, value){
+	K.arrayMerge = function(){
+		var arr = arguments[0] || {};
+		$.each(arguments, function(key, value){
 			if(key > 0){
-				K.each(value,function(k, val){
+				$.each(value,function(k, val){
 					arr[k] = val;
 				});
 			}
@@ -1134,12 +2492,12 @@
 	 * @param notemp 需要排除的值
 	 * @returns {[]}
 	 */
-	K.S.explode = function(ft, str, notemp){
+	K.explode = function(ft, str, notemp){
 		str = ft && str ? str.toString().split(ft) : [];
 		//如果需要排除空值
-		if(K.isset(notemp)){
+		if($.isset(notemp)){
 			var news = [], i =0;
-			K.each(str, function(_, v){
+			$.each(str, function(_, v){
 				if(v != notemp){
 					news[i] = v;
 					i ++;
@@ -1149,7 +2507,7 @@
 		}
 		return str;
 	}
-	K.S.implode = function(n, arr){
+	K.implode = function(n, arr){
 		var s = '', str = '';
 		for(k in arr){
 			str += s+arr[k];
@@ -1157,30 +2515,38 @@
 		}
 		return str;
 	}
-	K.S.unset = function(dt,keys){
-		keys = K.explode(' ', keys);
+	K.unset = function(dt,keys){
+		keys = $.explode(' ', keys);
 		var newDt = {};
-		K.each(dt,function(k, v){
-			if(!K.inArray(k,keys)){
+		$.each(dt,function(k, v){
+			if(!$.inArray(k,keys)){
 				newDt[k] = v;
 			}
 		});
-		if(K.isArray(dt)){
+		if($.isArray(dt)){
 			newDt = Array.from(newDt);
 		}
 		return newDt;
 	}
 
-	K.each(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (i, name) {
-		K.S[name] = function(func, fn) {
+    K.trim = function(str, char){
+        str = str.toString();
+        if(!char){
+            str = str.replace(new RegExp('^\\'+char+'+', 'g'),'');
+            str = str.replace(new RegExp('\\'+char+'+$', 'g'),'')
+        }else{
+            str = str.trim();
+        }
+        return str;
+    }
+
+	K.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (i, name) {
+		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};
 	});
 	
-	window.KSA = window.$ = K;
-
-
-
+	window.KSA = window.$ = $;
 
 
 	/**
@@ -1191,5 +2557,5 @@
 			return $;
 		});
 	}
-	return K;
+	return $;
 })(document);

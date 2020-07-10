@@ -35,12 +35,7 @@ function debugTime(key){
 	function createDom(code){
 		//创建虚拟dom并写入字符串
 		dom = document.createRange().createContextualFragment(code);
-		//返回虚拟dom中生成的节点
-		var doms = [];
-		dom.childNodes.forEach(function(ele){
-			doms.push(ele);
-		});
-		return doms;
+		return [].slice.call(dom.childNodes);
 	}
 
 	/**
@@ -540,12 +535,19 @@ function debugTime(key){
      * @param {func} 每次循环的函数 function(key,value){...}
      */
     K.loop = function(dt,fun){
-        var val, i=0;
-        for(var k in dt){
-            val = dt[k];
-            fun(k,val,i);
-            i++;
-        }
+    	if($.isArray(dt)){
+			for(i=0;i<dt.length;i++){
+				val = dt[i];
+				fun(i, dt[i] ,i);
+			}
+		}else{
+			var val, i=0;
+			for(var k in dt){
+				val = dt[k];
+				fun(k,val,i);
+				i++;
+			}
+		}
     }
 
 	/**
@@ -903,7 +905,7 @@ function debugTime(key){
 			var kid = KID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
 
-			event.split(/\s/).forEach(function (evn) {
+			$.loop(event.split(/\s/), function (_, evn) {
 				if (evn == 'ready'){
 					return $(document).ready(callback);
 				}
@@ -951,7 +953,7 @@ function debugTime(key){
 		callback = callback ? callback : function(){return false};
 		return self.each(function (_, ele) {
 			var kid = KID(ele);
-			event.split(/\s/).forEach(function (evn) {
+			$.loop(event.split(/\s/), function (_, evn) {
 				var evnDt = bindEventData[kid] && bindEventData[kid][evn] ? bindEventData[kid][evn] : null;
 
 				evn = evn.replace(/\..*/,'');
@@ -1136,24 +1138,136 @@ function debugTime(key){
 		}
     }
 // ====================== 元素监听 ====================== //
-	K.monitor = function(){
-    	this.map(function(ele){
-			var value = ele.value;
-			Object.defineProperty(ele, 'value', {
-				enumerable: true,
-				configurable: true,
-				set : function(v){
-					value = v;
-					debug(value);
-				},
-				get : function(v){
 
-					return value;
-				}
+	/**
+	 * 对象变量名分割为主变量名 索引名
+	 * 例：
+	 * data.user[1] = [data.user, 1]
+	 * data.user = [data, user]
+	 * @param kname 需要处理的变量名
+	 * @returns {[string, string]}
+	 */
+	K.keyNameMap = {};
+	K.keyName = function(kname){
+		if(!this.keyNameMap[kname]) {
+			var keys = '', p = '';
+			kname.replace(/(.*?)(\[(\d+)\]|\.(\w+))$/, function () {
+				keys = arguments[4] || arguments[3];
+				p = arguments[1];
 			});
-		});
+			this.keyNameMap[kname] = [p, keys];
+		}
+		return this.keyNameMap[kname];
 	}
 
+	/**
+	 * 变量监听函数
+	 */
+	K.def = function(){
+		return {
+			ths : null,
+			updIndex : 0,
+			updMap : {},
+			DelEvent : {object:[],func:[]},
+			AddEvent : {object:[],func:[]},
+			/**
+			 * 全局更新函数
+			 * @param inobj this指向
+			 * @param func
+			 */
+			upd : function(inobj, func){
+				var i = this.updIndex ++;
+				this.updMap[i] = function(){
+					return func.apply(inobj, arguments);
+				}
+			},
+			/**
+			 * 变量监听 虚拟dom引擎TPC2使用
+			 * @param obj
+			 * @param keyName
+			 * @param setFun
+			 * @param getFun
+			 * @private
+			 */
+			set : function(obj, keyName, setFun, getFun){
+				var ths = this;
+				if(!$.isObject(obj) || !keyName || !setFun){
+					return;
+				}
+
+				var setTer = Object.getOwnPropertyDescriptor(obj, keyName).set;
+				var setFunction = function(v){
+					setTer && setTer(v);
+					setFun(v);
+				};
+
+
+				try {
+					var _Svalue = obj[keyName];
+					Object.defineProperty(obj, keyName, {
+						enumerable: true,
+						configurable: true,
+						set : function(v){
+							if(v === _Svalue){//值相同时不回调函数
+								return;
+							}
+							//回调处理做延迟 以达到值写入成功后再回调
+							window.setTimeout(function(){
+								$.loop(ths.updMap, function(_, fun){
+									if(fun(v, _Svalue) !== true){
+										delete ths.updMap[_];
+										//debug('删除当前监听回调')
+									}
+								});
+								setFunction(v);
+							},0);
+
+							_Svalue = v;
+						},
+						get : function(v){
+							return _Svalue;
+						}
+					});
+				}catch (e) {
+
+				}
+
+			},
+			del : function(obj, func, tothis){
+				this.DelEvent.object.push(obj);
+				this.DelEvent.func.push(function(){
+					func.call(tothis);
+				});
+			},
+			add : function(obj, func, tothis){
+				this.AddEvent.object.push(obj);
+				this.AddEvent.func.push(function(){
+					func.apply(tothis, arguments);
+				});
+			},
+		}
+	}
+
+	/**
+	 * 创建匿名回调函数解析模板实际值
+	 * @param evalCode 需要解析的js
+	 * @param {object} addVariables 附加回调参数 键名=参数名 键值=回调值
+	 */
+	K.eval = function(evalCode, addVariables){
+		if(!evalCode){
+			return;
+		}
+		var __vkey = addVariables ? Object.keys(addVariables).join(',') : '';
+		var __vValue = addVariables ? Object.values(addVariables) : [];
+		eval('function _Vcall('+__vkey+'){ return '+evalCode+'}');
+		var R;
+		try {
+			R = _Vcall.apply('', __vValue);
+		}catch (e) {
+			
+		}
+		return R;
+	}
 
 // ====================== 元素监听 ====================== //
 	K.tpl = function(_DATA){
@@ -1164,39 +1278,6 @@ function debugTime(key){
 
 
 
-
-		/**
-		 * 字符串转为实际变量
-		 * @param variable 变量字符串
-		 * @param isReturnStr 是否只需要返回解析后的变量字符串
-		 * @returns {*}
-		 */
-		function strTovars(variable, isReturnStr){
-
-			var vars, returnStr = variable;
-			if(!variable){
-				returnStr = '_DATA';
-				vars = _DATA;
-			}else {
-				//先从局部变量中匹配
-				try {
-					returnStr = '_DATA.' + variable;
-					vars = eval(returnStr);
-					if(vars == undefined){
-						returnStr = variable;
-						vars = eval(variable);
-					}
-				} catch (e) {
-					returnStr = variable;
-					try {
-						vars = eval(variable);
-					} catch (e) {
-					}
-				}
-			}
-			console.assert(vars !== 'undefined', variable+'变量不存在');
-			return isReturnStr ? returnStr : vars;
-		}
 
 		/**
 		 * 对象变量名解析为格式化字符
@@ -1237,142 +1318,74 @@ function debugTime(key){
 
 		var Tpc = {
 			E : '', //前台渲染区DOM对象
+			data : _DATA,
 			Dom : '', //虚拟节点
 			VDOM : {},
-            VARS : {}, //变量规则替换MAP索引
-			Code : '',
 			init : function(ele){
 
 				this.E = ele;
 				this.def.ths = this;
                 this.VDOM = this.replace().createVDOM(this.Dom);
+                delete this.Dom;
 
                 this.createDom(this.VDOM);
                 this.pushDom(this.VDOM);
                 this.parseIf(this.VDOM);
 
+
 			},
+			def : self.def(),
+			/**
+			 * 模板变量转为实际变量
+			 * @param variable 变量字符串
+			 * @param isReturnStr 是否只需要返回解析后的变量字符串
+			 * @returns {*}
+			 */
+			strTovarsMap : {},
+			strTovars : function(variable, isReturnStr){
+				var ths = this;
+				var vars, returnStr = variable;
+				var map = this.strTovarsMap;
+				if(variable && map[variable]){
+					returnStr = map[variable][0];
+					vars = map[variable][1];
+				}else {
 
-            /**
-             * 变量监听函数
-             */
-            def : {
-                ths : null,
-                updIndex : 0,
-                updMap : {},
-				DelEvent : {object:[],func:[]},
-				AddEvent : {object:[],func:[]},
-                /**
-                 * 全局更新函数
-                 * @param inobj this指向
-                 * @param func
-                 */
-                upd : function(inobj, func){
-                    var i = this.updIndex ++;
-                    this.updMap[i] = function(){
-                        return func.apply(inobj, arguments);
-                    }
-                },
-                /**
-                 * 变量监听 虚拟dom引擎TPC2使用
-                 * @param obj
-                 * @param keyName
-                 * @param setFun
-                 * @param getFun
-                 * @private
-                 */
-                set : function(obj, keyName, setFun, getFun){
-                    var ths = this.ths, _ths = this;
-                    if($.isString(obj) && $.isFunction(keyName)){
-                        getFun = !getFun && setFun ? setFun : getFun;
+					if (!variable) {
+						returnStr = '_DATA';
+						vars = _DATA;
+					} else {
+						//先从局部变量中匹配
+						try {
+							returnStr = '_DATA.' + variable;
+							vars = ths.eval(returnStr);
+							if (vars === undefined) {
+								returnStr = variable;
+								vars = ths.eval(variable);
+							}
+						} catch (e) {
+							returnStr = variable;
+							try {
+								vars = ths.eval(variable);
+							} catch (e) {
+							}
+						}
+						this.strTovarsMap[variable] = [returnStr, vars];
+					}
 
-                        setFun = keyName;
-                        if(ths.VARS[obj]){
-                            keyName = ths.VARS[obj][1];
-                            obj = ths.VARS[obj][3];
-
-                        }else {
-                            keyName = '';
-                            var p ='';
-                            obj.replace(/(.*?)(\[(\d+)\]|\.(\w+))$/, function () {
-                                keyName = arguments[4] || arguments[3];
-                                p = arguments[1];
-                            });
-                            ths.VARS[obj] = [p, keyName, strTovars(p)];
-                        }
-
-                        if(!$.isObject(obj) && !$.isArray(obj)){
-                            return;
-                        }
-                    }
-
-                    if(!$.isObject(obj) || !keyName){
-                        return;
-                    }
-
-                    var setTer = Object.getOwnPropertyDescriptor(obj, keyName).set;
-                    var setFunction = function(v){
-                        setTer && setTer(v);
-                        setFun(v);
-                    };
-
-                    var _Svalue = obj[keyName];
-
-                    Object.defineProperty(obj, keyName, {
-                        enumerable: true,
-                        configurable: true,
-                        set : function(v){
-                            if(v === _Svalue){//值相同时不回调函数
-                                return;
-                            }
-                            //回调处理做延迟 以达到值写入成功后再回调
-                            window.setTimeout(function(){
-                                $.loop(_ths.updMap, function(_, fun){
-                                    if(fun(v, _Svalue) !== true){
-                                        delete _ths.updMap[_];
-                                        //debug('删除当前监听回调')
-                                    }
-                                });
-                                setFunction(v);
-                            },0);
-
-
-                            debug('new SET：'+v);
-
-                            _Svalue = v;
-                        },
-                        get : function(v){
-
-                            return _Svalue;
-                        }
-                    });
-                },
-				del : function(obj, func, tothis){
-                	this.DelEvent.object.push(obj);
-					this.DelEvent.func.push(function(){
-						func.call(tothis);
-					});
-				},
-				add : function(obj, func, tothis){
-					this.AddEvent.object.push(obj);
-					this.AddEvent.func.push(function(){
-						func.apply(tothis, arguments);
-					});
-				},
-            },
+				}
+				return isReturnStr ? returnStr : vars;
+			},
             /**
              * 创建匿名回调函数解析模板实际值
              * @param evalCode 需要解析的js
              * @param {object} addVariables 附加回调参数 键名=参数名 键值=回调值
              */
-            newFunction : function(evalCode, addVariables, tree){
-                if(!evalCode){
-                    return;
-                }
-                var __vkey = addVariables ? Object.keys(addVariables).join(',') : '';
-                var __vValue = addVariables ? Object.values(addVariables) : [];
-                eval('function _Vcall('+__vkey+'){ return '+evalCode+'}');
-                return _Vcall.apply('', __vValue);
+			eval : function(evalCode, addVariables){
+				addVariables = addVariables || {};
+				addVariables._DATA = this.data;
+
+                return $.eval(evalCode, addVariables);
             },
 			//模板语法格式化为符合内部要求的语法
 			replace : function(){
@@ -1382,15 +1395,13 @@ function debugTime(key){
 				code = code.replace(/\{(elseif) ([^\\]+?)\}/ig, '</ksa><ksa $1><ksafactor>$2</ksafactor>');
 				code = code.replace(/\{else\}/ig, '</ksa><ksa else>');
 
-
 				code = code.replace(/\{\/if\}/ig, '</ksa></ifscope>');
 				code = code.replace(/\{\/loop\}/ig, '</ksaloopline></ksa>');
 
 				code = code.replace(/\{eval\}/ig, '<ksa eval>');
 				code = code.replace(/\{\/eval\}/ig, '</ksa>');
 				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksa eval>$1</ksa>');
-				this.Code = code;
-				this.Dom = $.dom(this.Code);
+				this.Dom = $.dom(code);
 				return this;
 			},
 			createDomLoop : function(ele, tree, eleKey, parentKey){
@@ -1409,7 +1420,7 @@ function debugTime(key){
 						var num = $.count(this.children),
 							chilnodes = chil.ele._childNodes,
 							length = chilnodes.length;
-						chilnodes.forEach(function(e, i){
+						$.loop(chilnodes, function(i, e){
 							e = $(e);
 							if(i === length-1){
 								ts.ele = document.createComment('');
@@ -1423,7 +1434,7 @@ function debugTime(key){
 					}, tree);
 				}
 
-				farr[0] = strTovars(farr[0]);
+				farr[0] = ths.strTovars(farr[0]);
 				tree.children = {};
 				$.loop(farr[0], function(k, value, _i1){
 					var d = {};
@@ -1475,8 +1486,9 @@ function debugTime(key){
                 parentKey = parentKey ? parentKey+'.children.' : '';
                 var ths = this;
                 var newTree = {};
-                eleList.forEach(function(ele, eleKey){
-                    if(ele.tagName ==='KSAFACTOR' || !$.isDomAll(ele)) {
+				eleList = [].slice.call(eleList);
+                $.loop(eleList, function(eleKey, ele){
+                    if(ele.tagName ==='KSAFACTOR') {
                         return ;
                     }
                     eleKey = '_'+eleKey;
@@ -1517,6 +1529,7 @@ function debugTime(key){
                     if(ele.nodeType === 3 || ele.nodeType === 8){
                         tree.text = ele.nodeValue;
                         var exp = ths.parseText(tree.text);
+
                         if(exp){
                             //文本节点解析结果
                             if(exp.parseCode){
@@ -1591,9 +1604,26 @@ function debugTime(key){
                     var nodeType = tree.nodeType;
                     var dom;
                     if(nodeType === 3 || nodeType === 8){
-                        dom = nodeType === 3 ? document.createTextNode(tree.text) : document.createComment(tree.text);
-                        dom._nodeValue = tree.parseCode;
-                        ths.parseNodes(dom, tree);
+						var txt = tree.parseCode ? ths.eval(tree.parseCode, tree.data) : tree.text;
+                        dom = nodeType === 3 ? document.createTextNode(txt) : document.createComment(txt);
+                        //节点变量监听
+						$.loop(tree.variableList, function(_, val){
+							val = $.keyName(val);
+							if(!val[1]){
+								return;
+							}
+							ths.def.set(ths.strTovars(val[0]), val[1], function(){
+								dom.nodeValue = ths.eval(tree.parseCode, tree.data);
+							});
+
+						});
+						$.loop(tree.data, function(_, val){
+							$.loop(val, function(kn){
+								ths.def.set(val, kn,function(){
+									dom.nodeValue = ths.eval(tree.parseCode, tree.data);
+								});
+							});
+						});
                     }else{
                         if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa','ksaloopline'])) {
                             dom = newFragment();
@@ -1616,10 +1646,7 @@ function debugTime(key){
 
                     if(dom) {
 						if(dom.childNodes){
-							dom._childNodes = [];
-							dom.childNodes.forEach(function(e){
-								dom._childNodes.push(e);
-							})
+							dom._childNodes = [].slice.call(dom.childNodes);
 						}
                         tree.ele = dom;
                         Vdom.appendChild(dom);
@@ -1645,7 +1672,7 @@ function debugTime(key){
 					$.loop(tree.children, function(_, t){
 						var r = false;
 						if(t.tag !='else') {
-							r = ths.newFunction(t.factor, t.data) === true;
+							r = ths.eval(t.factor, t.data) === true;
 							if(r){
 								ifR = r;
 								if(!accordTree){
@@ -1659,7 +1686,7 @@ function debugTime(key){
 						}
 						if(!r){
 							//整理待删除列表 待删除的节点必须是已存在于前台dom中
-							t.ele._childNodes.forEach(function(t1){
+							$.loop(t.ele._childNodes, function(_k, t1){
 								if(!$.inArray(document.compareDocumentPosition(t1), [35, 37])) {
 									deleteEles.push(t1);
 								}
@@ -1681,7 +1708,7 @@ function debugTime(key){
 						$(deleteEles[0]).before(accordTree.ele._childNodes);
 					}
 
-					deleteEles.forEach(function(e){
+					$.loop(deleteEles, function(_, e){
 						$(e).remove();
 					});
 
@@ -1701,38 +1728,6 @@ function debugTime(key){
 					}
 				});
 			},
-            /**
-             * 解析节点中的变量
-             *
-             */
-            parseNodes : function(eleList, tree){
-                var ths = this;
-                if(!eleList.forEach){
-                    eleList = [eleList];
-                }
-                eleList.forEach(function(ele){
-                    //文本节点渲染
-                    if((ele.nodeType === 3 || ele.nodeType === 8) && ele._nodeValue){
-                        ele.nodeValue = ths.newFunction(ele._nodeValue, tree.data);
-
-                        $.loop(tree.variableList, function(_, val){
-							ths.def.set(val, function(){
-								ele.nodeValue = ths.newFunction(ele._nodeValue, tree.data);
-							});
-						});
-						$.loop(tree.data, function(_, val){
-							$.loop(val, function(kn){
-								ths.def.set(val, kn,function(){
-									ele.nodeValue = ths.newFunction(ele._nodeValue, tree.data);
-								});
-							});
-						});
-                    }
-                    if(ele.childNodes){
-                        ths.parseNodes(ele.childNodes, tree.data);
-                    }
-                });
-            },
             /**
              * 将虚拟DOM写入到前台DOM
              */
@@ -1770,7 +1765,7 @@ function debugTime(key){
 				function __eachtree(tree){
 				    //文本节点渲染
 					if(tree.nodeType === 3 && tree.parseCode){
-						tree.text = ths.newFunction(tree.parseCode, tree.variables);
+						tree.text = ths.eval(tree.parseCode, tree.variables);
                         //监听变量
                         if(tree.variables && tree.variables.value) {
                             $.each(tree.variables, function(_key, _value){
@@ -1778,7 +1773,7 @@ function debugTime(key){
                                     $.each(_value, function(_k, _v){
                                         ths.def.set(_value, _k, function (v) {
                                             if(tree.nodeType === 3 && tree.ele) {
-                                                tree.ele.nodeValue = ths.newFunction(tree.parseCode, tree.variables);
+                                                tree.ele.nodeValue = ths.eval(tree.parseCode, tree.variables);
                                             }
                                         });
                                     });
@@ -1787,16 +1782,20 @@ function debugTime(key){
                         }
                         if(tree.variableList) {
                             $.each(tree.variableList, function (_, _kname) {
-                                ths.def.set(_kname, function (v) {
+								var val = $.keyName(_kname);
+								if(!val[1]){
+									return;
+								}
+                                ths.def.set(val[0], val[1], function (v) {
                                     if (tree.nodeType === 3 && tree.ele) {
-                                        tree.ele.nodeValue = ths.newFunction(tree.parseCode, tree.variables);
+                                        tree.ele.nodeValue = ths.eval(tree.parseCode, tree.variables);
                                     }
                                 });
                             });
                         }
 					}
 					if($.inArray(tree.tag,['if','elseif']) && tree.factor){
-						tree.factorResult = ths.newFunction(tree.factor, tree.variables);
+						tree.factorResult = ths.eval(tree.factor, tree.variables);
 						//初次渲染 如果结果为true 则通知父级
 						if(tree.factorResult === true && !tree.parent().renderTree){
 						    tree.parent().renderTree = tree;
@@ -1827,9 +1826,11 @@ function debugTime(key){
 			    if(!text.trim()){
 			        return;
                 }
+
 			    if(ths.parseTextIndex[text]){
 			        return ths.parseTextIndex[text];
                 }
+
 				var tagRE = variableReg;
 				var parseCode = [];
 				var variableList = [];
@@ -1840,13 +1841,26 @@ function debugTime(key){
 					if (index > lastIndex) {
 						parseCode.push('"' + text.slice(lastIndex, index) + '"');
 					}
-                    var kname = strTovars(match[1].trim(),true);
+					var kname = match[1].trim();
+
+                    var kname = ths.strTovars(kname,true);
 					parseCode.push(kname);
 					variableList.push(kname);
 					lastIndex = index + match[0].length;
-
 				}
 				parseCode = parseCode.length ? parseCode.join('+') : null;
+				if(parseCode) {
+					parseCode = parseCode.replace(/(\r\n|\r|\n)/g, function(_1){
+						if(_1 ==="\r\n"){
+							_1 = '\\r\\n';
+						}else if(_1 ==="\r"){
+							_1 = '\\r';
+						}else if(_1 ==="\n"){
+							_1 = '\\n';
+						}
+						return _1;
+					});
+				}
 				variableList = variableList.length ? variableList : null;
                 ths.parseTextIndex[text] = {parseCode:parseCode, variableList:variableList};
                 return ths.parseTextIndex[text];
@@ -1860,11 +1874,12 @@ function debugTime(key){
 
 
         return {
-            data : _DATA,
+            OBJECT : Tpc,
+        	data : _DATA,
             VDOM : Tpc.VDOM,
             del : function(obj){
                 var evn = Tpc.def.DelEvent;
-                evn.object.forEach(function(o, key){
+                $.loop(evn.object, function(key, o){
                     if(o === obj){
                         evn.func[key]();
                     }
@@ -1874,7 +1889,7 @@ function debugTime(key){
             add : function(obj, addkey, data){
                 obj[addkey] = data;
                 var evn = Tpc.def.AddEvent;
-                evn.object.forEach(function(o, key){
+                $.loop(evn.object, function(key, o){
                     if(o === obj){
                         evn.func[key](addkey, data);
                     }
@@ -1882,482 +1897,6 @@ function debugTime(key){
             }
         };
 
-        //变量监听对象
-		var _TPLdefPCallFun = {
-			ADDC : {}, //添加值时待监听链表
-			SETC : {}, //写值时待监听链表 key=需要拦截的变量名 value=变更回调
-			DELC : {}, //删除时待监听链表
-			GETC : {}, //获取时待监听链表,
-			GUPDC : {}, //更新时待监听链表
-			globalUpdateUUID : 0,
-			add : function(key, fun){
-				this.ADDC[key] = this.ADDC[key] || [];
-				this.ADDC[key].push(fun);
-			},
-			set : function(key, fun){
-				this.SETC[key] = this.SETC[key] || [];
-				this.SETC[key].push(fun);
-			},
-			get : function(key, fun){
-				this.GETC[key] = this.GETC[key] || [];
-				this.GETC[key].push(fun);
-			},
-			delete : function(key, fun){
-				this.DELC[key] = this.DELC[key] || [];
-				this.DELC[key].push(fun);
-			},
-			globalUpdate : function(setObj, fun){
-				var i = this.globalUpdateUUID ++;
-				this.GUPDC[i] = function(){
-					return fun.call(setObj, arguments);
-				}
-				return i;
-			},
-			clear : function(key){
-				delete this.GUPDC[key];
-				return this;
-			}
-		};
-
-
-        var Tpc1 = {
-            el : null, //前台渲染区dom对象
-            dom : newFragment(), //准备渲染到前台的节点
-            VDOM : {}, //虚拟dom树 virtualDOM tree
-            VDOMindex : 0,
-            init : function(el){
-                this.el = el; //el变量传递
-                this.format().treeInit();
-                return this;
-            },
-
-            //模板语法格式化为符合内部要求的语法
-            format : function(){
-                var $this = this;
-                var code = this.el.innerHTML;
-                code = code.replace(/\{(if|loop) ([^\\]+?)\}/ig, '<ksascope><ksa $1><ksafactor>$2</ksafactor>');
-                code = code.replace(/\{(elseif) ([^\\]+?)\}/ig, '</ksa><ksa $1><ksafactor>$2</ksafactor>');
-                code = code.replace(/\{else\}/ig, '</ksa><ksa else>');
-
-                code = code.replace(/\{eval\}/ig, '<ksa eval>');
-                code = code.replace(/\{\/eval\}/ig, '</ksa>');
-                code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksa eval>$1</ksa>');
-                code = code.replace(/\{\/(if|loop)\}/ig, '</ksa></ksascope>');
-                $(code).map(function(e){
-                    $this.dom.appendChild(e);
-                });
-                return this;
-            },
-
-            //创建虚拟节点
-            treeInit : function(){
-                var $this = this;
-
-                //遍历虚拟节点
-                $.map(this.dom.childNodes, function(ele){
-                    $this.renderElement(ele);
-                });
-                //清空前台dom 并重新填充
-                $(this.el).empty().html($this.dom);
-
-                return this;
-            },
-            //遍历虚拟节点 填充到前台并侦听数据变化
-            renderElement : function(ele, dt){
-                ele = $(ele);
-                var $this = this,
-                    tps = ele[0].nodeType;
-
-                if(tps ===1){
-
-                    //if节点整理
-                    $this.loopList(ele);
-
-
-                    ele.childAll().each(function(_, el){
-                        $this.renderElement(el, dt);
-                    });
-
-                }else if(tps ===3){
-                    $this.analyze(ele, dt);
-                }
-                return ele[0];
-            },
-            loopList : function(ele, tpl){
-                ele = $(ele);
-                if(ele[0].nodeType == 1 && ele.isAttr('loop')) {
-                    var $this = this;
-                    var loop = $.explode(' ', ele.children('ksafactor').html(), '');
-                    ele.children('ksafactor').remove();
-
-                    tpl = tpl ? tpl : ele.html().replace("'", "\'");
-
-                    var dtStr = loop[0],
-                        Kk = loop[2] ? loop[1] : 'key',
-                        Vv = loop[2] ? loop[2] : loop[1];
-
-
-                    var dt = strTovars(dtStr);
-                    ele.empty();
-
-
-                    /**
-                     * 根据数据创建一个loop子节点
-                     * @param k 键名
-                     * @param v 值
-                     * @returns {*|ChildNode}
-                     * @private
-                     */
-					function _newloopNode(k, v){
-						var rek = dtStr + ($.isNumber(k) ? ('[' + k + ']') : ('.' + k));
-						var code = tpl.replace(new RegExp('\\${' + Vv, 'g'), '${' + rek);
-						code = code.replace(new RegExp('\\${' + Kk + '}'), k);
-						return $.dom('<ksaloopline>'+code+'</ksaloopline>')[0];
-					}
-
-					//根据数据组合dom
-					var DomChins = {};
-					$.each(dt, function (k, v) {
-						DomChins[k] = _newloopNode(k,v);
-					});
-
-
-					function _loopNodeRender(k, el){
-						var dk = ($.isNumber(k) ? ('[' + k + ']') : ('.' + k)); //当前loop子键名
-						var rek = dtStr + dk; //当前loop数据主键名
-						var lineCode = ('var ' + Vv + ' = ' + strTovars(dtStr, true) + dk+';');
-
-						$this.analyze(el);
-						$this.renderIF(el, lineCode);
-
-						var insertDom = [];
-						el.childNodes.forEach(function(e){
-							insertDom.push(e);
-						});
-
-						//当前loop变量被删除监控
-						_TPLdefPCallFun.delete(rek, function(){
-							insertDom.forEach(function(e){
-								$(e).remove();
-							})
-						});
-						DomChins[k] = insertDom;
-						return insertDom;
-					}
-					$.each(DomChins, function(k, el){
-						ele.append(_loopNodeRender(k, el));
-					});
-					ele.after(ele.childAll()).remove();
-					//主变量写入检测
-					_TPLdefPCallFun.add(dtStr, function(){
-						//遍历所有list数据找出差异并加入到dom中
-						var fastK;
-						$.each(dt, function(k, val){
-							//找到差异项 并在前一个loop循环最后插入新节点
-							if(!DomChins[k]){
-								var dms = _loopNodeRender(k, _newloopNode(k, val));
-								var indexDom = DomChins[fastK].pop();
-								$(indexDom).after(dms);
-							}
-							fastK = k;
-						});
-					});
-				}
-				return this;
-			},
-			renderIF : function(element, evalCode){
-    	    	var $this = this;
-				var R = {
-					//把初始化的节点全部转为占位节点
-					def2comment : function(doms){
-						var ths = this;
-
-						$(doms).each(function(_, ele){
-							var eles = $(ele);
-							if(ele.nodeType == 1 && eles.isAttr('if elseif else')){
-
-								var childIF = eles.children('ksafactor');
-								var comnode = document.createComment('');
-								comnode._KSAIF = {
-									mark : eles.isAttr('if') ? 'if' : (eles.isAttr('elseif') ? 'elseif' : 'else' ), //判断类型
-									ifcode : childIF.html(), //条件判断源码
-									return : false, //条件解析结果
-									eval : '(function(e){ '+evalCode+' e._KSAIF.return = eval(e._KSAIF.ifcode);})', //封装解析语法到属性中
-									childs : [], //子节点
-									isPush : false, //子节点是否已经添加到dom中
-									scope : [] //当前域下所有节点 包含自己
-								};
-								childIF.remove();
-								ele.childNodes.forEach(function(e){
-									comnode._KSAIF.childs.push(e);
-								});
-								eles.after(comnode).remove();
-							}else if(ele.nodeType == 1){
-								ele.childNodes.forEach(function(e){
-									ths.def2comment(e);
-								});
-							}
-						});
-						return this;
-					},
-					//上下级关系绑定 此环节ksascope标签还存在
-					sliblings : function(doms){
-						var ths = this;
-						$(doms).each(function(_, ele){
-							if(ele._KSAIF){
-								//所有作用域中的if节点 包含自己
-								ele.parentNode.childNodes.forEach(function(e){
-									ele._KSAIF.scope.push(e);
-								});
-							}else if(ele.nodeType == 1){
-								ele.childNodes.forEach(function(e){
-									ths.sliblings(e);
-								})
-							}
-						});
-						return this;
-					},
-					//移除作用域标签
-					removeScope : function(doms){
-						var ths = this;
-						$(doms).each(function(_, ele){
-							if(ele.tagName ==='KSASCOPE'){
-								$(ele).after(ele.childNodes).remove();
-							}else if(ele.nodeType == 1){
-								ele.childNodes.forEach(function(e){
-									ths.removeScope(e);
-								})
-							}
-						});
-						return this;
-					},
-					render : function(doms){
-						var ths = this;
-						$(doms).each(function(_, ele){
-							var eles = $(ele);
-
-							if(ele._KSAIF && ele.nodeType ===8){
-
-								//解析if语句结果
-								ele._KSAIF.eval && eval(ele._KSAIF.eval).call(ele, ele);
-
-								var scopeIsTrue = false; //当前域下是否有结果
-								//如果当前if结果为真 通知域下所有节点当前结果
-								ele._KSAIF.scope.forEach(function(e){
-									//不处理自己节点
-									if(ele === e){
-										return;
-									}
-									//如果当前节点不是else 并且判断结果为true 则同域下所有节点为false
-									if(ele._KSAIF.return === true){
-										e._KSAIF.return = false;
-									}
-									if(e._KSAIF.return === true){
-										scopeIsTrue = true;
-									}
-								});
-
-								//如果当前节点是else 并且同域下没有true 则默认为true
-								if(ele._KSAIF.mark ==='else' && scopeIsTrue === false){
-									ele._KSAIF.return = true;
-								}
-
-								//如果条件为真 并且节点存在于dom中
-								if(ele._KSAIF.return === true){
-									if(!ele._KSAIF.isPush) {
-										//用子节点替换当前
-										eles.after(ele._KSAIF.childs).remove();
-										ele._KSAIF.isPush = true; //属性标注为已push到DOM
-										if (ele._KSAIF.mark !== 'else') {
-											//全局检测 如果任意变量发生变化，则重新解析当前域
-											_TPLdefPCallFun.globalUpdate(ele, function () {
-												if (this._KSAIF.mark === 'else') {
-													return;
-												}
-												var ts = this, childlength = ts._KSAIF.childs.length;
-												ts._KSAIF.eval && eval(ts._KSAIF.eval).call(ts, ts);
-												//如果编译结果非真 则删除所有节点
-												if (ts._KSAIF.return === false) {
-													ts._KSAIF.childs.forEach(function (e, i) {
-														if (!$.inArray(document.compareDocumentPosition(e), [35, 37])) {
-															//在最后一个加入占位节点 并且标注为未push到DOM
-															if (i == childlength - 1) {
-																$(e).after(ts);
-																ts._KSAIF.isPush = false;
-															}
-															e.remove();
-														}
-													});
-													ths.render(ts._KSAIF.scope);
-												}
-												return true;
-											});
-										}
-									}
-								}
-							//如果是元素节点则一直渲染子节点
-							}else if(ele.nodeType == 1){
-								ele.childNodes.forEach(function(e){
-									ths.render(e);
-								})
-							}
-						});
-
-						return this;
-					}
-				};
-
-				R.def2comment(element).sliblings(element).removeScope(element).render(element);
-
-			},
-            //解析模板
-            analyze : function(element, isDefPcall){
-    	    	var $this = this;
-
-				//此处只解析文本节点中的变量
-				$(element).each(function(_, ele){
-					var eles = $(ele);
-    	    		var nodeType = ele.nodeType;
-
-					//递归解析子级
-					if(nodeType === 1) {
-						eles.childAll().each(function (_i, childel) {
-							$this.analyze(childel);
-						});
-
-					//文本节点解析
-					}else if(nodeType === 3){
-
-						var tcode = ele._KSATPL || ele.nodeValue;
-						//节点增加_KSATPL属性 用于数据变更时的二次渲染
-						if(tcode && variableReg.test(tcode)){
-							ele._KSATPL = tcode;
-						}
-
-						var varsChain = {};
-						//字符串变量转换为实际变量值
-						tcode = tcode.replace(variableReg, function (_vs) {
-							var _vsK = _vs.trim().replace(/^\${/g, '').replace(/}$/g, '');
-							varsChain[_vsK] = _vsK;
-
-							_vs = strTovars(_vsK);
-							return _vs === undefined ? '' : _vs;
-						});
-						eles.nodeValue(tcode);
-
-						//如果不是监听事件回调的渲染 则添加监听事件
-						if(!isDefPcall){
-							//当前节点所有使用到的变量 添加侦听事件，如果变量有更新 则同时更新dom
-							$.each(varsChain, function(keys){
-								_TPLdefPCallFun.set(keys, function(val){
-									$this.analyze(ele, true);
-								});
-							});
-						}
-					}
-    	    		return ele;
-				});
-
-
-            },
-		};
-
-
-
-
-
-    	//拦截变量 Object.defineProperty
-		$.each(_TPLdefPCallFun.SETC, function(vars, callfun){
-			var varsKeys = variableNameEx(vars);
-
-			var parentObj = strTovars(varsKeys[1]);
-			//debug('监听：'+varsKeys[1] +' = '+ varsKeys[2]);
-
-			if(!$.isObject(parentObj) && !$.isArray(parentObj)){
-				return;
-			}
-
-			var value = parentObj[varsKeys[2]];
-
-			Object.defineProperty(parentObj, varsKeys[2], {
-				enumerable: true,
-				configurable: true,
-				set : function(v){
-					if(v === value){//值相同时不回调函数
-						return;
-					}
-					//回调处理做延迟 以达到值写入成功后再回调
-					window.setTimeout(function(){
-						$.each(_TPLdefPCallFun.GUPDC, function(_, fun){
-							if(fun(v, value, varsKeys[1], varsKeys[2]) !== true){
-								delete _TPLdefPCallFun.GUPDC[_];
-								//debug('删除当前监听回调')
-							}
-						});
-
-						callfun.forEach(function(cfval){
-							cfval(v, value, varsKeys[1], varsKeys[2]);
-						});
-					},0);
-
-
-					debug('defineProperty SET：'+v);
-
-					value = v;
-				},
-				get : function(v){
-
-					return value;
-				}
-			});
-		});
-
-		return {
-			add : function(key, value){
-				var kys = variableNameEx(key);
-				var vars = strTovars(key, 1);
-				eval('(function(v){'+vars+' = v;})').call(null,value);
-				if(_TPLdefPCallFun.ADDC){
-					$.each(_TPLdefPCallFun.ADDC, function(_k, callfun){
-						if(_k == kys[1]){
-							callfun.forEach(function(cfval){
-								cfval();
-							});
-						}
-					});
-				}
-			},
-			delete : function(key){
-				var $this = this;
-				var vars = strTovars(key);
-				var delname = '_DATA'+($.isNumber(key) ? '['+key+']' : '.'+key);
-
-				if($.isObject(vars)){
-					$.each(vars, function(k, _){
-						k = key + ($.isNumber(k) ? '['+k+']' : '.'+k);
-						$this.delete(k);
-					});
-				}
-				if(_TPLdefPCallFun.SETC){
-					$.each(_TPLdefPCallFun.SETC, function(_k, callfun){
-						if(_k == key){
-							callfun.forEach(function(cfval){
-								cfval('');
-							});
-						}
-					});
-				}
-
-				if(_TPLdefPCallFun.DELC[key]){
-					debug('删除：'+key);
-					$.each(_TPLdefPCallFun.DELC[key], function(_, callfun){
-						callfun();
-					});
-				}
-				eval('('+delname+' = "")');
-
-			}
-		};
 
 	}
 
@@ -2554,7 +2093,7 @@ function debugTime(key){
 	 **/
 	if (typeof define === 'function' && define.amd) {
 		define('KSA', [], function() {
-			return K;
+			return $;
 		});
 	}
 	return $;

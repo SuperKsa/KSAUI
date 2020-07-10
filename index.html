@@ -18,12 +18,13 @@
         <tr><th>电话</th><td>{{tel}}</td></tr>
     </table>
     ###
+    <!-- ${name} -->
     <div>
     <template v-for="(value,key) in list">
         <template v-if="value.name != '张三1'">
             <div>{{key}} : {{value.name}} {{value.sex}} {{name}}</div>
         </template>
-        <template v-else-if="value.name == '张三1'">
+        <template v-else-if="value.name == '张三10'">
             <div>【elseif】 {{value.name}}</div>
         </template>
         <template v-else>
@@ -86,6 +87,7 @@
         <tr><th>电话</th><td>${tel}</td></tr>
     </table>
 <!-- ${name} -->
+    ${window.location.href}
     <div>
         {loop list key value}
 
@@ -104,7 +106,6 @@
 <div class="a" cid="v" data-da="1"></div>
 <div class="a" cid="v" data-da="2"></div>
 <script>
-    debug($('.a').data('clascs da',1234));
     var KTPL;
     (function(){
         var template = $('#template').html();
@@ -120,6 +121,7 @@
         KTPL = pushDOM.tpl(sdt);
         console.timeEnd('KSA');
     })();
+    debug(KTPL);
 
 
     function parseFilters (exp) {
