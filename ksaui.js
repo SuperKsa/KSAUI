@@ -529,22 +529,30 @@ function debugTime(key){
 
 // ====================== 遍历 ====================== //
 
+	K.instanceof = function(a, b){
+		return a instanceof b;
+	}
+
     /**
      * 循环函数
      * @param {object} dt 数组或对象
      * @param {func} 每次循环的函数 function(key,value){...}
      */
     K.loop = function(dt,fun){
-    	if($.isArray(dt)){
+		if(dt && ($.isArray(dt) || $.instanceof(dt,NodeList))){
 			for(i=0;i<dt.length;i++){
 				val = dt[i];
-				fun(i, dt[i] ,i);
+				if(fun(i, dt[i] ,i) === true){
+					return;
+				}
 			}
-		}else{
-			var val, i=0;
+		}else if(dt && $.isObject(dt)){
+			var i=0;
 			for(var k in dt){
 				val = dt[k];
-				fun(k,val,i);
+				if(fun(k,dt[k],i) === true){
+					return;
+				}
 				i++;
 			}
 		}
@@ -613,12 +621,10 @@ function debugTime(key){
 
 	/**
 	 * 取集合范围
-	 * @param start 起始
-	 * @param end 结束
 	 * @returns {*[]}
 	 */
-	K.slice = function(start, end){
-		return [].slice.apply(this, [start, end]);
+	K.slice = function(){
+		return [].slice.apply(this, arguments);
 	}
 
 	/**
@@ -1259,17 +1265,16 @@ function debugTime(key){
 		}
 		var __vkey = addVariables ? Object.keys(addVariables).join(',') : '';
 		var __vValue = addVariables ? Object.values(addVariables) : [];
-		eval('function _Vcall('+__vkey+'){ return '+evalCode+'}');
-		var R;
-		try {
-			R = _Vcall.apply('', __vValue);
-		}catch (e) {
-			
-		}
-		return R;
+		var funCode = 'function _Vcall('+__vkey+'){ return '+evalCode+'}';
+		eval(funCode);
+		return _Vcall.apply('', __vValue);
 	}
 
 // ====================== 元素监听 ====================== //
+	K.V = function(val){
+		return val === undefined ? '' : val;
+	}
+
 	K.tpl = function(_DATA){
     	var self = this;
 		//匹配变量正则 {xxx}
@@ -1318,19 +1323,33 @@ function debugTime(key){
 
 		var Tpc = {
 			E : '', //前台渲染区DOM对象
-			data : _DATA,
+			data : {},
 			Dom : '', //虚拟节点
 			VDOM : {},
+			EVALVARS : '',
 			init : function(ele){
-
 				this.E = ele;
-				this.def.ths = this;
-                this.VDOM = this.replace().createVDOM(this.Dom);
-                delete this.Dom;
+				var ths = this;
+				$.loop(_DATA, function(_, v){
+					ths.data[_] = v;
+				});
+				this.VDOM = this.replace(); //替换语法生成内部HTML
+				this.VDOM = this.createVDOM(this.Dom); //内部HTML转为DOM节点并生成虚拟DOM
 
+                delete this.Dom; //删除虚拟节点 释放内存
+				//模板语法生成js解析代码
+                this.EVALVARS = this.createVDOMcode(this.VDOM);
+                debug(this.EVALVARS);
+				//执行js解析代码并填充到虚拟DOM
+                this.parseVDOMcode();
+                //监听变量变更
+                this.monitor(this.VDOM);
+				//虚拟DOM对应生成元素节点
                 this.createDom(this.VDOM);
+                //虚拟DOM push到页面
                 this.pushDom(this.VDOM);
                 this.parseIf(this.VDOM);
+
 
 
 			},
@@ -1387,6 +1406,7 @@ function debugTime(key){
 
                 return $.eval(evalCode, addVariables);
             },
+
 			//模板语法格式化为符合内部要求的语法
 			replace : function(){
 				var code = this.E.innerHTML;
@@ -1398,9 +1418,9 @@ function debugTime(key){
 				code = code.replace(/\{\/if\}/ig, '</ksa></ifscope>');
 				code = code.replace(/\{\/loop\}/ig, '</ksaloopline></ksa>');
 
-				code = code.replace(/\{eval\}/ig, '<ksa eval>');
-				code = code.replace(/\{\/eval\}/ig, '</ksa>');
-				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksa eval>$1</ksa>');
+				code = code.replace(/\{eval\}/ig, '<ksaeval>');
+				code = code.replace(/\{\/eval\}/ig, '</ksaeval>');
+				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksaeval>$1</ksaeval>');
 				this.Dom = $.dom(code);
 				return this;
 			},
@@ -1434,16 +1454,18 @@ function debugTime(key){
 					}, tree);
 				}
 
-				farr[0] = ths.strTovars(farr[0]);
+				var loopData = ths.strTovars(farr[0]);
 				tree.children = {};
-				$.loop(farr[0], function(k, value, _i1){
+				$.loop(loopData, function(k, value, _i1){
 					var d = {};
 					d[farr[1]] = k;
 					d[farr[2]] = value;
+					var sk = $.isNumber(k) ? (farr[0]+'['+k+']') : (farr[0]+'.'+k);
 
 					var _n = '_'+_i1;
-					tree.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
-
+					//生成VDOM时 节点内只有一个ksaloopline标签 所以针对性单独处理
+					var t = ths.createVDOM(ele.childNodes, (parentKey+eleKey), d, [sk, k, [farr[1],farr[2]], _i1])[_n];
+					tree.children[_n] = t;
 					__defdel(_n, value);
 					loopN ++;
 				});
@@ -1453,7 +1475,7 @@ function debugTime(key){
 				}
 
 				//监听 子变量添加
-				ths.def.add(farr[0], function(key, dt){
+				ths.def.add(loopData, function(key, dt){
 					var _n = '_'+key;
 					var d = {};
 					d[farr[1]] = key;
@@ -1469,8 +1491,9 @@ function debugTime(key){
 						});
 						end = end.ele._childNodes[end.ele._childNodes.length -1];
 					}
+					var sk = $.isNumber(key) ? (farr[0]+'['+key+']') : (farr[0]+'.'+key);
 
-					this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey+'.children.'+_n), d)._1;
+					this.children[_n] = ths.createVDOM(ele.childNodes, (parentKey+eleKey), d, [sk, key, [farr[1],farr[2]], key])[_n];
 					var dom = ths.createDom([this.children[_n]]);
 
 					$(end).after(dom);
@@ -1482,20 +1505,33 @@ function debugTime(key){
 					__defdel(_n, dt);
 				}, tree);
 			},
-            createVDOM : function(eleList, parentKey, data){
+			/**
+			 * 创建虚拟DOM
+			 * @param eleList 节点列表
+			 * @param parentKey 父级键名
+			 * @param data 参与渲染的数据
+			 * @param addKeyName 参与渲染的数据键名
+			 * @returns {{}}
+			 */
+            createVDOM : function(eleList, parentKey, data, addKeyName){
                 parentKey = parentKey ? parentKey+'.children.' : '';
                 var ths = this;
                 var newTree = {};
-				eleList = [].slice.call(eleList);
+
                 $.loop(eleList, function(eleKey, ele){
                     if(ele.tagName ==='KSAFACTOR') {
                         return ;
                     }
+                    //针对loop循环兼容
+                    if(ele.tagName ==='KSALOOPLINE'){
+                    	eleKey = addKeyName[3];
+					}
                     eleKey = '_'+eleKey;
                     var tree = {
                         tag : ele.tagName ? ele.tagName.toLowerCase() : '', //标签名小写 文本节点为空
                         nodeType: ele.nodeType, //节点类型
 						data : data,
+						dataKey : addKeyName, //当前节点用到的数据键名
                         eleKey : parentKey+eleKey,
                         variables : {}, //当前节点使用的变量值
                         //返回父级树
@@ -1529,7 +1565,6 @@ function debugTime(key){
                     if(ele.nodeType === 3 || ele.nodeType === 8){
                         tree.text = ele.nodeValue;
                         var exp = ths.parseText(tree.text);
-
                         if(exp){
                             //文本节点解析结果
                             if(exp.parseCode){
@@ -1541,6 +1576,7 @@ function debugTime(key){
                             }
                         }
                     }
+
                     //遍历属性名
                     if (ele.attributes && ele.attributes.length) {
                         var attrs = {};
@@ -1560,13 +1596,13 @@ function debugTime(key){
                         }
                         attrs = null;
                     }
-                    //循环节点单独创建VDOM树
-                    if(tree.tag =='loop'){
+					if(tree.tag ==='ksaeval'){
+						tree.eval = ele.innerHTML;
+					}else if(tree.tag =='loop'){//循环节点单独创建VDOM树
                         ths.createDomLoop(ele, tree, eleKey, parentKey);
 
                     //如果存在子节点则遍历
                     }else if(ele.childNodes && ele.childNodes.length){
-
                         tree.children = ths.createVDOM(ele.childNodes, (parentKey+eleKey), data);
                         //增加取所有子级函数
                         tree.childrenAll = function(callFun){
@@ -1593,6 +1629,145 @@ function debugTime(key){
 
                 return newTree;
             },
+			/**
+			 * 统一解析VDOM虚拟树中的变量
+			 */
+			parseVDOMcode : function(){
+				var _VM = this.VDOM;
+
+				//变量回调解析
+				function _E(tree, intdt, p3){
+					if(p3 =='if'){
+						tree.factorResult = intdt; //给if节点加上解析结果
+					}else{
+						tree.text = intdt;
+					}
+				}
+
+				var __data = this.data;
+				var __vkey = __data ? Object.keys(__data).join(',') : '';
+				var __vValue = __data ? Object.values(__data) : [];
+				var Evcode = "function _Vcall("+__vkey+"){\n "+this.EVALVARS+"}";
+				try {
+
+				}catch (e) {
+
+				}
+				eval(Evcode);
+				_Vcall.apply('', __vValue);
+			},
+			//DOM树转执行语句
+			_createVDOMcode : function(vdomKey, inputCode, p3){
+            	if(inputCode ==='' || typeof(inputCode) == 'undefined'){
+					inputCode = "''";
+				}
+				return "_E(_VM."+vdomKey+", ("+inputCode+"), '"+(p3 || '')+"' );\n";
+			},
+			//创建虚拟DOM 语法解析代码
+			createVDOMcode : function(treeList){
+				var ths =  this;
+				var evalStrings = [];
+				$.loop(treeList,function(treeKey, tree){
+
+					var inputCode = '';
+					//区域解析 loop 特殊声明等 Start
+					if(tree.dataKey && tree.dataKey.length){
+						inputCode += '(function('+(tree.dataKey[2].join(', '))+'){'+"\n";
+					}
+					if(tree.nodeType === 3 || tree.nodeType === 8){
+						if(tree.parseCode){
+							inputCode += ths._createVDOMcode(tree.eleKey, tree.parseCode);
+						}
+					}else if(tree.tag ==='ksaeval' && tree.eval){
+						inputCode += tree.eval+"\n";
+					}else if(tree.nodeType === 1){
+
+						if(tree.children){
+							inputCode += ths.createVDOMcode(tree.children);
+						}
+					}
+					//if条件的解析
+					if($.inArray(tree.tag, ['if','elseif'])){
+						inputCode += ths._createVDOMcode(tree.eleKey, tree.factor, 'if');
+					}
+
+
+					//区域解析 loop 特殊声明等 END
+					if(tree.dataKey && tree.dataKey.length){
+						inputCode += '}).call("","'+tree.dataKey[1]+'", '+tree.dataKey[0]+');'+"\n";
+					}
+
+					evalStrings.push(inputCode);
+				});
+
+				evalStrings = evalStrings.join("");
+
+				return evalStrings;
+				/*
+				var ths = this;
+				$.loop(treeList,function(_, tree){
+					var nodeType = tree.nodeType;
+
+					if((nodeType === 3 || nodeType === 8) && tree.parseCode) {
+						tree.text = tree.parseCode ? ths.eval(tree.parseCode, tree.data) : tree.text;
+
+						//节点变量监听
+						$.loop(tree.variableList, function(_, val){
+							val = $.keyName(val);
+							if(!val[1]){
+								return;
+							}
+							ths.def.set(ths.strTovars(val[0]), val[1], function(){
+								tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
+							});
+						});
+						$.loop(tree.data, function(_, val){
+							$.loop(val, function(kn){
+								ths.def.set(val, kn,function(){
+									tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
+								});
+							});
+						});
+
+					}
+
+					if(tree.children){
+						ths.createVDOMcode(tree.children);
+					}
+				});
+				*/
+			},
+			//监听变量变更
+			monitor : function(treeList){
+            	var ths = this;
+				$.loop(treeList,function(treeKey, tree){
+					var nodeType = tree.nodeType;
+					//文本节点
+					if((nodeType === 3 || nodeType === 8) && tree.parseCode) {
+
+						//节点变量监听
+						$.loop(tree.variableList, function(_, val){
+							val = $.keyName(val);
+							if(!val[1]){
+								return;
+							}
+							ths.def.set(ths.strTovars(val[0]), val[1], function(){
+								tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
+							});
+						});
+						$.loop(tree.data, function(_, val){
+							$.loop(val, function(kn){
+								ths.def.set(val, kn,function(){
+									tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
+								});
+							});
+						});
+					}
+					if(tree.children){
+						ths.monitor(tree.children);
+					}
+				});
+			},
             /**
              * 根据虚拟DOM创建节点
              * 此环节 变量语法等还未解析
@@ -1601,29 +1776,14 @@ function debugTime(key){
                 var ths = this;
                 var Vdom = newFragment();
                 $.loop(treeList,function(_, tree){
+                	if(tree.tag =='ksaeval'){
+                		return;
+					}
                     var nodeType = tree.nodeType;
                     var dom;
                     if(nodeType === 3 || nodeType === 8){
-						var txt = tree.parseCode ? ths.eval(tree.parseCode, tree.data) : tree.text;
-                        dom = nodeType === 3 ? document.createTextNode(txt) : document.createComment(txt);
-                        //节点变量监听
-						$.loop(tree.variableList, function(_, val){
-							val = $.keyName(val);
-							if(!val[1]){
-								return;
-							}
-							ths.def.set(ths.strTovars(val[0]), val[1], function(){
-								dom.nodeValue = ths.eval(tree.parseCode, tree.data);
-							});
+                        dom = nodeType === 3 ? document.createTextNode(tree.text) : document.createComment(tree.text);
 
-						});
-						$.loop(tree.data, function(_, val){
-							$.loop(val, function(kn){
-								ths.def.set(val, kn,function(){
-									dom.nodeValue = ths.eval(tree.parseCode, tree.data);
-								});
-							});
-						});
                     }else{
                         if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa','ksaloopline'])) {
                             dom = newFragment();
@@ -1672,7 +1832,7 @@ function debugTime(key){
 					$.loop(tree.children, function(_, t){
 						var r = false;
 						if(t.tag !='else') {
-							r = ths.eval(t.factor, t.data) === true;
+							r = t.factorResult;
 							if(r){
 								ifR = r;
 								if(!accordTree){
@@ -1756,65 +1916,6 @@ function debugTime(key){
 				return r;
 			},
 
-			/**
-			 * 初次渲染虚拟DOM树
-			 * if loop条件处理
-			 */
-			renderTree : function(){
-				var ths = this;
-				function __eachtree(tree){
-				    //文本节点渲染
-					if(tree.nodeType === 3 && tree.parseCode){
-						tree.text = ths.eval(tree.parseCode, tree.variables);
-                        //监听变量
-                        if(tree.variables && tree.variables.value) {
-                            $.each(tree.variables, function(_key, _value){
-                                if($.isObject(_value)){
-                                    $.each(_value, function(_k, _v){
-                                        ths.def.set(_value, _k, function (v) {
-                                            if(tree.nodeType === 3 && tree.ele) {
-                                                tree.ele.nodeValue = ths.eval(tree.parseCode, tree.variables);
-                                            }
-                                        });
-                                    });
-                                }
-                            });
-                        }
-                        if(tree.variableList) {
-                            $.each(tree.variableList, function (_, _kname) {
-								var val = $.keyName(_kname);
-								if(!val[1]){
-									return;
-								}
-                                ths.def.set(val[0], val[1], function (v) {
-                                    if (tree.nodeType === 3 && tree.ele) {
-                                        tree.ele.nodeValue = ths.eval(tree.parseCode, tree.variables);
-                                    }
-                                });
-                            });
-                        }
-					}
-					if($.inArray(tree.tag,['if','elseif']) && tree.factor){
-						tree.factorResult = ths.eval(tree.factor, tree.variables);
-						//初次渲染 如果结果为true 则通知父级
-						if(tree.factorResult === true && !tree.parent().renderTree){
-						    tree.parent().renderTree = tree;
-                        }
-					}
-
-					if(tree.children){
-						$.each(tree.children, function(key, value){
-							__eachtree(value);
-						});
-					}
-				}
-
-				$.each(this.VDOM, function(key, value){
-					__eachtree(value);
-				});
-				return this;
-			},
-
             parseTextIndex : {}, //parseText变量缓存map
 			/**
 			 * 解析文本节点内容
@@ -1847,6 +1948,9 @@ function debugTime(key){
 					parseCode.push(kname);
 					variableList.push(kname);
 					lastIndex = index + match[0].length;
+				}
+				if (lastIndex < text.length) {
+					parseCode.push(JSON.stringify(text.slice(lastIndex)))
 				}
 				parseCode = parseCode.length ? parseCode.join('+') : null;
 				if(parseCode) {
@@ -1998,9 +2102,10 @@ function debugTime(key){
 	}
 	K.inArray = function(val,dt, rkey){
 		var S = false;
-		$.each(dt,function(k,v){
-			if(val == v){
+		$.loop(dt,function(k,v){
+			if(val === v){
 				S = rkey ? k : true;
+				return true;
 			}
 		});
 		return S;
