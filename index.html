@@ -110,7 +110,10 @@
 <div class="a" cid="v" data-da="1"></div>
 <div class="a" cid="v" data-da="2"></div>
 <textarea>
-    value . name ? value[1].name.toString('\\'(1.)测试12+23') : (value.sex ? '一' : (value.n[10] +1))
+    ${value . name ? value[1].name.toString('(1.)测试12+23') : (value.sex ? '一' : (value.n[10] +1))}
+    ${key} : ${value.name} ${value.sex} ${name}
+    ${list[1].name.toString()}
+    ${window.location.href}
 </textarea>
 <script>
     var KTPL;
@@ -243,21 +246,39 @@
 
         return expression
     }
+    */
     //提取if条件中所有的变量名
     var code = $('textarea').val();
-    debug(AST(code));
-    */
 
-    /*
-    code = code.replace(/\\'|\\"/g,''); //去掉转义引号' "
 
-    code = code.replace(/("|')[^"']+("|')/g,'$1$2');
+
+    //code = code.replace(/\\'|\\"/g,''); //去掉转义引号' "
+
+    //code = code.replace(/("|')[^"']+("|')/g,'$1$2');//去掉引号中间的内容
+
     //code = code.replace(/--|\+\+|\*\*=?|=>|&&|\|\||[!=]==|<<=?|>>>?=?|[-+*\/%&|^!=<>]=?|\.{3}|\?[.?]?|[~:]/g,"\n");
-    code = code.replace(/[a-z_$]\w+[$(\.{1})(\[\d+\])]+/ig, function(){
-        debug(arguments[0])
-        return '_Kvalue('+arguments[0]+')';
+    var codeDt = [];
+    code.replace(/\$\{((?:.|\r?\n)+?)\}/ig, function(){
+        var s = arguments[1];
+        s = s.trim();
+        //去掉字符串
+        s = s.replace(/\\'|\\"/g,''); //去掉转义引号' "
+        s = s.replace(/("|')[^"']+("|')/g,'$1$2');//去掉引号中间的内容
+        //去掉原生方法
+        s = s.replace(/\.[\s+]?(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match| repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim| toLocaleLowerCase| toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)[\s+]?\([\s+]?(''|"")?[\s+]?\)/g,'');
+        debug(s);
+        var regabc = '([\s+]?(\.{1})?[\s+]?[a-z_$]+)?'; //匹配 .$a_
+        var regnum = '(\[[0-9]+\])?'; //匹配 [0]
+        var reg = new RegExp('^[a-z_$]+('+regnum+regabc+regnum+')$','ig');
+        //直接变量（无函数或修饰）
+        if(reg.test(s)){
+            codeDt.push(s);
+        }
+
     });
+    debug("匹配：\n"+codeDt.join("\n"));
     debug(code);
+    /*
     code = code.split("\n");
     var codedt = {};
     $.loop(code, function(i, val){

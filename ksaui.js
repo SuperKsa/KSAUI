@@ -1339,7 +1339,6 @@ function debugTime(key){
                 delete this.Dom; //删除虚拟节点 释放内存
 				//模板语法生成js解析代码
                 this.EVALVARS = this.createVDOMcode(this.VDOM);
-                debug(this.EVALVARS);
 				//执行js解析代码并填充到虚拟DOM
                 this.parseVDOMcode();
                 //监听变量变更
