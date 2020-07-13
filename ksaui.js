@@ -1154,16 +1154,35 @@ function debugTime(key){
 	 * @returns {[string, string]}
 	 */
 	K.keyNameMap = {};
-	K.keyName = function(kname){
-		if(!this.keyNameMap[kname]) {
-			var keys = '', p = '';
-			kname.replace(/(.*?)(\[(\d+)\]|\.(\w+))$/, function () {
+	/**
+	 *
+	 * @param kname
+	 * @param isOne 数组第一个只返回第一个变量名
+	 * @returns {*}
+	 */
+	K.keyName = function(kname, isOne){
+		var kmapI = kname+'{'+isOne+'}';
+		if(!this.keyNameMap[kmapI]) {
+			var keys = '', p = kname;
+			/*
+			kname.replace(/^([\w\d\$]+)((\[\d+\])+|((\.([\w\d\$]+))+))$/i, function () {
+				debug(arguments);
 				keys = arguments[4] || arguments[3];
 				p = arguments[1];
 			});
-			this.keyNameMap[kname] = [p, keys];
+			 */
+			var dn = !isOne ? kname.lastIndexOf('.') : kname.indexOf('.'), qn =0;
+			if(dn === -1){
+				qn = !isOne ? kname.lastIndexOf('[') : kname.indexOf('[');
+			}
+			var vlast = Math.max(qn, dn);
+			if(vlast >0){
+				p = kname.substr(0,vlast);
+				keys = kname.substr(dn>0 ? vlast+1 : vlast);
+			}
+			this.keyNameMap[kmapI] = [p, keys, kname];
 		}
-		return this.keyNameMap[kname];
+		return this.keyNameMap[kmapI];
 	}
 
 	/**
@@ -1201,7 +1220,8 @@ function debugTime(key){
 					return;
 				}
 
-				var setTer = Object.getOwnPropertyDescriptor(obj, keyName).set;
+				var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
+				setTer = setTer ? setTer.set : setTer;
 				var setFunction = function(v){
 					setTer && setTer(v);
 					setFun(v);
@@ -1275,13 +1295,29 @@ function debugTime(key){
 		return val === undefined ? '' : val;
 	}
 
+	/**
+	 * 获取调用此函数的参数名与参数值
+	 * @param Args
+	 */
+	K.getIncludeFunc = function(Args){
+		var argsNames = Args.callee.toString().match(/^function(\s[^(]+)?\(([^\)]+)?\)\{/);
+		if(argsNames && argsNames[2]) {
+			var dt = {};
+			argsNames = $.explode(',', argsNames[2], ' ');
+			$.loop(argsNames, function (k, v) {
+				v = v.trim();
+				dt[v] = Args[k];
+			});
+			return dt;
+		}
+	}
+
 	K.tpl = function(_DATA){
     	var self = this;
-		//匹配变量正则 {xxx}
+		//匹配模板变量正则 {xxx}
 		var variableReg = /\$\{((?:.|\r?\n)+?)\}/g;
-
-
-
+		//匹配js变量名正则
+		var varsNameRegx = /(([\u4e00-\u9fa5_a-zA-Z$]+([\u4e00-\u9fa5_a-zA-Z0-9$]+)?)(((\[[0-9]+\])+|(\.[\u4e00-\u9fa5_a-zA-Z$][\u4e00-\u9fa5_a-zA-Z$0-9]+))+)?)(\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)\(.*?\))?/g;
 
 
 		/**
@@ -1319,37 +1355,53 @@ function debugTime(key){
 			}
 			return [ancestor, firstName, lastName];
 		}
-
-
 		var Tpc = {
 			E : '', //前台渲染区DOM对象
-			data : {},
+			data : _DATA,
 			Dom : '', //虚拟节点
 			VDOM : {},
 			EVALVARS : '',
-			init : function(ele){
-				this.E = ele;
+			$dataMap : {},
+			createdata : function($dt, parentKEY){
 				var ths = this;
-				$.loop(_DATA, function(_, v){
-					ths.data[_] = v;
+				$.loop($dt, function(key, value){
+					var inKey;
+					if($.isNumber(key)){
+						inKey = parentKEY ? (parentKEY+'['+key+']') : key;
+					}else{
+						inKey = parentKEY ? (parentKEY+'.'+key) : key;
+					}
+
+					ths.$dataMap[inKey] = '1';
+					if($.isObject(value) || $.isArray(value)){
+						ths.createdata(value, inKey);
+
+					}
 				});
+			},
+			init : function(ele){
+
+
+				this.E = ele;
+
+				this.createdata(this.data);//创建传入数据的索引
+
 				this.VDOM = this.replace(); //替换语法生成内部HTML
 				this.VDOM = this.createVDOM(this.Dom); //内部HTML转为DOM节点并生成虚拟DOM
 
                 delete this.Dom; //删除虚拟节点 释放内存
-				//模板语法生成js解析代码
+				//模板语法生成js 解析代码
                 this.EVALVARS = this.createVDOMcode(this.VDOM);
 				//执行js解析代码并填充到虚拟DOM
                 this.parseVDOMcode();
                 //监听变量变更
-                this.monitor(this.VDOM);
+                //this.monitor(this.VDOM);
+
 				//虚拟DOM对应生成元素节点
                 this.createDom(this.VDOM);
                 //虚拟DOM push到页面
                 this.pushDom(this.VDOM);
                 this.parseIf(this.VDOM);
-
-
 
 			},
 			def : self.def(),
@@ -1405,7 +1457,6 @@ function debugTime(key){
 
                 return $.eval(evalCode, addVariables);
             },
-
 			//模板语法格式化为符合内部要求的语法
 			replace : function(){
 				var code = this.E.innerHTML;
@@ -1529,8 +1580,8 @@ function debugTime(key){
                     var tree = {
                         tag : ele.tagName ? ele.tagName.toLowerCase() : '', //标签名小写 文本节点为空
                         nodeType: ele.nodeType, //节点类型
-						data : data,
 						dataKey : addKeyName, //当前节点用到的数据键名
+						renderFunction : [], //渲染节点时需要执行的回调函数列表
                         eleKey : parentKey+eleKey,
                         variables : {}, //当前节点使用的变量值
                         //返回父级树
@@ -1563,7 +1614,7 @@ function debugTime(key){
                     //文本节点
                     if(ele.nodeType === 3 || ele.nodeType === 8){
                         tree.text = ele.nodeValue;
-                        var exp = ths.parseText(tree.text);
+                        var exp = ths.parseText(tree);
                         if(exp){
                             //文本节点解析结果
                             if(exp.parseCode){
@@ -1632,35 +1683,68 @@ function debugTime(key){
 			 * 统一解析VDOM虚拟树中的变量
 			 */
 			parseVDOMcode : function(){
+				var ths = this;
 				var _VM = this.VDOM;
 
 				//变量回调解析
-				function _E(tree, intdt, p3){
-					if(p3 =='if'){
-						tree.factorResult = intdt; //给if节点加上解析结果
+				function _E(){
+					var tree = arguments[0], //需要渲染的vdom
+						intdt = arguments[1]; //渲染的数据结果
+					if($.inArray(tree.tag,['if','elseif'])){//给if节点加上解析结果
+						tree.factorResult = intdt;
 					}else{
 						tree.text = intdt;
+						if(tree.ele && (tree.ele.nodeType ===3 || tree.ele.nodeType ===8)){
+							tree.ele.nodeValue = intdt;
+						}
 					}
 				}
 
-				var __data = this.data;
-				var __vkey = __data ? Object.keys(__data).join(',') : '';
-				var __vValue = __data ? Object.values(__data) : [];
-				var Evcode = "function _Vcall("+__vkey+"){\n "+this.EVALVARS+"}";
-				try {
-
-				}catch (e) {
-
+				//虚拟DOM树解析函数
+				function _F(tree, Efunc){
+					Efunc.call('', tree);
+					tree.renderFunction.push(Efunc);
 				}
+
+				/**
+				 * 变量监听绑定函数
+				 *
+				 * 每个需要监听的对象键名都交给monitor
+				 *
+				 * @param tree 对应VDOM树
+				 * @param obj 需要监听的对象
+				 * @param objKey 需要监听的键名
+				 */
+				function _M(tree, obj, objKey){
+					ths.monitor.set(obj, objKey, func); //待完成
+				}
+
+
+				//===================================================
+				var __data = this.data,
+					__vkey = __data ? Object.keys(__data).join(',') : '',
+					__vValue = __data ? Object.values(__data) : [];
+				var Evcode = "function _Vcall("+__vkey+"){\n "+this.EVALVARS+"}";
+
 				eval(Evcode);
 				_Vcall.apply('', __vValue);
 			},
 			//DOM树转执行语句
-			_createVDOMcode : function(vdomKey, inputCode, p3){
+			_createVDOMcode : function(tree, inputCode){
             	if(inputCode ==='' || typeof(inputCode) == 'undefined'){
 					inputCode = "''";
 				}
-				return "_E(_VM."+vdomKey+", ("+inputCode+"), '"+(p3 || '')+"' );\n";
+            	var treeKey = "_VM."+tree.eleKey;
+				var Rcode = "_F("+treeKey+", function(){\n";
+				Rcode += "_E(arguments[0], ("+inputCode+"));\n";
+				//添加监听
+				$.loop(tree.variableList, function(vname, skv){
+					if($.isObject(skv)){
+						Rcode += "_M(arguments[0], "+vname+", '"+Object.keys(skv).join(',')+"');\n";
+					}
+				});
+				Rcode += "});\n";
+				return Rcode;
 			},
 			//创建虚拟DOM 语法解析代码
 			createVDOMcode : function(treeList){
@@ -1671,11 +1755,11 @@ function debugTime(key){
 					var inputCode = '';
 					//区域解析 loop 特殊声明等 Start
 					if(tree.dataKey && tree.dataKey.length){
-						inputCode += '(function('+(tree.dataKey[2].join(', '))+'){'+"\n";
+						inputCode += '(function('+tree.dataKey[2].join(', ')+'){'+"\n";
 					}
 					if(tree.nodeType === 3 || tree.nodeType === 8){
 						if(tree.parseCode){
-							inputCode += ths._createVDOMcode(tree.eleKey, tree.parseCode);
+							inputCode += ths._createVDOMcode(tree, tree.parseCode);
 						}
 					}else if(tree.tag ==='ksaeval' && tree.eval){
 						inputCode += tree.eval+"\n";
@@ -1687,7 +1771,7 @@ function debugTime(key){
 					}
 					//if条件的解析
 					if($.inArray(tree.tag, ['if','elseif'])){
-						inputCode += ths._createVDOMcode(tree.eleKey, tree.factor, 'if');
+						inputCode += ths._createVDOMcode(tree, tree.factor);
 					}
 
 
@@ -1736,13 +1820,61 @@ function debugTime(key){
 				});
 				*/
 			},
+
+			//待监听的变量数据 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
+			monitorMap : [],
 			//监听变量变更
-			monitor : function(treeList){
+			monitor : function(obj, objKey){
             	var ths = this;
+
+            	/*
 				$.loop(treeList,function(treeKey, tree){
 					var nodeType = tree.nodeType;
 					//文本节点
 					if((nodeType === 3 || nodeType === 8) && tree.parseCode) {
+						var nodeFunc = function(){
+							$.loop(tree.renderFunction, function(_, f){
+								f(tree);
+							});
+						};
+
+						$.loop(tree.variableList, function(vname, valKey){
+							if(tree.data && vname){
+								var treeDt = tree.data[vname];
+
+								if(treeDt && $.isObject(treeDt)) {
+									var insetStatus = 0;
+									$.loop(ths.monitorMap, function (__, lithen) {
+										if (lithen.obj === treeDt) {
+											if ($.isObject(valKey)) {
+												$.loop(valKey, function (vk) {
+													if (lithen.keys[vk]) {
+														lithen.keys[vk].push(nodeFunc);
+													}
+												});
+											} else if (!lithen.keys[vname]) {
+												lithen.keys[vname] = [nodeFunc];
+											}
+											insetStatus = 1;
+										}
+									});
+									if (!insetStatus) {
+										var inadd = {obj: treeDt, keys: {}};
+										if ($.isObject(valKey)) {
+											$.loop(valKey, function (vk) {
+												inadd.keys[vk] = inadd.keys[vk] ? inadd.keys[vk] : [];
+												inadd.keys[vk].push(nodeFunc);
+											});
+										} else if (!inadd.keys[vname]) {
+											inadd.keys[vname] = [nodeFunc];
+										}
+
+										ths.monitorMap.push(inadd);
+									}
+								}
+							}
+						});
+
 
 						//节点变量监听
 						$.loop(tree.variableList, function(_, val){
@@ -1761,11 +1893,13 @@ function debugTime(key){
 								});
 							});
 						});
+
 					}
 					if(tree.children){
 						ths.monitor(tree.children);
 					}
 				});
+				*/
 			},
             /**
              * 根据虚拟DOM创建节点
@@ -1914,15 +2048,32 @@ function debugTime(key){
 				}
 				return r;
 			},
-
+			/**
+			 * 提取字符串中的变量名
+			 * @param str
+			 * @returns {[]}
+			 */
+			extractParamName : function(str){
+				var ParamName = [];
+				str = str.trim();
+				//去掉字符串 去掉转义引号' " 去掉引号中间的内容 去掉.()[]左右空格
+				str = str.replace(/\\'|\\"/g,'').replace(/("|')[^"']+("|')/g,'$1$2').replace(/\s+([\.\(\)\[\]\:\?])[\s+]?/g,'$1');
+				str.replace(varsNameRegx, function(){
+					if(arguments && arguments[1]){
+						ParamName.push(arguments[1]);
+					}
+				});
+				return ParamName;
+			},
             parseTextIndex : {}, //parseText变量缓存map
 			/**
 			 * 解析文本节点内容
 			 * @param text
 			 * @returns {{expression: string, tokens: []}}
 			 */
-			parseText : function  (text) {
-			    var ths = this;
+			parseText : function  (tree) {
+
+			    var ths = this, text = tree.text;
 			    if(!text.trim()){
 			        return;
                 }
@@ -1933,7 +2084,7 @@ function debugTime(key){
 
 				var tagRE = variableReg;
 				var parseCode = [];
-				var variableList = [];
+				var variableList = {};
 				var lastIndex = tagRE.lastIndex = 0;
 				var match, index;
 				while ((match = tagRE.exec(text))) {
@@ -1942,10 +2093,17 @@ function debugTime(key){
 						parseCode.push('"' + text.slice(lastIndex, index) + '"');
 					}
 					var kname = match[1].trim();
-
-                    var kname = ths.strTovars(kname,true);
+					$.loop(ths.extractParamName(kname), function(k, v){
+						var skv = $.keyName(v,1);
+						if(skv[1]){
+							variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
+							variableList[skv[0]][skv[1]] = 1;
+						}else{
+							variableList[skv[0]] = 1;
+						}
+					});
 					parseCode.push(kname);
-					variableList.push(kname);
+
 					lastIndex = index + match[0].length;
 				}
 				if (lastIndex < text.length) {
@@ -1954,17 +2112,9 @@ function debugTime(key){
 				parseCode = parseCode.length ? parseCode.join('+') : null;
 				if(parseCode) {
 					parseCode = parseCode.replace(/(\r\n|\r|\n)/g, function(_1){
-						if(_1 ==="\r\n"){
-							_1 = '\\r\\n';
-						}else if(_1 ==="\r"){
-							_1 = '\\r';
-						}else if(_1 ==="\n"){
-							_1 = '\\n';
-						}
-						return _1;
+						return _1 ==="\r\n" ? '\\r\\n' : (_1 ==="\r" ? '\\r' : '\\n');
 					});
 				}
-				variableList = variableList.length ? variableList : null;
                 ths.parseTextIndex[text] = {parseCode:parseCode, variableList:variableList};
                 return ths.parseTextIndex[text];
 			},
