@@ -1245,7 +1245,7 @@ function debugTime(key){
 										//debug('删除当前监听回调')
 									}
 								});
-								setFunction(v);
+								setFunction(v, keyName, obj);
 							},0);
 
 							_Svalue = v;
@@ -1394,8 +1394,8 @@ function debugTime(key){
                 this.EVALVARS = this.createVDOMcode(this.VDOM);
 				//执行js解析代码并填充到虚拟DOM
                 this.parseVDOMcode();
-                //监听变量变更
-                //this.monitor(this.VDOM);
+                //监听列表统一更新
+                this.monitor();
 
 				//虚拟DOM对应生成元素节点
                 this.createDom(this.VDOM);
@@ -1689,7 +1689,7 @@ function debugTime(key){
 				//变量回调解析
 				function _E(){
 					var tree = arguments[0], //需要渲染的vdom
-						intdt = arguments[1]; //渲染的数据结果
+						intdt = arguments[1](); //渲染的数据结果
 					if($.inArray(tree.tag,['if','elseif'])){//给if节点加上解析结果
 						tree.factorResult = intdt;
 					}else{
@@ -1701,9 +1701,10 @@ function debugTime(key){
 				}
 
 				//虚拟DOM树解析函数
-				function _F(tree, Efunc){
-					Efunc.call('', tree);
+				function _F(tree, Efunc, Defunc){
 					tree.renderFunction.push(Efunc);
+					Efunc.call('', tree);
+					Defunc.call('', tree);
 				}
 
 				/**
@@ -1716,7 +1717,16 @@ function debugTime(key){
 				 * @param objKey 需要监听的键名
 				 */
 				function _M(tree, obj, objKey){
-					ths.monitor.set(obj, objKey, func); //待完成
+					var func = [];
+					if(!tree.renderFunction || !tree.renderFunction.length){
+						return;
+					}
+					$.loop(tree.renderFunction, function(_, f){
+						func.push(function(){
+							f(tree);
+						});
+					});
+					ths.monitorGather(obj, objKey, func);
 				}
 
 
@@ -1724,23 +1734,33 @@ function debugTime(key){
 				var __data = this.data,
 					__vkey = __data ? Object.keys(__data).join(',') : '',
 					__vValue = __data ? Object.values(__data) : [];
-				var Evcode = "function _Vcall("+__vkey+"){\n "+this.EVALVARS+"}";
 
-				eval(Evcode);
-				_Vcall.apply('', __vValue);
+				var invars = [];
+				$.loop(Object.keys(__data), function(_, key){
+					invars.push("var "+key+" = _$data_"+($.isNumber(key) ? ("["+key+"]") : ("."+key))+";");
+				});
+				invars = invars.join("\n");
+				this.EVALVARS = "function _Vcall(_$data_){\n"+invars+" \n "+this.EVALVARS+"}";
+				//console.log(this.EVALVARS);
+				eval(this.EVALVARS);
+				_Vcall.call('',ths.data);
 			},
 			//DOM树转执行语句
 			_createVDOMcode : function(tree, inputCode){
+				var ths = this;
             	if(inputCode ==='' || typeof(inputCode) == 'undefined'){
 					inputCode = "''";
 				}
             	var treeKey = "_VM."+tree.eleKey;
 				var Rcode = "_F("+treeKey+", function(){\n";
-				Rcode += "_E(arguments[0], ("+inputCode+"));\n";
+				Rcode += "_E(arguments[0], function(){return "+inputCode+"});\n";
+				Rcode += "}, function(){\n";
 				//添加监听
 				$.loop(tree.variableList, function(vname, skv){
 					if($.isObject(skv)){
 						Rcode += "_M(arguments[0], "+vname+", '"+Object.keys(skv).join(',')+"');\n";
+					}else if(typeof(ths.data[vname]) !== "undefined"){
+						Rcode += "_M(arguments[0], _$data_, '"+vname+"');\n";
 					}
 				});
 				Rcode += "});\n";
@@ -1821,85 +1841,55 @@ function debugTime(key){
 				*/
 			},
 
-			//待监听的变量数据 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
+			//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
 			monitorMap : [],
-			//监听变量变更
-			monitor : function(obj, objKey){
-            	var ths = this;
+			//收集监听列表
+			monitorGather : function(setObj, setKey, setFunc){
+            	var SetEvent = this.monitorMap;
+            	if($.isArray(setFunc) && !setFunc.length){
+            		return;
+				}
+				if(setObj && $.isObject(setObj) && setFunc) {
+					setKey = $.explode(',', setKey,' ');
+					var addKey = null;
+					$.loop(SetEvent, function (k, obj) {
+						if (obj.object === setObj) {
+							addKey = k;
+						}
+					});
+					//如果监听对象不在列表则添加一个
+					if(addKey === null){
+						addKey = SetEvent.push({object: setObj, keys: {}});
+						addKey --;
+					}
+					var setEvn = SetEvent[addKey];
 
-            	/*
-				$.loop(treeList,function(treeKey, tree){
-					var nodeType = tree.nodeType;
-					//文本节点
-					if((nodeType === 3 || nodeType === 8) && tree.parseCode) {
-						var nodeFunc = function(){
-							$.loop(tree.renderFunction, function(_, f){
-								f(tree);
-							});
-						};
-
-						$.loop(tree.variableList, function(vname, valKey){
-							if(tree.data && vname){
-								var treeDt = tree.data[vname];
-
-								if(treeDt && $.isObject(treeDt)) {
-									var insetStatus = 0;
-									$.loop(ths.monitorMap, function (__, lithen) {
-										if (lithen.obj === treeDt) {
-											if ($.isObject(valKey)) {
-												$.loop(valKey, function (vk) {
-													if (lithen.keys[vk]) {
-														lithen.keys[vk].push(nodeFunc);
-													}
-												});
-											} else if (!lithen.keys[vname]) {
-												lithen.keys[vname] = [nodeFunc];
-											}
-											insetStatus = 1;
-										}
-									});
-									if (!insetStatus) {
-										var inadd = {obj: treeDt, keys: {}};
-										if ($.isObject(valKey)) {
-											$.loop(valKey, function (vk) {
-												inadd.keys[vk] = inadd.keys[vk] ? inadd.keys[vk] : [];
-												inadd.keys[vk].push(nodeFunc);
-											});
-										} else if (!inadd.keys[vname]) {
-											inadd.keys[vname] = [nodeFunc];
-										}
-
-										ths.monitorMap.push(inadd);
-									}
+					$.loop(setKey, function (_, vk) {
+						setEvn.keys[vk] = setEvn.keys[vk] ? setEvn.keys[vk] : [];
+						if($.isArray(setFunc)){
+							$.loop(setFunc, function(_, f){
+								if(!$.inArray(f, setEvn.keys[vk])){
+									setEvn.keys[vk].push({function : f, isPush:false});
 								}
+							});
+						}else if($.isFunction(setFunc) && !$.inArray(setFunc, setEvn.keys[vk])){
+							setEvn.keys[vk].push({function : setFunc, isPush:false});
+						}
+					});
+				}
+			},
+			monitor : function(){
+				var ths = this;
+				$.loop(this.monitorMap, function(_, sdt){
+					$.loop(sdt.keys, function(key, funs){
+						$.loop(funs, function(____, f){
+							if(!f.isPush) {
+								ths.def.set(sdt.object, key, f.function);
+								f.isPush = true;
 							}
 						});
-
-
-						//节点变量监听
-						$.loop(tree.variableList, function(_, val){
-							val = $.keyName(val);
-							if(!val[1]){
-								return;
-							}
-							ths.def.set(ths.strTovars(val[0]), val[1], function(){
-								tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
-							});
-						});
-						$.loop(tree.data, function(_, val){
-							$.loop(val, function(kn){
-								ths.def.set(val, kn,function(){
-									tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
-								});
-							});
-						});
-
-					}
-					if(tree.children){
-						ths.monitor(tree.children);
-					}
+					});
 				});
-				*/
 			},
             /**
              * 根据虚拟DOM创建节点
@@ -2094,7 +2084,7 @@ function debugTime(key){
 					}
 					var kname = match[1].trim();
 					$.loop(ths.extractParamName(kname), function(k, v){
-						var skv = $.keyName(v,1);
+						var skv = $.keyName(v);
 						if(skv[1]){
 							variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
 							variableList[skv[0]][skv[1]] = 1;

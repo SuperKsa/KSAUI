@@ -40,7 +40,7 @@
 
 <script>
 
-    var LOOPMAX = 1;
+    var LOOPMAX = 10;
 
     var sdt = {
         name : '二大爷',
@@ -67,28 +67,30 @@
 <script>
 
 
-    Vue.config.devtools = false;
-    Vue.config.productionTip = false;
-    var template = $('#vue-template').html();
-    var pushDOM = $('#vuedom');
+    (function(){
+        Vue.config.devtools = false;
+        Vue.config.productionTip = false;
+        var template = $('#vue-template').html();
+        var pushDOM = $('#vuedom');
 
-    for(var i =0; i<LOOPMAX; i++){
-        (function(){
-            var dom = $.dom('<div>'+template.replace('###',i)+'</div>');
-            pushDOM.append(dom);
-        })();
-    }
-    console.time("VUE");
-    var VUE = new Vue({el : '#vuedom', data : sdt});
-    debug(VUE);
-    console.timeEnd("VUE");
+        for(var i =0; i<LOOPMAX; i++){
+            (function(){
+                var dom = $.dom('<div>'+template.replace('###',i)+'</div>');
+                pushDOM.append(dom);
+            })();
+        }
+        console.time("VUE");
+        var VUE = new Vue({el : '#vuedom', data : sdt});
+        debug(VUE);
+        console.timeEnd("VUE");
+    })();
 
 </script>
 
 <template id="template">
 
     <table class="as">
-        <tr><th>姓名</th><td>${name ? name : '123'}</td></tr>
+        <tr><th>姓名</th><td>${_$data_.name}</td></tr>
         <tr><th>性别</th><td>${sex}</td></tr>
         <tr><th>学校</th><td>${school}</td></tr>
         <tr><th>电话</th><td>${tel}</td></tr>
