@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <script src="ksaui.js"></script>
+    <!--
     <script src="./data/vue.js"></script>
+    -->
 </head>
 <body>
 <style>
@@ -40,7 +42,7 @@
 
 <script>
 
-    var LOOPMAX = 10;
+    var LOOPMAX = 1;
 
     var sdt = {
         name : '二大爷',
@@ -67,7 +69,7 @@
 <script>
 
 
-    (function(){
+    (function(){return;
         Vue.config.devtools = false;
         Vue.config.productionTip = false;
         var template = $('#vue-template').html();
@@ -90,7 +92,7 @@
 <template id="template">
 
     <table class="as">
-        <tr><th>姓名</th><td>${_$data_.name}</td></tr>
+        <tr><th>姓名</th><td>${name}</td></tr>
         <tr><th>性别</th><td>${sex}</td></tr>
         <tr><th>学校</th><td>${school}</td></tr>
         <tr><th>电话</th><td>${tel}</td></tr>
@@ -106,7 +108,7 @@
 
 
 
-        {if value.name != '张三1'}
+        {if value.name != '张二娃' && value.name !='张三10'}
         <div>${key} : ${value.name} ${value.sex} ${name}</div>
         {elseif value.name =='张三10'}
         <div>【elseif】 ${value.name}</div>

@@ -1234,21 +1234,22 @@ function debugTime(key){
 						enumerable: true,
 						configurable: true,
 						set : function(v){
+
 							if(v === _Svalue){//值相同时不回调函数
 								return;
 							}
-							//回调处理做延迟 以达到值写入成功后再回调
-							window.setTimeout(function(){
-								$.loop(ths.updMap, function(_, fun){
-									if(fun(v, _Svalue) !== true){
-										delete ths.updMap[_];
-										//debug('删除当前监听回调')
-									}
-								});
-								setFunction(v, keyName, obj);
-							},0);
 
+							var oldValue = _Svalue;
 							_Svalue = v;
+
+							$.loop(ths.updMap, function(_, fun){
+								if(fun(v, oldValue) !== true){
+									delete ths.updMap[_];
+									//debug('删除当前监听回调')
+								}
+							});
+							setFunction(v, keyName, obj);
+
 						},
 						get : function(v){
 							return _Svalue;
@@ -1310,6 +1311,14 @@ function debugTime(key){
 			});
 			return dt;
 		}
+	}
+	K.setTimeoutMap = {};
+	K.setTimeout = function(skey, func, time){
+		if(this.setTimeoutMap[skey]){
+			window.clearTimeout(this.setTimeoutMap[skey]);
+			delete this.setTimeoutMap[skey];
+		}
+		this.setTimeoutMap[skey] = window.setTimeout(func, time);
 	}
 
 	K.tpl = function(_DATA){
@@ -1401,7 +1410,7 @@ function debugTime(key){
                 this.createDom(this.VDOM);
                 //虚拟DOM push到页面
                 this.pushDom(this.VDOM);
-                this.parseIf(this.VDOM);
+                this.parseIfinit(this.VDOM);
 
 			},
 			def : self.def(),
@@ -1611,21 +1620,8 @@ function debugTime(key){
                         }
                     };
 
-                    //文本节点
-                    if(ele.nodeType === 3 || ele.nodeType === 8){
-                        tree.text = ele.nodeValue;
-                        var exp = ths.parseText(tree);
-                        if(exp){
-                            //文本节点解析结果
-                            if(exp.parseCode){
-                                tree.parseCode = exp.parseCode;
-                            }
-                            //节点中使用了哪些变量
-                            if(exp.variableList){
-                                tree.variableList = exp.variableList;
-                            }
-                        }
-                    }
+
+
 
                     //遍历属性名
                     if (ele.attributes && ele.attributes.length) {
@@ -1635,7 +1631,7 @@ function debugTime(key){
                             if($.inArray(v.name, ['if','elseif','else','loop'])){
                                 tree.tag = v.name; //标签名为条件名
                                 if(v.name !='else' && ele.childNodes[0].tagName === 'KSAFACTOR') {//增加判断条件 条件值=第一个子级html
-                                    tree.factor = ele.childNodes[0].innerHTML;
+                                    tree.factor = ele.childNodes[0].innerHTML.replace(/&amp;/g,'&');
                                 }
                             }else{
                                 attrs[v.name] = v.value;
@@ -1646,6 +1642,16 @@ function debugTime(key){
                         }
                         attrs = null;
                     }
+
+					//文本节点
+					if(ele.nodeType === 3 || ele.nodeType === 8){
+						tree.text = ele.nodeValue;
+						ths.parseText(tree, tree.text);
+					}
+					if($.inArray(tree.tag, ['if','elseif'])){
+						ths.parseText(tree, '${'+tree.factor+'}');
+					}
+
 					if(tree.tag ==='ksaeval'){
 						tree.eval = ele.innerHTML;
 					}else if(tree.tag =='loop'){//循环节点单独创建VDOM树
@@ -1691,7 +1697,21 @@ function debugTime(key){
 					var tree = arguments[0], //需要渲染的vdom
 						intdt = arguments[1](); //渲染的数据结果
 					if($.inArray(tree.tag,['if','elseif'])){//给if节点加上解析结果
+
 						tree.factorResult = intdt;
+						if(tree.ele){
+							var tpt = tree.parent(), tptEndtree;
+							$.loop(tpt.children, function(k, t){
+								if(t.tag !=='else'){
+									tptEndtree = t;
+								}
+							});
+							if(tptEndtree === tree){
+								ths.parseIfscope(tpt);
+							}
+
+						}
+
 					}else{
 						tree.text = intdt;
 						if(tree.ele && (tree.ele.nodeType ===3 || tree.ele.nodeType ===8)){
@@ -1708,7 +1728,7 @@ function debugTime(key){
 				}
 
 				/**
-				 * 变量监听绑定函数
+				 * vdom变量监听绑定函数
 				 *
 				 * 每个需要监听的对象键名都交给monitor
 				 *
@@ -1729,18 +1749,26 @@ function debugTime(key){
 					ths.monitorGather(obj, objKey, func);
 				}
 
+				function _G(obj, objKey, func){
+					if(func) {
+						ths.monitorGather(obj, objKey, function (v) {
+							func(v);
+						});
+					}
+				}
+
 
 				//===================================================
-				var __data = this.data,
-					__vkey = __data ? Object.keys(__data).join(',') : '',
-					__vValue = __data ? Object.values(__data) : [];
-
 				var invars = [];
-				$.loop(Object.keys(__data), function(_, key){
-					invars.push("var "+key+" = _$data_"+($.isNumber(key) ? ("["+key+"]") : ("."+key))+";");
+				var ginvars = [];
+				$.loop(this.data, function(key, value){
+					var svs = "_$data_"+($.isNumber(key) ? ("["+key+"]") : ("."+key));
+					invars.push("var "+key+" = "+svs+";");
+					ginvars.push("_G(_$data_, '"+key+"', function(v){"+key+"= v;})");
 				});
 				invars = invars.join("\n");
-				this.EVALVARS = "function _Vcall(_$data_){\n"+invars+" \n "+this.EVALVARS+"}";
+				ginvars = ginvars.join("\n");
+				this.EVALVARS = "function _Vcall(_$data_){\n"+invars+"\n"+ginvars+" \n "+this.EVALVARS+"}";
 				//console.log(this.EVALVARS);
 				eval(this.EVALVARS);
 				_Vcall.call('',ths.data);
@@ -1806,39 +1834,6 @@ function debugTime(key){
 				evalStrings = evalStrings.join("");
 
 				return evalStrings;
-				/*
-				var ths = this;
-				$.loop(treeList,function(_, tree){
-					var nodeType = tree.nodeType;
-
-					if((nodeType === 3 || nodeType === 8) && tree.parseCode) {
-						tree.text = tree.parseCode ? ths.eval(tree.parseCode, tree.data) : tree.text;
-
-						//节点变量监听
-						$.loop(tree.variableList, function(_, val){
-							val = $.keyName(val);
-							if(!val[1]){
-								return;
-							}
-							ths.def.set(ths.strTovars(val[0]), val[1], function(){
-								tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
-							});
-						});
-						$.loop(tree.data, function(_, val){
-							$.loop(val, function(kn){
-								ths.def.set(val, kn,function(){
-									tree.ele.nodeValue = ths.eval(tree.parseCode, tree.data);
-								});
-							});
-						});
-
-					}
-
-					if(tree.children){
-						ths.createVDOMcode(tree.children);
-					}
-				});
-				*/
 			},
 
 			//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
@@ -1938,76 +1933,78 @@ function debugTime(key){
 
                 return Vdom;
             },
+
+			/**
+			 * 解析if域
+			 * @param tree
+			 * @returns {boolean}
+			 */
+			parseIfscope : function(tree){
+				if(tree.tag !=='ifscope'){
+					return;
+				}
+				var ifR = false;
+				var deleteEles = [];//待删除节点列表
+				var accordTree; //符合条件的节点
+				if(!tree.comNode) {
+					//创建虚拟节点
+					tree.comNode = document.createComment('ifComment');
+				}
+				$.loop(tree.children, function(_, t){
+					var r = false;
+					if(t.tag !='else') {
+						r = t.factorResult;
+						if(r){
+							ifR = r;
+							if(!accordTree){
+								accordTree = t;
+							}
+						}
+					}
+					//如果是else 并且整个域没有符合的条件 则展示else节点
+					if(t.tag ==='else' && !ifR){
+						ifR = r = true;
+						accordTree = t;
+					}
+					if(!r){
+						//整理待删除列表 待删除的节点必须是已存在于前台dom中
+						$.loop(t.ele._childNodes, function(_k, t1){
+							if(!$.inArray(document.compareDocumentPosition(t1), [35, 37])) {
+								deleteEles.push(t1);
+							}
+						})
+					}
+				});
+				//如果整个节点没有符合的条件 则创建一个占位节点
+				if(!ifR && !tree.comNodePush){
+					$(tree.ele._childNodes[0]).before(tree.comNode);
+					tree.comNodePush = true;
+				//如果当前条件成立 但节点为占位节点时 用真实节点替换占位节点
+				}else if(ifR && tree.comNodePush){
+					$(tree.comNode).before(accordTree.ele._childNodes).remove();
+					tree.comNodePush = false;
+				//如果当前条件成立 且占位节点不存在 用新节点替换原节点
+				}else if(ifR && !tree.comNodePush){
+					$(deleteEles[0]).before(accordTree.ele._childNodes);
+					tree.comNodePush = false;
+				}
+				$.loop(deleteEles, function(_, e){
+					$(e).remove();
+				});
+
+				return ifR;
+			},
 			/**
 			 * 节点push到前台后 IF节点的处理
 			 * @param treeList
 			 */
-			parseIf : function(treeList){
+			parseIfinit : function(treeList){
             	var ths = this;
-            	function ifCalc(tree){
-					var ifR = false;
-					var deleteEles = [];//待删除节点列表
-					var accordTree; //符合条件的节点
-					if(!tree.comNode) {
-						//创建虚拟节点
-						tree.comNode = document.createComment('');
-					}
-					$.loop(tree.children, function(_, t){
-						var r = false;
-						if(t.tag !='else') {
-							r = t.factorResult;
-							if(r){
-								ifR = r;
-								if(!accordTree){
-									accordTree = t;
-								}
-							}
-						}
-						//如果是else 并且整个域没有符合的条件 则展示else节点
-						if(t.tag ==='else' && !ifR){
-							r = true;
-						}
-						if(!r){
-							//整理待删除列表 待删除的节点必须是已存在于前台dom中
-							$.loop(t.ele._childNodes, function(_k, t1){
-								if(!$.inArray(document.compareDocumentPosition(t1), [35, 37])) {
-									deleteEles.push(t1);
-								}
-							})
-						}
-					});
-
-					//如果整个节点没有符合的条件 则创建一个占位节点
-					if(!ifR && !tree.comNodePush){
-						$(tree.ele._childNodes[0]).before(tree.comNode);
-						tree.ifscopePushDom = [tree.comNode];
-						tree.comNodePush = true;
-					//如果当前条件成立 但节点为占位节点时 用真实节点替换占位节点
-					}else if(ifR && tree.comNodePush){
-						$(tree.comNode).before(accordTree.ele._childNodes).remove();
-						tree.comNodePush = false;
-					//如果当前条件成立 且占位节点不存在 用新节点替换原节点
-					}else if(ifR && !tree.comNodePush){
-						$(deleteEles[0]).before(accordTree.ele._childNodes);
-					}
-
-					$.loop(deleteEles, function(_, e){
-						$(e).remove();
-					});
-
-					return ifR;
-				}
-
 				$.loop(treeList,function(_, tree){
 					if(tree.tag ==='ifscope'){
-						ifCalc(tree);
-						ths.def.upd(tree, function(){
-							ifCalc(tree);
-							return true; //一直监听
-						});
-
+						ths.parseIfscope(tree);
 					}else if(tree.children){
-						ths.parseIf(tree.children);
+						ths.parseIfinit(tree.children);
 					}
 				});
 			},
@@ -2061,52 +2058,64 @@ function debugTime(key){
 			 * @param text
 			 * @returns {{expression: string, tokens: []}}
 			 */
-			parseText : function  (tree) {
+			parseText : function  (tree, text) {
 
-			    var ths = this, text = tree.text;
-			    if(!text.trim()){
+			    var ths = this;
+			    if(!text || !text.trim()){
 			        return;
                 }
 
+			    var parseDt;
 			    if(ths.parseTextIndex[text]){
-			        return ths.parseTextIndex[text];
-                }
+					parseDt = ths.parseTextIndex[text];
+                }else {
 
-				var tagRE = variableReg;
-				var parseCode = [];
-				var variableList = {};
-				var lastIndex = tagRE.lastIndex = 0;
-				var match, index;
-				while ((match = tagRE.exec(text))) {
-					index = match.index;
-					if (index > lastIndex) {
-						parseCode.push('"' + text.slice(lastIndex, index) + '"');
-					}
-					var kname = match[1].trim();
-					$.loop(ths.extractParamName(kname), function(k, v){
-						var skv = $.keyName(v);
-						if(skv[1]){
-							variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
-							variableList[skv[0]][skv[1]] = 1;
-						}else{
-							variableList[skv[0]] = 1;
+					var parseCode = [];
+					var variableList = {};
+
+					var tagRE = variableReg;
+
+					var lastIndex = tagRE.lastIndex = 0;
+					var match, index;
+					while ((match = tagRE.exec(text))) {
+						index = match.index;
+						if (index > lastIndex) {
+							parseCode.push('"' + text.slice(lastIndex, index) + '"');
 						}
-					});
-					parseCode.push(kname);
+						var kname = match[1].trim();
+						$.loop(ths.extractParamName(kname), function (k, v) {
+							var skv = $.keyName(v);
+							if (skv[1]) {
+								variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
+								variableList[skv[0]][skv[1]] = 1;
+							} else {
+								variableList[skv[0]] = 1;
+							}
+						});
+						parseCode.push(kname);
 
-					lastIndex = index + match[0].length;
+						lastIndex = index + match[0].length;
+					}
+					if (lastIndex < text.length) {
+						parseCode.push(JSON.stringify(text.slice(lastIndex)))
+					}
+					parseCode = parseCode.length ? parseCode.join('+') : null;
+					if (parseCode) {
+						parseCode = parseCode.replace(/(\r\n|\r|\n)/g, function (_1) {
+							return _1 === "\r\n" ? '\\r\\n' : (_1 === "\r" ? '\\r' : '\\n');
+						});
+					}
+					variableList = $.isEmpty(variableList) ? null : variableList;
+					parseDt = [parseCode, variableList];
+					ths.parseTextIndex[text] = parseDt;
 				}
-				if (lastIndex < text.length) {
-					parseCode.push(JSON.stringify(text.slice(lastIndex)))
+			    if(parseDt[0]) {
+					tree.parseCode = parseDt[0];
 				}
-				parseCode = parseCode.length ? parseCode.join('+') : null;
-				if(parseCode) {
-					parseCode = parseCode.replace(/(\r\n|\r|\n)/g, function(_1){
-						return _1 ==="\r\n" ? '\\r\\n' : (_1 ==="\r" ? '\\r' : '\\n');
-					});
+			    if(parseDt[1]){
+					tree.variableList = parseDt[1];
 				}
-                ths.parseTextIndex[text] = {parseCode:parseCode, variableList:variableList};
-                return ths.parseTextIndex[text];
+
 			},
 		};
 
