@@ -109,17 +109,15 @@
 
 
         {if value.name != '张二娃' && value.name !='张三10'}
-        <div>${key} : ${value.name} ${value.sex} ${name}</div>
+        <div>${key} : ${value.name} ${value.sex} /
+            {if name =='123'}
+            ${name}
+            {/if}
+        </div>
         {elseif value.name =='张三10'}
         <div>【elseif】 ${value.name}</div>
         {else}
         <div>【else】</div>
-        {/if}
-
-        {if key =='data'}
-        {loop value.list k v}
-        <p>${v}</p>
-        {/loop}
         {/if}
         {/loop}
     </div>

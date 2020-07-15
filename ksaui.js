@@ -1234,14 +1234,11 @@ function debugTime(key){
 						enumerable: true,
 						configurable: true,
 						set : function(v){
-
 							if(v === _Svalue){//值相同时不回调函数
 								return;
 							}
-
 							var oldValue = _Svalue;
 							_Svalue = v;
-
 							$.loop(ths.updMap, function(_, fun){
 								if(fun(v, oldValue) !== true){
 									delete ths.updMap[_];
@@ -1395,14 +1392,13 @@ function debugTime(key){
 
 				this.createdata(this.data);//创建传入数据的索引
 
-				this.VDOM = this.replace(); //替换语法生成内部HTML
+				this.replace(); //替换语法生成内部HTML
 				this.VDOM = this.createVDOM(this.Dom); //内部HTML转为DOM节点并生成虚拟DOM
-
                 delete this.Dom; //删除虚拟节点 释放内存
 				//模板语法生成js 解析代码
                 this.EVALVARS = this.createVDOMcode(this.VDOM);
 				//执行js解析代码并填充到虚拟DOM
-                this.parseVDOMcode();
+                this.parseVDOMcode(this.EVALVARS);
                 //监听列表统一更新
                 this.monitor();
 
@@ -1469,10 +1465,10 @@ function debugTime(key){
 			//模板语法格式化为符合内部要求的语法
 			replace : function(){
 				var code = this.E.innerHTML;
-				code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksa loop><ksafactor>$1</ksafactor><ksaloopline>');
-				code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksa if><ksafactor>$1</ksafactor>');
-				code = code.replace(/\{(elseif) ([^\\]+?)\}/ig, '</ksa><ksa $1><ksafactor>$2</ksafactor>');
-				code = code.replace(/\{else\}/ig, '</ksa><ksa else>');
+				code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksa ksaaction="loop" ksafactor="$1"><ksaloopline>');
+				code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksa ksaaction="if" ksafactor="$1">');
+				code = code.replace(/\{elseif ([^\\]+?)\}/ig, '</ksa><ksa ksaaction="elseif" ksafactor="$1">');
+				code = code.replace(/\{else\}/ig, '</ksa><ksa ksaaction="else">');
 
 				code = code.replace(/\{\/if\}/ig, '</ksa></ifscope>');
 				code = code.replace(/\{\/loop\}/ig, '</ksaloopline></ksa>');
@@ -1480,6 +1476,7 @@ function debugTime(key){
 				code = code.replace(/\{eval\}/ig, '<ksaeval>');
 				code = code.replace(/\{\/eval\}/ig, '</ksaeval>');
 				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksaeval>$1</ksaeval>');
+				this.code = code;
 				this.Dom = $.dom(code);
 				return this;
 			},
@@ -1488,6 +1485,7 @@ function debugTime(key){
 					loopN = 0,
 					farr = $.explode(' ', tree.factor, '');
 
+            	/*
             	function __defdel(key, dt){
 					//监听 变量被删除
 					ths.def.del(dt, function(){
@@ -1563,6 +1561,7 @@ function debugTime(key){
 					ths.parseIf(this.children[_n].children);
 					__defdel(_n, dt);
 				}, tree);
+				*/
 			},
 			/**
 			 * 创建虚拟DOM
@@ -1582,7 +1581,7 @@ function debugTime(key){
                         return ;
                     }
                     //针对loop循环兼容
-                    if(ele.tagName ==='KSALOOPLINE'){
+                    if(ele.tagName ==='KSALOOPLINE' && addKeyName){
                     	eleKey = addKeyName[3];
 					}
                     eleKey = '_'+eleKey;
@@ -1620,19 +1619,16 @@ function debugTime(key){
                         }
                     };
 
-
-
-
                     //遍历属性名
                     if (ele.attributes && ele.attributes.length) {
                         var attrs = {};
                         $.map(ele.attributes, function (v) {
                             //判断与循环标签的处理
-                            if($.inArray(v.name, ['if','elseif','else','loop'])){
-                                tree.tag = v.name; //标签名为条件名
-                                if(v.name !='else' && ele.childNodes[0].tagName === 'KSAFACTOR') {//增加判断条件 条件值=第一个子级html
-                                    tree.factor = ele.childNodes[0].innerHTML.replace(/&amp;/g,'&');
-                                }
+                            if(v.name === 'ksaaction'){
+								tree.tag = v.value; //标签名为条件名
+
+							}else if(v.name === 'ksafactor'){
+								tree.factor = v.value.replace(/&amp;/g,'&');
                             }else{
                                 attrs[v.name] = v.value;
                             }
@@ -1688,7 +1684,7 @@ function debugTime(key){
 			/**
 			 * 统一解析VDOM虚拟树中的变量
 			 */
-			parseVDOMcode : function(){
+			parseVDOMcode : function(_EvalCodes){
 				var ths = this;
 				var _VM = this.VDOM;
 
@@ -1723,8 +1719,8 @@ function debugTime(key){
 				//虚拟DOM树解析函数
 				function _F(tree, Efunc, Defunc){
 					tree.renderFunction.push(Efunc);
-					Efunc.call('', tree);
-					Defunc.call('', tree);
+					Efunc(tree);
+					Defunc(tree);
 				}
 
 				/**
@@ -1746,6 +1742,7 @@ function debugTime(key){
 							f(tree);
 						});
 					});
+
 					ths.monitorGather(obj, objKey, func);
 				}
 
@@ -1768,16 +1765,16 @@ function debugTime(key){
 				});
 				invars = invars.join("\n");
 				ginvars = ginvars.join("\n");
-				this.EVALVARS = "function _Vcall(_$data_){\n"+invars+"\n"+ginvars+" \n "+this.EVALVARS+"}";
-				//console.log(this.EVALVARS);
-				eval(this.EVALVARS);
+				_EvalCodes = "function _Vcall(_$data_){\n"+invars+"\n"+ginvars+" \n "+_EvalCodes+"}";
+				//console.log(_EvalCodes);
+				eval(_EvalCodes);
 				_Vcall.call('',ths.data);
 			},
 			//DOM树转执行语句
 			_createVDOMcode : function(tree, inputCode){
 				var ths = this;
-            	if(inputCode ==='' || typeof(inputCode) == 'undefined'){
-					inputCode = "''";
+            	if(inputCode ==='' || typeof(inputCode) == 'undefined' || !tree.variableList){
+					return '';
 				}
             	var treeKey = "_VM."+tree.eleKey;
 				var Rcode = "_F("+treeKey+", function(){\n";
@@ -1835,7 +1832,6 @@ function debugTime(key){
 
 				return evalStrings;
 			},
-
 			//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
 			monitorMap : [],
 			//收集监听列表
