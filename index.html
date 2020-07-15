@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <script src="ksaui.js"></script>
+    <script src="ksaui_tpl.js"></script>
     <!--
     <script src="./data/vue.js"></script>
     -->
@@ -101,7 +102,7 @@
     ${window.location.href}
     ${name =='1' ? 'name1' : (name === 3 ? 3 : sdt.sex)}
     <div>
-        {loop list key value}
+        {loop list key  value}
         {eval}
         var evaladd = {a:('123'+key)};
         {/eval}
@@ -118,6 +119,11 @@
         <div>【elseif】 ${value.name}</div>
         {else}
         <div>【else】</div>
+        {/if}
+        {if key =='data'}
+        {loop value.list k v}
+        <p>${v}</p>
+        {/loop}
         {/if}
         {/loop}
     </div>

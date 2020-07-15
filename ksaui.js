@@ -216,7 +216,7 @@ function debugTime(key){
                 }
             }else{
                 var setDt = {}, setDtCount =0;
-                $.loop(key, function(k, v){
+                $.loop(key, function( v, k){
                     //移除属性
                     if (value === null) {
                         ele.removeAttribute(v);
@@ -238,7 +238,7 @@ function debugTime(key){
                 //写入data属性
                 if(setDtCount >0){
                     if (!ele._KSADATA) {ele._KSADATA = {};}
-                    $.loop(setDt, function(k, v){
+                    $.loop(setDt, function( v, k){
                         ele._KSADATA[k.substr(5)] = v;
                     });
                 }
@@ -290,14 +290,14 @@ function debugTime(key){
             }
             var getdt = {};
             if(setData){
-                $.loop(setData, function(k, v){
+                $.loop(setData, function( v, k){
                     if(!$.isObject(v) && ele.attributes['data-'+k]){
                         ele.setAttribute('data-'+k, v);
                     }
                     ele._KSADATA[k] = v;
                 });
             }else if(getKey.length){
-                $.loop(getKey, function(_, k){
+                $.loop(getKey, function( k, _){
                     var v = ele._KSADATA[k] || (ele.getAttribute('data-'+k) || undefined);
                     if($.isset(v)) {
                         getdt[k] = v;
@@ -315,7 +315,7 @@ function debugTime(key){
                 }
 
             }else if(isdel){
-                $.loop(key, function(_, k){
+                $.loop(key, function( k, _){
                     delete ele._KSADATA[k];
                 });
             }
@@ -542,7 +542,7 @@ function debugTime(key){
 		if(dt && ($.isArray(dt) || $.instanceof(dt,NodeList))){
 			for(i=0;i<dt.length;i++){
 				val = dt[i];
-				if(fun(i, dt[i] ,i) === true){
+				if(fun(dt[i] ,i) === true){
 					return;
 				}
 			}
@@ -550,7 +550,7 @@ function debugTime(key){
 			var i=0;
 			for(var k in dt){
 				val = dt[k];
-				if(fun(k,dt[k],i) === true){
+				if(fun(dt[k], k, i) === true){
 					return;
 				}
 				i++;
@@ -911,7 +911,7 @@ function debugTime(key){
 			var kid = KID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
 
-			$.loop(event.split(/\s/), function (_, evn) {
+			$.loop(event.split(/\s/), function (evn) {
 				if (evn == 'ready'){
 					return $(document).ready(callback);
 				}
@@ -959,7 +959,7 @@ function debugTime(key){
 		callback = callback ? callback : function(){return false};
 		return self.each(function (_, ele) {
 			var kid = KID(ele);
-			$.loop(event.split(/\s/), function (_, evn) {
+			$.loop(event.split(/\s/), function (evn) {
 				var evnDt = bindEventData[kid] && bindEventData[kid][evn] ? bindEventData[kid][evn] : null;
 
 				evn = evn.replace(/\..*/,'');
@@ -1239,7 +1239,7 @@ function debugTime(key){
 							}
 							var oldValue = _Svalue;
 							_Svalue = v;
-							$.loop(ths.updMap, function(_, fun){
+							$.loop(ths.updMap, function( fun, _){
 								if(fun(v, oldValue) !== true){
 									delete ths.updMap[_];
 									//debug('删除当前监听回调')
@@ -1302,7 +1302,7 @@ function debugTime(key){
 		if(argsNames && argsNames[2]) {
 			var dt = {};
 			argsNames = $.explode(',', argsNames[2], ' ');
-			$.loop(argsNames, function (k, v) {
+			$.loop(argsNames, function (v, k) {
 				v = v.trim();
 				dt[v] = Args[k];
 			});
@@ -1318,7 +1318,7 @@ function debugTime(key){
 		this.setTimeoutMap[skey] = window.setTimeout(func, time);
 	}
 
-	K.tpl = function(_DATA){
+	K.tpl_ = function(_DATA){
     	var self = this;
 		//匹配模板变量正则 {xxx}
 		var variableReg = /\$\{((?:.|\r?\n)+?)\}/g;
@@ -1364,13 +1364,14 @@ function debugTime(key){
 		var Tpc = {
 			E : '', //前台渲染区DOM对象
 			data : _DATA,
-			Dom : '', //虚拟节点
+			Dom : newFragment(), //虚拟节点
+			DOMMAPS : [], //虚拟节点索引
 			VDOM : {},
 			EVALVARS : '',
 			$dataMap : {},
 			createdata : function($dt, parentKEY){
 				var ths = this;
-				$.loop($dt, function(key, value){
+				$.loop($dt, function( value, key){
 					var inKey;
 					if($.isNumber(key)){
 						inKey = parentKEY ? (parentKEY+'['+key+']') : key;
@@ -1393,7 +1394,7 @@ function debugTime(key){
 				this.createdata(this.data);//创建传入数据的索引
 
 				this.replace(); //替换语法生成内部HTML
-				this.VDOM = this.createVDOM(this.Dom); //内部HTML转为DOM节点并生成虚拟DOM
+				this.VDOM = this.createVDOM(this.Dom.childNodes); //内部HTML转为DOM节点并生成虚拟DOM
                 delete this.Dom; //删除虚拟节点 释放内存
 				//模板语法生成js 解析代码
                 this.EVALVARS = this.createVDOMcode(this.VDOM);
@@ -1465,19 +1466,19 @@ function debugTime(key){
 			//模板语法格式化为符合内部要求的语法
 			replace : function(){
 				var code = this.E.innerHTML;
-				code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksa ksaaction="loop" ksafactor="$1"><ksaloopline>');
+				code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksa ksaaction="loop" ksafactor="$1">');
 				code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksa ksaaction="if" ksafactor="$1">');
 				code = code.replace(/\{elseif ([^\\]+?)\}/ig, '</ksa><ksa ksaaction="elseif" ksafactor="$1">');
 				code = code.replace(/\{else\}/ig, '</ksa><ksa ksaaction="else">');
 
 				code = code.replace(/\{\/if\}/ig, '</ksa></ifscope>');
-				code = code.replace(/\{\/loop\}/ig, '</ksaloopline></ksa>');
+				code = code.replace(/\{\/loop\}/ig, '</ksa>');
 
 				code = code.replace(/\{eval\}/ig, '<ksaeval>');
 				code = code.replace(/\{\/eval\}/ig, '</ksaeval>');
 				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksaeval>$1</ksaeval>');
 				this.code = code;
-				this.Dom = $.dom(code);
+				$(this.Dom).html($.dom(code));
 				return this;
 			},
 			createDomLoop : function(ele, tree, eleKey, parentKey){
@@ -1485,7 +1486,7 @@ function debugTime(key){
 					loopN = 0,
 					farr = $.explode(' ', tree.factor, '');
 
-            	/*
+
             	function __defdel(key, dt){
 					//监听 变量被删除
 					ths.def.del(dt, function(){
@@ -1497,7 +1498,7 @@ function debugTime(key){
 						var num = $.count(this.children),
 							chilnodes = chil.ele._childNodes,
 							length = chilnodes.length;
-						$.loop(chilnodes, function(i, e){
+						$.loop(chilnodes, function( e, i){
 							e = $(e);
 							if(i === length-1){
 								ts.ele = document.createComment('');
@@ -1513,7 +1514,7 @@ function debugTime(key){
 
 				var loopData = ths.strTovars(farr[0]);
 				tree.children = {};
-				$.loop(loopData, function(k, value, _i1){
+				$.loop(loopData, function( value, _i1, k){
 					var d = {};
 					d[farr[1]] = k;
 					d[farr[2]] = value;
@@ -1543,7 +1544,7 @@ function debugTime(key){
 					if(this.isEmpty){
 						end = this.ele;
 					}else{
-						$.loop(this.children, function(_, e){
+						$.loop(this.children, function( e, _){
 							end = e;
 						});
 						end = end.ele._childNodes[end.ele._childNodes.length -1];
@@ -1561,7 +1562,7 @@ function debugTime(key){
 					ths.parseIf(this.children[_n].children);
 					__defdel(_n, dt);
 				}, tree);
-				*/
+
 			},
 			/**
 			 * 创建虚拟DOM
@@ -1576,7 +1577,7 @@ function debugTime(key){
                 var ths = this;
                 var newTree = {};
 
-                $.loop(eleList, function(eleKey, ele){
+                $.loop(eleList, function( ele, eleKey){
                     if(ele.tagName ==='KSAFACTOR') {
                         return ;
                     }
@@ -1665,12 +1666,12 @@ function debugTime(key){
                             function f(el){
                                 callFun.call(this, el);
                                 if(el.children){
-                                    $.loop(el.children, function(_, e){
+                                    $.loop(el.children, function( e, _){
                                         f(e);
                                     });
                                 }
                             }
-                            $.loop(ths.children, function(_, e){
+                            $.loop(ths.children, function( e, _){
                                 f(e);
                             });
                         };
@@ -1697,7 +1698,7 @@ function debugTime(key){
 						tree.factorResult = intdt;
 						if(tree.ele){
 							var tpt = tree.parent(), tptEndtree;
-							$.loop(tpt.children, function(k, t){
+							$.loop(tpt.children, function( t, k){
 								if(t.tag !=='else'){
 									tptEndtree = t;
 								}
@@ -1737,7 +1738,7 @@ function debugTime(key){
 					if(!tree.renderFunction || !tree.renderFunction.length){
 						return;
 					}
-					$.loop(tree.renderFunction, function(_, f){
+					$.loop(tree.renderFunction, function( f, _){
 						func.push(function(){
 							f(tree);
 						});
@@ -1758,7 +1759,7 @@ function debugTime(key){
 				//===================================================
 				var invars = [];
 				var ginvars = [];
-				$.loop(this.data, function(key, value){
+				$.loop(this.data, function( value, key){
 					var svs = "_$data_"+($.isNumber(key) ? ("["+key+"]") : ("."+key));
 					invars.push("var "+key+" = "+svs+";");
 					ginvars.push("_G(_$data_, '"+key+"', function(v){"+key+"= v;})");
@@ -1781,7 +1782,7 @@ function debugTime(key){
 				Rcode += "_E(arguments[0], function(){return "+inputCode+"});\n";
 				Rcode += "}, function(){\n";
 				//添加监听
-				$.loop(tree.variableList, function(vname, skv){
+				$.loop(tree.variableList, function( skv, vname){
 					if($.isObject(skv)){
 						Rcode += "_M(arguments[0], "+vname+", '"+Object.keys(skv).join(',')+"');\n";
 					}else if(typeof(ths.data[vname]) !== "undefined"){
@@ -1858,7 +1859,7 @@ function debugTime(key){
 					$.loop(setKey, function (_, vk) {
 						setEvn.keys[vk] = setEvn.keys[vk] ? setEvn.keys[vk] : [];
 						if($.isArray(setFunc)){
-							$.loop(setFunc, function(_, f){
+							$.loop(setFunc, function( f, _){
 								if(!$.inArray(f, setEvn.keys[vk])){
 									setEvn.keys[vk].push({function : f, isPush:false});
 								}
@@ -1871,9 +1872,9 @@ function debugTime(key){
 			},
 			monitor : function(){
 				var ths = this;
-				$.loop(this.monitorMap, function(_, sdt){
-					$.loop(sdt.keys, function(key, funs){
-						$.loop(funs, function(____, f){
+				$.loop(this.monitorMap, function( sdt, _){
+					$.loop(sdt.keys, function( funs, key){
+						$.loop(funs, function( f, ____){
 							if(!f.isPush) {
 								ths.def.set(sdt.object, key, f.function);
 								f.isPush = true;
@@ -1899,7 +1900,7 @@ function debugTime(key){
                         dom = nodeType === 3 ? document.createTextNode(tree.text) : document.createComment(tree.text);
 
                     }else{
-                        if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa','ksaloopline'])) {
+                        if($.inArray(tree.tag, ['if','elseif','else','loop','ifscope','ksa'])) {
                             dom = newFragment();
 
                         }else{
@@ -1946,7 +1947,7 @@ function debugTime(key){
 					//创建虚拟节点
 					tree.comNode = document.createComment('ifComment');
 				}
-				$.loop(tree.children, function(_, t){
+				$.loop(tree.children, function( t, _){
 					var r = false;
 					if(t.tag !='else') {
 						r = t.factorResult;
@@ -1964,7 +1965,7 @@ function debugTime(key){
 					}
 					if(!r){
 						//整理待删除列表 待删除的节点必须是已存在于前台dom中
-						$.loop(t.ele._childNodes, function(_k, t1){
+						$.loop(t.ele._childNodes, function( t1, _k){
 							if(!$.inArray(document.compareDocumentPosition(t1), [35, 37])) {
 								deleteEles.push(t1);
 							}
@@ -1984,7 +1985,7 @@ function debugTime(key){
 					$(deleteEles[0]).before(accordTree.ele._childNodes);
 					tree.comNodePush = false;
 				}
-				$.loop(deleteEles, function(_, e){
+				$.loop(deleteEles, function( e, _){
 					$(e).remove();
 				});
 
@@ -2011,7 +2012,7 @@ function debugTime(key){
                 var E = $(this.E);
                 E.empty();
                 var Vdom = newFragment();
-                $.loop(this.VDOM, function(_, e){
+                $.loop(this.VDOM, function( e, _){
                     Vdom.appendChild(e.ele);
                 });
                 E.html(Vdom);
@@ -2127,7 +2128,7 @@ function debugTime(key){
             VDOM : Tpc.VDOM,
             del : function(obj){
                 var evn = Tpc.def.DelEvent;
-                $.loop(evn.object, function(key, o){
+                $.loop(evn.object, function( o, key){
                     if(o === obj){
                         evn.func[key]();
                     }
@@ -2137,7 +2138,7 @@ function debugTime(key){
             add : function(obj, addkey, data){
                 obj[addkey] = data;
                 var evn = Tpc.def.AddEvent;
-                $.loop(evn.object, function(key, o){
+                $.loop(evn.object, function( o, key){
                     if(o === obj){
                         evn.func[key](addkey, data);
                     }
@@ -2246,10 +2247,10 @@ function debugTime(key){
 	}
 	K.inArray = function(val,dt, rkey){
 		var S = false;
-		$.loop(dt,function(k,v){
+		$.loop(dt,function(v, k){
 			if(val === v){
 				S = rkey ? k : true;
-				return true;
+				return S;
 			}
 		});
 		return S;
@@ -2328,7 +2329,7 @@ function debugTime(key){
         return str;
     }
 
-	K.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (i, name) {
+	K.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};
