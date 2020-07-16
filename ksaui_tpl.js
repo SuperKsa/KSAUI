@@ -22,15 +22,14 @@ $.__proto__.tpl = function(_DATA){
 			return index;
 		},
 		ECODE : [],
+		def : $this.def(),
 		init : function(ele){
 			this.E = ele;
 			this.replace();
 			this.ECODE = this.createVDOM(this.Dom.childNodes);
-
-			function _element(){
-
-			}
 			this.parseVDOMcode('_Push('+this.ECODE+')');
+			//监听列表统一更新
+			this.monitor();
 		},
 		//模板语法格式化为符合内部要求的语法
 		replace : function(){
@@ -62,6 +61,12 @@ $.__proto__.tpl = function(_DATA){
 			}else{
 				ele._KSA[key] = value;
 			}
+		},
+		getAttrs : function(ele, key){
+			if(!ele._KSA){
+				ele._KSA = {};
+			}
+			return $.isset(key) && $.isset(ele._KSA[key]) ? ele._KSA[key] : null;
 		},
 		/**
 		 * 获取节点loop属性值
@@ -105,9 +110,22 @@ $.__proto__.tpl = function(_DATA){
 					}
 				}
 
-				var rcode = '';
+				var rcode = '', monitor = null;
 				if($.inArray(nodeType, [3,8])){
-					rcode = ths.parseText(ele.nodeValue, ele)[0];
+					var exp = ths.parseText(ele.nodeValue, ele);
+					rcode = exp[0];
+					if(exp[1]){
+						monitor = 'function(){';
+						//添加监听
+						$.loop(exp[1], function( skv, vname){
+							if($.isObject(skv)){
+								monitor += "_M(arguments[0], "+vname+", '"+Object.keys(skv).join(',')+"');\n";
+							}else if(typeof(ths.data[vname]) !== "undefined"){
+								monitor += "_M(arguments[0], _$data_, '"+vname+"');\n";
+							}
+						});
+						monitor += '}';
+					}
 				}else{
 					var loopExp = ths.getloop(ele);
 					if(loopExp){
@@ -144,7 +162,7 @@ $.__proto__.tpl = function(_DATA){
 				}
 				if(tag ==='IFSCOPE' || ifExp){
 				}else{
-					rcode = '_C("'+tag+'", '+nodeType+', '+(attrs || '""')+', '+(rcode || '""')+')';
+					rcode = '_F(function(e){return _C((e||"'+tag+'"), '+nodeType+', '+(attrs || '""')+', '+(rcode || '""')+')}, '+monitor+')';
 				}
 
 				Enode.push(rcode);
@@ -161,6 +179,58 @@ $.__proto__.tpl = function(_DATA){
 			}
 			return Enode;
 		},
+		//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
+		monitorMap : [],
+		//收集监听列表
+		monitorGather : function(setObj, setKey, setFunc){
+			var SetEvent = this.monitorMap;
+			if($.isArray(setFunc) && !setFunc.length){
+				return;
+			}
+			if(setObj && $.isObject(setObj) && setFunc) {
+				setKey = $.explode(',', setKey,' ');
+				var addKey = null;
+				$.loop(SetEvent, function (obj, k) {
+					if (obj.object === setObj) {
+						addKey = k;
+					}
+				});
+				//如果监听对象不在列表则添加一个
+				if(addKey === null){
+					addKey = SetEvent.push({object: setObj, keys: {}});
+					addKey --;
+				}
+				var setEvn = SetEvent[addKey];
+				$.loop(setKey, function (vk) {
+					setEvn.keys[vk] = setEvn.keys[vk] ? setEvn.keys[vk] : [];
+					if($.isArray(setFunc)){
+						$.loop(setFunc, function(f){
+							if(!$.inArray(f, setEvn.keys[vk])){
+								setEvn.keys[vk].push({function : f, isPush:false});
+							}
+						});
+					}else if($.isFunction(setFunc) && !$.inArray(setFunc, setEvn.keys[vk])){
+						setEvn.keys[vk].push({function : setFunc, isPush:false});
+					}
+				});
+			}
+		},
+		monitor : function(){
+			var ths = this;
+			$.loop(this.monitorMap, function(sdt){
+				$.loop(sdt.keys, function(funs, key){
+					$.loop(funs, function(f){
+						if(!f.isPush) {
+							ths.def.set(sdt.object, key, f.function);
+							f.isPush = true;
+						}
+					});
+				});
+			});
+		},
+		parseElement : function(ele){
+
+		},
 		/**
 		 * 统一解析VDOM虚拟树中的变量
 		 */
@@ -168,9 +238,31 @@ $.__proto__.tpl = function(_DATA){
 			var ths = this;
 			var _VM = this.VDOM;
 
-			//创建节点
+			function _F(Cfunc, Mfunc){
+				var ele = Cfunc();
+				ths.setAttrs(ele, 'renderFunction', function(){
+					Cfunc(ele);
+				});
+				Mfunc && Mfunc(ele);
+				return ele;
+			}
+
+			/**
+			 * 创建节点
+			 * @returns {Comment | DocumentFragment}
+			 * @private
+			 */
 			function _C(){
-				var tag = arguments[0], nodeType = arguments[1], attrs = arguments[2], nodeValue = arguments[3];
+				var tag = arguments[0];
+
+				var nodeType = arguments[1],
+					attrs = arguments[2],
+					nodeValue = arguments[3],
+					monitorFunc = arguments[4];
+				if($.isObject(tag) && tag.nodeType){
+					tag.nodeValue = nodeValue;
+					return tag;
+				}
 				var ele;
 				if($.isArray(tag)){
 					ele = document.createDocumentFragment();
@@ -208,7 +300,29 @@ $.__proto__.tpl = function(_DATA){
 				}
 				var domIndex = ths.domListSet(ele);
 				ths.setAttrs(ele, 'domIndex', domIndex);
+				if(monitorFunc){
+					monitorFunc(ele);
+				}
 				return ele;
+			}
+
+			/**
+			 * vdom变量监听绑定函数
+			 *
+			 * 每个需要监听的对象键名都交给monitor
+			 *
+			 * @param tree 对应VDOM树
+			 * @param obj 需要监听的对象
+			 * @param objKey 需要监听的键名
+			 */
+			function _M(ele, obj, objKey){
+				var func = [], func = ths.getAttrs(ele,'renderFunction');
+				if(!func){
+					return;
+				}
+				ths.monitorGather(obj, objKey, function(){
+					func(ele)
+				});
 			}
 
 			//将DOM写到页面中
@@ -217,7 +331,7 @@ $.__proto__.tpl = function(_DATA){
 				if($.isArray(element)){
 
 					$.loop(element, function(e){
-						dom.appendChild(e);
+						e && dom.appendChild(e);
 					});
 				}else{
 					dom.appendChild(element);
@@ -228,8 +342,12 @@ $.__proto__.tpl = function(_DATA){
 			}
 
 			//收集监控变量
-			function _G(){
-
+			function _G(obj, objKey, func){
+				if(func) {
+					ths.monitorGather(obj, objKey, function (v) {
+						func(v);
+					});
+				}
 			}
 
 			//循环回调
@@ -255,7 +373,8 @@ $.__proto__.tpl = function(_DATA){
 			invars = invars.join("\n");
 			ginvars = ginvars.join("\n");
 			_EvalCodes = "function _Vcall(_$data_){\n"+invars+"\n"+ginvars+" \n "+_EvalCodes+"}";
-			console.log(_EvalCodes);
+			_EvalCodes += "\n\nconsole.error(new Error('测试错误 爆源码'))";
+			//console.log(_EvalCodes);
 			eval(_EvalCodes);
 			_Vcall.call('',ths.data);
 		},
