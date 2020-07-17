@@ -538,10 +538,13 @@ function debugTime(key){
      * @param {object} dt 数组或对象
      * @param {func} 每次循环的函数 function(key,value){...}
      */
-    K.loop = function(dt,fun){
+    K.loop = function(dt, fun, actions){
 		if(dt && ($.isArray(dt) || $.instanceof(dt,NodeList))){
 			for(i=0;i<dt.length;i++){
 				val = dt[i];
+				if(actions ==='first' || (actions ==='last' && i === dt.length -1)){
+					return val;
+				}
 				if(fun(dt[i] ,i) === true){
 					return;
 				}
@@ -550,6 +553,9 @@ function debugTime(key){
 			var i=0;
 			for(var k in dt){
 				val = dt[k];
+				if(actions ==='first' || (actions ==='last' && i === dt.length -1)){
+					return val;
+				}
 				if(fun(dt[k], k, i) === true){
 					return;
 				}
@@ -1188,89 +1194,123 @@ function debugTime(key){
 	/**
 	 * 变量监听函数
 	 */
-	K.def = function(){
-		return {
-			ths : null,
-			updIndex : 0,
-			updMap : {},
-			DelEvent : {object:[],func:[]},
-			AddEvent : {object:[],func:[]},
-			/**
-			 * 全局更新函数
-			 * @param inobj this指向
-			 * @param func
-			 */
-			upd : function(inobj, func){
-				var i = this.updIndex ++;
-				this.updMap[i] = function(){
-					return func.apply(inobj, arguments);
-				}
-			},
-			/**
-			 * 变量监听 虚拟dom引擎TPC2使用
-			 * @param obj
-			 * @param keyName
-			 * @param setFun
-			 * @param getFun
-			 * @private
-			 */
-			set : function(obj, keyName, setFun, getFun){
-				var ths = this;
-				if(!$.isObject(obj) || !keyName || !setFun){
-					return;
-				}
+	K.def = {
+		updIndex : 0,
+		updMap : {},
+		DelEvent : {},
+		AddEvent : {},
+		/**
+		 * 全局更新函数
+		 * @param inobj this指向
+		 * @param func
+		 */
+		upd : function(inobj, func){
+			var i = this.updIndex ++;
+			this.updMap[i] = function(){
+				return func.apply(inobj, arguments);
+			}
+		},
+		/**
+		 * 变量监听 虚拟dom引擎TPC2使用
+		 * @param obj
+		 * @param keyName
+		 * @param setFun
+		 * @param getFun
+		 * @private
+		 */
+		set : function(obj, keyName, setFun, getFun){
+			var ths = this;
+			if(!$.isObject(obj) || !keyName || !setFun){
+				return;
+			}
 
-				var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
-				setTer = setTer ? setTer.set : setTer;
-				var setFunction = function(v){
-					setTer && setTer(v);
-					setFun(v);
-				};
+			var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
+			setTer = setTer ? setTer.set : setTer;
+			var setFunction = function(v){
+				setTer && setTer(v);
+				setFun(v);
+			};
 
 
-				try {
-					var _Svalue = obj[keyName];
-					Object.defineProperty(obj, keyName, {
-						enumerable: true,
-						configurable: true,
-						set : function(v){
-							if(v === _Svalue){//值相同时不回调函数
-								return;
-							}
-							var oldValue = _Svalue;
-							_Svalue = v;
-							$.loop(ths.updMap, function( fun, _){
-								if(fun(v, oldValue) !== true){
-									delete ths.updMap[_];
-									//debug('删除当前监听回调')
-								}
-							});
-							setFunction(v, keyName, obj);
-
-						},
-						get : function(v){
-							return _Svalue;
+			try {
+				var _Svalue = obj[keyName];
+				Object.defineProperty(obj, keyName, {
+					enumerable: true,
+					configurable: true,
+					set : function(v){
+						if(v === _Svalue){//值相同时不回调函数
+							return;
 						}
-					});
-				}catch (e) {
+						var oldValue = _Svalue;
+						_Svalue = v;
+						$.loop(ths.updMap, function( fun, _){
+							if(fun(v, oldValue) !== true){
+								delete ths.updMap[_];
+								//debug('删除当前监听回调')
+							}
+						});
+						setFunction(v, keyName, obj);
 
-				}
+					},
+					get : function(v){
+						return _Svalue;
+					}
+				});
+			}catch (e) {
 
-			},
-			del : function(obj, func, tothis){
-				this.DelEvent.object.push(obj);
-				this.DelEvent.func.push(function(){
-					func.call(tothis);
-				});
-			},
-			add : function(obj, func, tothis){
-				this.AddEvent.object.push(obj);
-				this.AddEvent.func.push(function(){
-					func.apply(tothis, arguments);
-				});
-			},
-		}
+			}
+
+		},
+		del : function(obj, key, func, tothis){
+			var objID = $.objectID(obj);
+			if(!this.DelEvent[objID]){
+				this.DelEvent[objID] = {object:obj, func:{}};
+			}
+			if(!this.DelEvent[objID].func[key]){
+				this.DelEvent[objID].func[key] = [];
+			}
+			this.DelEvent[objID].func[key].push(function(){
+				func.apply(tothis, arguments);
+			});
+		},
+		add : function(obj, func, tothis){
+			var objID = $.objectID(obj);
+			if(!this.AddEvent[objID]){
+				this.AddEvent[objID] = {object:obj, func:[]};
+			}
+			this.AddEvent[objID].func.push(function(){
+				func.apply(tothis, arguments);
+			});
+		},
 	}
+
+	K.objectDel = function(obj, key){
+		if(typeof(obj[key]) !=="undefined"){
+			var objID = $.objectID(obj);
+			if(this.def.DelEvent[objID] && this.def.DelEvent[objID].func[key]){
+				$.loop(this.def.DelEvent[objID].func[key], function(f){
+					f.call('', key);
+				});
+				delete this.def.DelEvent[objID].func[key];
+			}
+		}
+		delete obj[key];
+	};
+
+	K.objectAdd = function(obj, key, data){
+		obj[key] = data;
+
+		if(typeof(obj[key]) !=="undefined"){
+			var objID = $.objectID(obj);
+			if(this.def.AddEvent[objID]){
+
+				$.loop(this.def.AddEvent[objID].func, function(f){
+					f.call('', key, data);
+				});
+			}
+		}
+
+	};
 
 	/**
 	 * 创建匿名回调函数解析模板实际值
@@ -2149,6 +2189,32 @@ function debugTime(key){
 
 	}
 
+
+	var autoIDMap = {};
+	/**
+	 * 根据key获得一个自增ID
+	 * @param key
+	 * @returns {number}
+	 */
+	K.autoID = function(key){
+		if(!autoIDMap[key]){
+			autoIDMap[key] = 0;
+		}
+		return autoIDMap[key] ++;
+	};
+
+	/**
+	 * 获取一个对象的唯一ID
+	 * @type {number}
+	 */
+	var objectIDIndex = 1;
+	K.objectID = function (obj) {
+		if(!obj.__$_objectID_$__) {
+			obj.__$_objectID_$__ = objectIDIndex++;
+		}
+		return obj.__$_objectID_$__;
+	}
+
 // ====================== 判断与重写函数类 ====================== //
 	K.isWindow = function isWindow(obj) {
 		return obj != null && obj === obj.window;
@@ -2238,8 +2304,23 @@ function debugTime(key){
 			return v === '' || v === 0 || v ==='0' || v === false || v === null || v === undefined;
 		}
 	}
+
+	/**
+	 * 判断是否是一个元素节点
+	 * @param dom
+	 * @returns {boolean}
+	 */
 	K.isDomAll = function(dom){
 		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList
+	}
+
+	/**
+	 * 判断元素节点是否在当前document中
+	 * @param e
+	 * @returns {*|boolean}
+	 */
+	K.isIndom = function(e){
+		return e && !$.inArray(document.compareDocumentPosition(e), [35, 37]);
 	}
 
 	K.isNull = function(v){
@@ -2262,6 +2343,7 @@ function debugTime(key){
 		});
 		return S;
 	}
+
 	K.arrayMerge = function(){
 		var arr = arguments[0] || {};
 		$.each(arguments, function(key, value){

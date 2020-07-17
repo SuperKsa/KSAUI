@@ -22,7 +22,7 @@ $.__proto__.tpl = function(_DATA){
 			return index;
 		},
 		ECODE : [],
-		def : $this.def(),
+		def : $this.def,
 		init : function(ele){
 			this.E = ele;
 			this.replace();
@@ -101,7 +101,9 @@ $.__proto__.tpl = function(_DATA){
 				if (ele.attributes && ele.attributes.length) {
 					attrs = {};
 					$.map(ele.attributes, function (v) {
-						attrs[v.name] = v.value;
+						if(!$.inArray(v.name, ['ksafactor','ksaaction'])) {
+							attrs[v.name] = v.value;
+						}
 					});
 					if(Object.keys(attrs).length > 0){
 						attrs = JSON.stringify(attrs);
@@ -132,28 +134,45 @@ $.__proto__.tpl = function(_DATA){
 						rcode += '_LOOP('+loopExp[0]+', function('+loopExp[1]+', '+loopExp[2]+'){ return ';
 					}
 					if(tag ==='IFSCOPE'){
-						rcode += '(function(){';
+						rcode += '_if(';
 					}
 					var ifExp = ths.getif(ele);
 					if(ifExp){
+						var exp = ths.parseText('${'+ifExp[1]+'}');
+						var factor = [];
+						$.loop(exp[1], function(v, k){
+							if($.isObject(v)){
+								factor.push('['+k+', ["'+Object.keys(v).join('","')+'"]]');
+							}
+						});
+						if(factor.length){
+							factor = '['+factor.join(',')+']';
+						}else{
+							factor = '""';
+						}
 						if(ifExp[0] ==='if'){
-							rcode += 'if('+ifExp[1]+'){ return ';
+							//rcode += 'if('+ifExp[1]+'){ return ';
+							rcode += '[function(){return '+ifExp[1]+'}, '+factor+', function(){return ';
 						}else if(ifExp[0] ==='elseif'){
-							rcode += 'else if('+ifExp[1]+'){ return ';
+							//rcode += 'else if('+ifExp[1]+'){ return ';
+							rcode += ',[function(){return '+ifExp[1]+'}, '+factor+', function(){return ';
 						}else if(ifExp[0] ==='else'){
-							rcode += 'else{ return ';
+							//rcode += 'else{ return ';
+							rcode += ',["else","", function(){return';
 						}
 					}
+					//遍历子节点
 					if(ele.childNodes && ele.childNodes.length){
 						rcode += ths.createVDOM(ele.childNodes, tag ==='IFSCOPE');
 					}
 
 					if(ifExp){
-						rcode += '}';
+						rcode += '}]';
+						//rcode += '}';
 					}
 
 					if(tag ==='IFSCOPE'){
-						rcode += '})()';
+						rcode += ')';
 					}
 
 					if(loopExp){
@@ -162,7 +181,8 @@ $.__proto__.tpl = function(_DATA){
 				}
 				if(tag ==='IFSCOPE' || ifExp){
 				}else{
-					rcode = '_F(function(e){return _C((e||"'+tag+'"), '+nodeType+', '+(attrs || '""')+', '+(rcode || '""')+')}, '+monitor+')';
+					monitor = monitor ? (', '+monitor) : '';
+					rcode = '_F(function(){return _C((arguments[0]||"'+tag+'"), '+nodeType+', '+(attrs || '""')+', '+(rcode || '""')+')}'+monitor+')';
 				}
 
 				Enode.push(rcode);
@@ -228,8 +248,44 @@ $.__proto__.tpl = function(_DATA){
 				});
 			});
 		},
-		parseElement : function(ele){
+		cache : {},
+		/**
+		 * 解析创建函数 IF区域中的数据
+		 * @returns {[number, *, {}]}
+		 */
+		parseIF : function(){
+			var ths = this;
+			var R, Rcheck, monObj = {};
+			var ifKey = $.autoID('ktpl-parseIF');
+			$.loop(arguments, function(value, inkey){
+				if(!Rcheck && (value[0] ==='else' || value[0]())){
+					R = value[2]();
+					Rcheck = true;
+					return true;
+				}
+				if(value[1]) {
+					$.loop(value[1], function (mv) {
+						var mvID = $.objectID(mv[0]);
+						if(monObj[mvID]){
+							$.loop(mv[1], function (k) {
+								if(!$.inArray(k, monObj[mvID][1])){
+									monObj[mvID][1].push(k);
+								}
+							});
+						}else{
+							monObj[mvID] = mv;
+						}
+					});
+				}
+			});
+			if(!ths.cache.ifscope){
+				ths.cache.ifscope = {};
+			}
+			if(R){
+				ths.cache.ifscope[ifKey] = R;
+			}
 
+			return [ifKey, R , monObj];
 		},
 		/**
 		 * 统一解析VDOM虚拟树中的变量
@@ -238,6 +294,12 @@ $.__proto__.tpl = function(_DATA){
 			var ths = this;
 			var _VM = this.VDOM;
 
+			/**
+			 * 创建节点并创建变量监听
+			 * @param Cfunc
+			 * @param Mfunc
+			 * @returns {*}
+			 */
 			function _F(Cfunc, Mfunc){
 				var ele = Cfunc();
 				ths.setAttrs(ele, 'renderFunction', function(){
@@ -298,8 +360,6 @@ $.__proto__.tpl = function(_DATA){
 						$(ele).attr(attrs);
 					}
 				}
-				var domIndex = ths.domListSet(ele);
-				ths.setAttrs(ele, 'domIndex', domIndex);
 				if(monitorFunc){
 					monitorFunc(ele);
 				}
@@ -352,15 +412,145 @@ $.__proto__.tpl = function(_DATA){
 
 			//循环回调
 			function _LOOP(dt, func){
-				var ele = document.createDocumentFragment();
-				$.loop(dt, function(value, key){
+				if(!ths.cache.loopscope){
+					ths.cache.loopscope = {};
+				}
+				var loopKey = $.autoID('ktpl-parseLoop');
+				ths.cache.loopscope[loopKey] = [];
+				var loopCache = ths.cache.loopscope[loopKey];
+
+				var newEle = document.createDocumentFragment();
+				var valueOld = {};
+
+				function pushNode(value, key, pcache){
+					var inNodes = [];
 					var node = func.call('', key, value);
 					if($.isArray(node)){
-						node = _C(node)
+						node = _C(node);
+						inNodes = [].slice.call(node.childNodes);
+					}else{
+						inNodes = [node];
 					}
-					node && ele.appendChild(node);
+
+					//loop删除数据监听
+					ths.def.del(dt, key, function(){
+						//删除缓存中对应节点
+						var newCache = [];
+						$.loop(loopCache, function(v){
+							if(!$.inArray(v, inNodes)){
+								newCache.push(v);
+							}
+						});
+						var loopisEmpty = !newCache.length || (newCache.length === 1 && newCache[0]._KSA_Placeholder);
+						loopCache = newCache;
+
+						var length = inNodes.length -1;
+						$.loop(inNodes, function(e, k){
+
+							//如果loop域是空的 则先创建占位节点
+							if(loopisEmpty && k === length){
+
+								$(e).after(_loopcreateCom());
+							}
+							$(e).remove();
+						});
+
+					});
+					valueOld[key] = value;
+					return node;
+				}
+
+				function _loopcreateCom(){
+					//如果loop没有数据 则创建一个占位节点
+					var node = document.createComment('KSA-Placeholder:loop');
+					node._KSA_Placeholder = 1;
+					loopCache.push(node);
+					return node;
+				}
+
+
+
+
+				$.loop(dt, function(value, key){
+					var node = pushNode(value, key);
+					var nodes;
+					if(node.nodeType === 11){
+						nodes = [].slice.call(node.childNodes);
+					}else{
+						nodes = [node];
+					}
+					newEle.appendChild(node);
+
+					$.loop(nodes, function(v){
+						loopCache.push(v);
+					});
 				});
-				return ele;
+
+				//loop添加数据监听
+				ths.def.add(dt, function(key, value){
+					var node = pushNode(value, key);
+
+					var markDom;
+					$.loop(loopCache, function(e){
+						if($.isIndom(e)) {
+							markDom = e;
+						}
+					});
+					var loopisEmpty = !loopCache.length || (loopCache.length === 1 && loopCache[0]._KSA_Placeholder);
+					if(node.nodeType === 11){
+						$.loop(node.childNodes, function(v){
+							loopCache.push(v);
+						});
+					}else{
+						loopCache.push(node);
+					}
+					$(markDom).after(node);
+					if(loopisEmpty){
+						$(markDom).remove();
+					}
+				});
+
+
+
+
+				if(!loopCache.length){
+					newEle.appendChild(_loopcreateCom());
+				}
+				return newEle;
+			}
+
+			/**
+			 * if判断节点回调处理
+			 */
+			function _if(){
+				var Args = arguments;
+				var ifdt = ths.parseIF.apply(ths, Args);
+				var cachekey = ifdt[0];
+
+				if(ifdt[2]){
+					$.loop(ifdt[2], function (mv) {
+						ths.monitorGather(mv[0], mv[1], function(){
+							var cache = ths.cache.ifscope[cachekey];
+							if(cache){
+								var newdom = ths.parseIF.apply(ths, Args);
+								if(newdom !== cache){
+									ths.cache.ifscope[cachekey] = newdom[1];
+									var markDom;
+									$.loop(cache, function(e){
+										if(!markDom && $.isIndom(e)) {
+											markDom = e;
+										}else{
+											$(e).remove();
+										}
+									});
+									$(markDom).before(newdom[1]).remove();
+								}
+							}
+						});
+					});
+				}
+
+				return ifdt[1];
 			}
 			//===================================================
 			var invars = [];

@@ -52,6 +52,9 @@
         tel :'18888888888',
         list : {
             0 : {name : '张二娃', sex : '男'},
+        },
+        list1 : {
+            0 : {name : '张二娃', sex : '男'},
 
             1 : {name : '李老五', sex : '男'},
             2 : {name : '王同学', sex : '男'},
@@ -110,10 +113,7 @@
 
 
         {if value.name != '张二娃' && value.name !='张三10'}
-        <div>${key} : ${value.name} ${value.sex} /
-            {if name =='123'}
-            ${name}
-            {/if}
+        <div>${key} : ${value.name} ${value.sex} / ${name}
         </div>
         {elseif value.name =='张三10'}
         <div>【elseif】 ${value.name}</div>
