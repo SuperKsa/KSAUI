@@ -34,13 +34,13 @@ $.__proto__.tpl = function(_DATA){
 		//模板语法格式化为符合内部要求的语法
 		replace : function(){
 			var code = this.E.innerHTML;
-			code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksa ksaaction="loop" ksafactor="$1">');
-			code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksa ksaaction="if" ksafactor="$1">');
-			code = code.replace(/\{elseif ([^\\]+?)\}/ig, '</ksa><ksa ksaaction="elseif" ksafactor="$1">');
-			code = code.replace(/\{else\}/ig, '</ksa><ksa ksaaction="else">');
+			code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksatpl ksaaction="loop" ksafactor="$1">');
+			code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksatpl ksaaction="if" ksafactor="$1">');
+			code = code.replace(/\{elseif ([^\\]+?)\}/ig, '</ksatpl><ksatpl ksaaction="elseif" ksafactor="$1">');
+			code = code.replace(/\{else\}/ig, '</ksatpl><ksatpl ksaaction="else">');
 
-			code = code.replace(/\{\/if\}/ig, '</ksa></ifscope>');
-			code = code.replace(/\{\/loop\}/ig, '</ksa>');
+			code = code.replace(/\{\/if\}/ig, '</ksatpl></ifscope>');
+			code = code.replace(/\{\/loop\}/ig, '</ksatpl>');
 
 			code = code.replace(/\{eval\}/ig, '<ksaeval>');
 			code = code.replace(/\{\/eval\}/ig, '</ksaeval>');
@@ -74,14 +74,14 @@ $.__proto__.tpl = function(_DATA){
 		 * @returns {[list, key, value]} undefined=非loop节点
 		 */
 		getloop : function(ele){
-			if(ele && ele.tagName ==='KSA' && ele.getAttribute('ksaaction') ==='loop'){
+			if(ele && ele.tagName ==='KSATPL' && ele.getAttribute('ksaaction') ==='loop'){
 				var farr = $.explode(' ', ele.getAttribute('ksafactor'), '');
 				farr[1] = farr[1] || '__value';
 				return [farr[0], farr[2] ? farr[1] : '__', farr[2] ? farr[2] : farr[1]];
 			}
 		},
 		getif : function(ele){
-			if(ele && ele.tagName ==='KSA'){
+			if(ele && ele.tagName ==='KSATPL'){
 				var ac = ele.getAttribute('ksaaction');
 				if($.inArray(ac, ['if','elseif','else'])){
 					return [ac, ele.getAttribute('ksafactor')];
@@ -345,7 +345,12 @@ $.__proto__.tpl = function(_DATA){
 							ele = document.createComment(nodeValue);
 							break;
 						default:
-							ele = document.createElement(tag);
+							if(tag === 'KSATPL'){
+								ele = document.createDocumentFragment();
+							}else{
+								ele = document.createElement(tag);
+							}
+
 							if($.isArray(nodeValue)){
 								$.loop(nodeValue, function(e){
 									if(e){
@@ -363,6 +368,7 @@ $.__proto__.tpl = function(_DATA){
 				if(monitorFunc){
 					monitorFunc(ele);
 				}
+
 				return ele;
 			}
 

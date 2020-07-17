@@ -22,7 +22,7 @@
     </table>
     ###
     <!-- {{name}} -->
-{{name =='张三' ? '输出张三' : sex}}
+    {{name =='1' ? 'name1' : (name === 3 ? 3 : sex)}}
     <div>
     <template v-for="(value,key) in list">
         <template v-if="value.name != '张三1'">
@@ -33,6 +33,11 @@
         </template>
         <template v-else>
             <div>【else】</div>
+        </template>
+        <template v-if="key =='data'">
+            <template v-for="(v,k) in value.list">
+            <p>{{v}}</p>
+            </template>
         </template>
     </template>
     </div>
@@ -50,10 +55,10 @@
         sex : '男',
         school :'江山中学',
         tel :'18888888888',
-        list : {
+        list1 : {
             0 : {name : '张二娃', sex : '男'},
         },
-        list1 : {
+        list : {
             0 : {name : '张二娃', sex : '男'},
 
             1 : {name : '李老五', sex : '男'},
@@ -101,16 +106,13 @@
         <tr><th>学校</th><td>${school}</td></tr>
         <tr><th>电话</th><td>${tel}</td></tr>
     </table>
-<!-- ${name} -->
-    ${window.location.href}
+    <!-- ${name} -->
     ${name =='1' ? 'name1' : (name === 3 ? 3 : sdt.sex)}
     <div>
         {loop list key  value}
         {eval}
         var evaladd = {a:('123'+key)};
         {/eval}
-
-
 
         {if value.name != '张二娃' && value.name !='张三10'}
         <div>${key} : ${value.name} ${value.sex} / ${name}
