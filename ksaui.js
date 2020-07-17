@@ -115,7 +115,7 @@ function debugTime(key){
         }
 	};
 
-    $.__proto__ = K.A.prototype = K;
+    $.prototype = $.__proto__ = K.A.prototype = K;
 
     K.ready = function(callback) {
         if (/complete|loaded|interactive/.test(document.readyState)) {
@@ -212,8 +212,10 @@ function debugTime(key){
             if(!isvalue && !isKey){
                 var a = ele.attributes;
                 for(var i=a.length-1; i>=0; i--) {
-                    ats[a[i].name] = a[i].value;
+                	var k = a[i].name;
+                    ats[k] = a[i].value;
                 }
+				//attrs.push(ats);
             }else{
                 var setDt = {}, setDtCount =0;
                 $.loop(key, function( v, k){
@@ -221,14 +223,14 @@ function debugTime(key){
                     if (value === null) {
                         ele.removeAttribute(v);
                         //读取属性
-                    }else if(!isvalue){
+                    }else if(!isvalue && !keyIsobj){
                         ats[v] = ele.getAttribute(v);
-                    }else if(isvalue && keyIsobj){
+                    }else if(keyIsobj){
                         ele.setAttribute(k, v);
                         if (k.indexOf('data-') == 0) {
                             setDt[k] = v; setDtCount ++;
                         }
-                    }else if(isvalue){
+                    }else if(isvalue && !keyIsobj){
                         if (v.indexOf('data-') == 0) {
                             setDt[v] = value; setDtCount ++;
                         }
@@ -243,7 +245,7 @@ function debugTime(key){
                     });
                 }
             }
-            if($.count(ats) == 1){
+            if(isKey && $.count(ats) == 1){
                 ats = Object.values(ats)[0];
             }
             attrs.push(ats);
@@ -506,6 +508,7 @@ function debugTime(key){
 	 * @returns {this}
 	 */
 	K.append = function (html, callback) {
+
 		return tempDom.call(this, html, function(ele, node){
 			if(!node){
 				return;
@@ -708,12 +711,17 @@ function debugTime(key){
 	 * @param selector 选择器
 	 * @returns {[]}
 	 */
-    var dir = function (element, key, selector) {
+    var dir = function (element, key, selector, isAll) {
         var rdom = [];
 		$.map(element,function(el){
-			while ((el = el[key]) && el.nodeType !== 9) {
-				el.nodeType === 1 && (!selector || isSelectDom(el, selector)) && rdom.push(el);
+			if(isAll){
+				rdom.push(el);
+			}else{
+				while ((el = el[key]) && el.nodeType !== 9) {
+					el.nodeType === 1 && (!selector || isSelectDom(el, selector)) && rdom.push(el);
+				}
 			}
+
 		});
         return rdom;
     };
@@ -881,12 +889,12 @@ function debugTime(key){
 	 * @param selector
 	 * @returns {*}
 	 */
-	K.nextAll = function(selector){
+	K.nextAll = function(selector, isAll){
 		var rdom = $(), ri=0;
 		this.map(dir(this, 'nextElementSibling', selector),function(ele){
 			rdom[ri] = ele;
 			ri ++;
-		});
+		}, isAll);
 		rdom.length = ri;
 		return rdom;
     }

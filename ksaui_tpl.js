@@ -12,22 +12,17 @@ $.__proto__.tpl = function(_DATA){
 	ksaTpl.prototype.$tpl = {
 		E : null,
 		data : _DATA,
+		cache : {},
 		Dom : document.createDocumentFragment(), //虚拟节点
-		domList : {},
-		$domListIndex : 0,
-		//待渲染节点索引
-		domListSet : function(ele){
-			var index = this.$domListIndex ++;
-			this.domList[index] = ele;
-			return index;
-		},
 		ECODE : [],
 		def : $this.def,
 		init : function(ele){
 			this.E = ele;
 			this.replace();
 			this.ECODE = this.createVDOM(this.Dom.childNodes);
+			delete this.Dom;
 			this.parseVDOMcode('_Push('+this.ECODE+')');
+			delete this.ECODE;
 			//监听列表统一更新
 			this.monitor();
 		},
@@ -42,14 +37,23 @@ $.__proto__.tpl = function(_DATA){
 			code = code.replace(/\{\/if\}/ig, '</ksatpl></ifscope>');
 			code = code.replace(/\{\/loop\}/ig, '</ksatpl>');
 
-			code = code.replace(/\{eval\}/ig, '<ksaeval>');
-			code = code.replace(/\{\/eval\}/ig, '</ksaeval>');
-			code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksaeval>$1</ksaeval>');
+			code = code.replace(/\{eval\}/ig, '<ksatpl ksaaction="eval">');
+			code = code.replace(/\{\/eval\}/ig, '</ksatpl>');
+			code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksatpl ksaaction="eval">$1</ksatpl>');
 			this.code = code;
-			$(this.Dom).html($.dom(code));
+			var dom = $(this.Dom);
+			dom.html($.dom(code));
+			dom.find('[ksaaction="eval"]').each(function(i, ele){
+				ele.factor = ele.innerHTML;
+				ele = $(ele);
+				ele.html(ele.nextAll('',true));
+			});
 			return this;
 		},
 		setAttrs : function(ele, key, value){
+			if(!ele){
+				return;
+			}
 			if(!ele._KSA){
 				ele._KSA = {};
 			}
@@ -97,38 +101,62 @@ $.__proto__.tpl = function(_DATA){
 				var nodeType = ele.nodeType;
 				var attrs = null;
 				var nodeValue = '';
+				var isEvalTag = tag ==='KSATPL' && ele.getAttribute('ksaaction') ==='eval';
+				var rcode = '', monitor = '';
+
 				//遍历属性名
 				if (ele.attributes && ele.attributes.length) {
-					attrs = {};
+					attrs = [];
+					var attrsIsP = [];
 					$.map(ele.attributes, function (v) {
-						if(!$.inArray(v.name, ['ksafactor','ksaaction'])) {
-							attrs[v.name] = v.value;
+						var value = v.value, key = v.name;
+						if(!$.inArray(key, ['ksafactor','ksaaction'])) {
+							var ep = ths.parseText(value);
+							value = ep[0];
+							if($.isObject(ep[1])){
+								$.loop(ep[1], function(kv, kn){
+									attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
+								});
+							}
+							attrs.push(''+key+':'+value+'');
 						}
 					});
-					if(Object.keys(attrs).length > 0){
-						attrs = JSON.stringify(attrs);
+
+					if(attrs.length>0){
+						attrs = 'function(){return {'+attrs.join(',')+'}}';
+						//如果attr有待监控变量时 以数组方式传递
+						if(attrsIsP.length){
+							attrs = '['+attrs+', ['+attrsIsP.join(',')+']]';
+						}
 					}else{
 						attrs = '';
 					}
+
 				}
 
-				var rcode = '', monitor = null;
+
+				if(isEvalTag){
+					rcode += '_F(function(){'+ele.factor+" \n\nreturn ";
+
+				}
 				if($.inArray(nodeType, [3,8])){
 					var exp = ths.parseText(ele.nodeValue, ele);
-					rcode = exp[0];
-					if(exp[1]){
-						monitor = 'function(){';
-						//添加监听
-						$.loop(exp[1], function( skv, vname){
-							if($.isObject(skv)){
-								monitor += "_M(arguments[0], "+vname+", '"+Object.keys(skv).join(',')+"');\n";
-							}else if(typeof(ths.data[vname]) !== "undefined"){
-								monitor += "_M(arguments[0], _$data_, '"+vname+"');\n";
-							}
-						});
-						monitor += '}';
+					if(exp) {
+						rcode = exp[0];
+						if (exp[1]) {
+
+							//添加监听
+							$.loop(exp[1], function (skv, vname) {
+								if ($.isObject(skv)) {
+									monitor += "_M(arguments[0], " + vname + ", '" + Object.keys(skv).join(',') + "');\n";
+								} else if (typeof (ths.data[vname]) !== "undefined") {
+									monitor += "_M(arguments[0], _$data_, '" + vname + "');\n";
+								}
+							});
+						}
 					}
 				}else{
+
 					var loopExp = ths.getloop(ele);
 					if(loopExp){
 						rcode += '_LOOP('+loopExp[0]+', function('+loopExp[1]+', '+loopExp[2]+'){ return ';
@@ -178,13 +206,17 @@ $.__proto__.tpl = function(_DATA){
 					if(loopExp){
 						rcode += '})'
 					}
+
 				}
-				if(tag ==='IFSCOPE' || ifExp){
+				if(tag ==='IFSCOPE' || ifExp || isEvalTag){
 				}else{
-					monitor = monitor ? (', '+monitor) : '';
+					monitor = monitor ? (', function(){'+monitor)+'}' : '';
 					rcode = '_F(function(){return _C((arguments[0]||"'+tag+'"), '+nodeType+', '+(attrs || '""')+', '+(rcode || '""')+')}'+monitor+')';
 				}
 
+				if(isEvalTag){
+					rcode += '})';
+				}
 				Enode.push(rcode);
 			});
 			var length = Enode.length;
@@ -200,10 +232,11 @@ $.__proto__.tpl = function(_DATA){
 			return Enode;
 		},
 		//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
-		monitorMap : [],
-		//收集监听列表
 		monitorGather : function(setObj, setKey, setFunc){
-			var SetEvent = this.monitorMap;
+			if(!this.cache.monitorMap){
+				this.cache.monitorMap = [];
+			}
+			var SetEvent = this.cache.monitorMap;
 			if($.isArray(setFunc) && !setFunc.length){
 				return;
 			}
@@ -237,7 +270,10 @@ $.__proto__.tpl = function(_DATA){
 		},
 		monitor : function(){
 			var ths = this;
-			$.loop(this.monitorMap, function(sdt){
+			if(!this.cache.monitorMap){
+				this.cache.monitorMap = [];
+			}
+			$.loop(this.cache.monitorMap, function(sdt){
 				$.loop(sdt.keys, function(funs, key){
 					$.loop(funs, function(f){
 						if(!f.isPush) {
@@ -248,7 +284,6 @@ $.__proto__.tpl = function(_DATA){
 				});
 			});
 		},
-		cache : {},
 		/**
 		 * 解析创建函数 IF区域中的数据
 		 * @returns {[number, *, {}]}
@@ -362,7 +397,35 @@ $.__proto__.tpl = function(_DATA){
 							}
 					}
 					if(attrs){
-						$(ele).attr(attrs);
+						var insetattr;
+						//attr属性存在需要监听的变量名
+						if($.isArray(attrs)){
+							insetattr = attrs[0]();
+							$.loop(attrs[1], function (v) {
+								ths.monitorGather(v[0], v[1], function(){
+									var e = $(ele);
+									var newats = attrs[0]();
+									var oldats = $(ele).attr();
+									var inats = {};
+									//删除原来的
+									$.loop(oldats, function(nv, nk){
+										if(!newats[nk]) {
+											e.removeAttr(nk);
+										}else if(newats[nk] && newats[nk] != nv){
+											e.attr(nk, newats[nk]);
+										}
+									});
+									$.loop(newats, function(nv, nk){
+										if(!oldats[nk] || oldats[nk] != nv){
+											e.attr(nk, nv);
+										}
+									});
+								});
+							});
+						}else{
+							insetattr = attrs;
+						}
+						$(ele).attr(insetattr);
 					}
 				}
 				if(monitorFunc){
@@ -377,11 +440,12 @@ $.__proto__.tpl = function(_DATA){
 			 *
 			 * 每个需要监听的对象键名都交给monitor
 			 *
-			 * @param tree 对应VDOM树
+			 * @param ele 对应VDOM树
 			 * @param obj 需要监听的对象
 			 * @param objKey 需要监听的键名
+			 * @param at 动作 默认为写nodevalue
 			 */
-			function _M(ele, obj, objKey){
+			function _M(ele, obj, objKey, at){
 				var func = [], func = ths.getAttrs(ele,'renderFunction');
 				if(!func){
 					return;
@@ -591,19 +655,21 @@ $.__proto__.tpl = function(_DATA){
 			});
 			return ParamName;
 		},
-		parseTextIndex : {}, //parseText变量缓存map
 		/**
 		 * 解析文本节点内容
 		 * @param text
 		 * @returns {{expression: string, tokens: []}}
 		 */
 		parseText : function  (text, ele) {
-
+			if(!this.cache.parseTextIndex){
+				this.cache.parseTextIndex = {};
+			}
 			var ths = this;
 			var parseDt = [];
+			var parseTextIndex = this.cache.parseTextIndex;
 			if(text && text.trim()) {
-				if (ths.parseTextIndex[text]) {
-					parseDt = ths.parseTextIndex[text];
+				if (parseTextIndex[text]) {
+					parseDt = parseTextIndex[text];
 				} else {
 
 					var parseCode = [];
@@ -643,7 +709,7 @@ $.__proto__.tpl = function(_DATA){
 					}
 					variableList = $.isEmpty(variableList) ? null : variableList;
 					parseDt = [parseCode, variableList];
-					ths.parseTextIndex[text] = parseDt;
+					parseTextIndex[text] = parseDt;
 				}
 				if (ele) {
 					ths.setAttrs(ele, 'parseCode', parseDt[0]);

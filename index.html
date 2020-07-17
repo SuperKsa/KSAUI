@@ -55,9 +55,10 @@
         sex : '男',
         school :'江山中学',
         tel :'18888888888',
-        list1 : {
-            0 : {name : '张二娃', sex : '男'},
-        },
+        list1 : [
+            {name : '张二娃', sex : '男'},
+            {name : '李老五', sex : '男'}
+        ],
         list : {
             0 : {name : '张二娃', sex : '男'},
 
@@ -115,7 +116,7 @@
         {/eval}
 
         {if value.name != '张二娃' && value.name !='张三10'}
-        <div>${key} : ${value.name} ${value.sex} / ${name}
+        <div class="class-${value.name} sdjj">${key} : ${value.name} ${value.sex} / ${name} / ${evaladd.a}
         </div>
         {elseif value.name =='张三10'}
         <div>【elseif】 ${value.name}</div>
