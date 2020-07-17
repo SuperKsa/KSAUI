@@ -224,12 +224,21 @@ function debugTime(key){
                         ele.removeAttribute(v);
                         //读取属性
                     }else if(!isvalue && !keyIsobj){
-                        ats[v] = ele.getAttribute(v);
+                    	if(ele.tagName ==='INPUT' && v ==='checked'){
+							ats[v] = ele.checked;
+						}else{
+							ats[v] = ele.getAttribute(v);
+						}
                     }else if(keyIsobj){
-                        ele.setAttribute(k, v);
-                        if (k.indexOf('data-') == 0) {
-                            setDt[k] = v; setDtCount ++;
-                        }
+						if(ele.tagName ==='INPUT' && v ==='checked'){
+							ele.checked = !!v;
+						}else {
+							ele.setAttribute(k, v);
+							if (k.indexOf('data-') == 0) {
+								setDt[k] = v;
+								setDtCount++;
+							}
+						}
                     }else if(isvalue && !keyIsobj){
                         if (v.indexOf('data-') == 0) {
                             setDt[v] = value; setDtCount ++;
@@ -396,6 +405,33 @@ function debugTime(key){
 		}
 	}
 
+	K.valText = function(value){
+		if($.isset(value)){
+
+			return this;
+		}else {
+			var t = [];
+			this.map(function (ele) {
+				var val;
+				switch (ele.tagName) {
+					case 'SELECT':
+						if(ele.multiple) {
+							$.map(ele.selectedOptions, function (val) {
+								t.push(val.text);
+							});
+
+						}else{
+							t.push(ele.options[ele.selectedIndex].text);
+						}
+						break;
+					default:
+						t.push(ele.innerText);
+				}
+
+			});
+			return t.join("\n");
+		}
+	};
 	/**
 	 * 写入或读取文本
 	 * @param {html|Node} value 传值表示写入
@@ -411,8 +447,8 @@ function debugTime(key){
 			return this;
 		}else {
 			var t = [];
-			$.each(this, function (k, value) {
-				t[k] = value.innerText;
+			this.map(function (ele) {
+				t[k] = ele.innerText;
 			});
 			return t.join("\n");
 		}
@@ -435,7 +471,7 @@ function debugTime(key){
 			return this;
 		}else {
 			var t = [];
-			$.each(this, function (k, value) {
+			this.map(function (value) {
 				value.nodeType == 3 && t.push(value.nodeValue);
 			});
 			return t.join("\n");

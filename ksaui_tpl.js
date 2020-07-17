@@ -118,15 +118,27 @@ $.__proto__.tpl = function(_DATA){
 									attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
 								});
 							}
-							attrs.push(''+key+':'+value+'');
+							if(key ==='v-update' || key ==='v-updatetext'){
+								var upbj = $.keyName(v.value);
+								if(upbj[0]){
+									if(!upbj[1]){
+										upbj[1] = upbj[0];
+										upbj[0] = '_$data_';
+									}
+									attrs.push('"v-update":[(typeof('+upbj[0]+'.'+(upbj[1])+') !=="undefined" ? '+upbj[0]+' : ""), "'+upbj[1]+'", '+(key ==='v-updatetext')+']');
+								}
+
+							}else{
+								attrs.push('"'+key+'":'+(value || '""')+'');
+							}
 						}
 					});
 
 					if(attrs.length>0){
-						attrs = 'function(){return {'+attrs.join(',')+'}}';
+						attrs = '{'+attrs.join(',')+'}';
 						//如果attr有待监控变量时 以数组方式传递
 						if(attrsIsP.length){
-							attrs = '['+attrs+', ['+attrsIsP.join(',')+']]';
+							attrs = '[function(){return '+attrs+'}, ['+attrsIsP.join(',')+']]';
 						}
 					}else{
 						attrs = '';
@@ -322,6 +334,40 @@ $.__proto__.tpl = function(_DATA){
 
 			return [ifKey, R , monObj];
 		},
+
+		/**
+		 * 双向绑定
+		 */
+		vUpdateModel : function(){
+			if(!arguments[0] || !arguments[1] || !arguments[1][0]){
+
+			}
+			var ele = $(arguments[0]),
+				tag = ele[0].tagName,
+				type = ele.attr('type'),
+				obj = arguments[1][0],
+				key = arguments[1][1],
+				isText = !!arguments[1][2];
+			if($.isObject(obj)){
+				if(tag ==='INPUT' && $.inArray(type,['checkbox','radio'])){
+					ele.click(function(){
+						if(ele.attr('checked')){
+							obj[key] = ele.val();
+						}else{
+							obj[key] = '';
+						}
+					});
+				}else if(tag ==='INPUT' || tag ==='TEXTAREA'){
+					ele.keyup(function(){
+						obj[key] = ele.val();
+					});
+				}else if(tag ==='SELECT'){
+					ele.change(function(){
+						obj[key] = isText ? ele.valText() : ele.val();
+					});
+				}
+			}
+		},
 		/**
 		 * 统一解析VDOM虚拟树中的变量
 		 */
@@ -401,31 +447,46 @@ $.__proto__.tpl = function(_DATA){
 						//attr属性存在需要监听的变量名
 						if($.isArray(attrs)){
 							insetattr = attrs[0]();
-							$.loop(attrs[1], function (v) {
-								ths.monitorGather(v[0], v[1], function(){
-									var e = $(ele);
-									var newats = attrs[0]();
-									var oldats = $(ele).attr();
-									var inats = {};
-									//删除原来的
-									$.loop(oldats, function(nv, nk){
-										if(!newats[nk]) {
-											e.removeAttr(nk);
-										}else if(newats[nk] && newats[nk] != nv){
-											e.attr(nk, newats[nk]);
-										}
-									});
-									$.loop(newats, function(nv, nk){
-										if(!oldats[nk] || oldats[nk] != nv){
-											e.attr(nk, nv);
-										}
+							if(attrs[1]) {
+								$.loop(attrs[1], function (v) {
+									ths.monitorGather(v[0], v[1], function () {
+										var e = $(ele);
+										var newats = attrs[0]();
+										var oldats = $(ele).attr();
+										var inats = {};
+										//删除原来的
+										$.loop(oldats, function (nv, nk) {
+											if (!newats[nk]) {
+												e.removeAttr(nk);
+											} else if (newats[nk] && newats[nk] != nv) {
+												e.attr(nk, newats[nk]);
+											}
+										});
+										$.loop(newats, function (nv, nk) {
+											if (!oldats[nk] || oldats[nk] != nv) {
+												e.attr(nk, nv);
+											}
+										});
 									});
 								});
-							});
+							}
 						}else{
 							insetattr = attrs;
 						}
-						$(ele).attr(insetattr);
+
+
+						if($.isObject(insetattr)){
+							var el = $(ele);
+							$.loop(insetattr, function(v, k){
+								if(k ==='v-update'){
+									ths.vUpdateModel(ele, v)
+								}else{
+									el.attr(k, v);
+								}
+							});
+						}
+
+
 					}
 				}
 				if(monitorFunc){
@@ -633,7 +694,7 @@ $.__proto__.tpl = function(_DATA){
 			invars = invars.join("\n");
 			ginvars = ginvars.join("\n");
 			_EvalCodes = "function _Vcall(_$data_){\n"+invars+"\n"+ginvars+" \n "+_EvalCodes+"}";
-			_EvalCodes += "\n\nconsole.error(new Error('测试错误 爆源码'))";
+			//_EvalCodes += "\n\nconsole.error(new Error('测试错误 爆源码'))";
 			//console.log(_EvalCodes);
 			eval(_EvalCodes);
 			_Vcall.call('',ths.data);
