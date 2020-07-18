@@ -19,9 +19,8 @@ function debugTime(key){
     };
 }
 
-(function(document, undefined) {
-
-
+(function(document, undefined, K) {
+	"use strict";
 
 	function newFragment(){
         return document.createDocumentFragment();
@@ -34,7 +33,7 @@ function debugTime(key){
 	 */
 	function createDom(code){
 		//创建虚拟dom并写入字符串
-		dom = document.createRange().createContextualFragment(code);
+		var dom = document.createRange().createContextualFragment(code);
 		return [].slice.call(dom.childNodes);
 	}
 
@@ -74,48 +73,46 @@ function debugTime(key){
 		return this;
 	}
 
-	var $ = function(selector){
-		return new K.A(selector);
+	function $(selector){
+		return new K_S_A(selector);
 	}
 
-	var K = {
-		version : '1.0',
-        A : function(selector){
-            var self = this;
+	function K_S_A(selector){
 
-            if(selector) {
-                if (selector instanceof $) {
-                    return selector;
-                } else if (self.isDomAll(selector)) {
-                    selector = [selector];
+		if(selector) {
+			if (selector instanceof $) {
+				return selector;
+			} else if ($.isDomAll(selector)) {
+				selector = [selector];
 
-                }else if(self.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
-                    selector = createDom(selector);
+			}else if($.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
+				selector = createDom(selector);
 
-                }else if(self.isString(selector)) {
-                    selector = [].slice.call(document.querySelectorAll(selector));
-                }
+			}else if($.isString(selector)) {
+				selector = [].slice.call(document.querySelectorAll(selector));
+			}
+			var length = selector.length;
 
-                var length = selector.length;
+			var obj = {};
+			for(var k in selector){
+				if($.isDomAll(selector[k])) {
+					obj[k] = selector[k];
+				}
+			}
+			selector = obj;
+			selector.length = length;
+		}else{
+			selector = {length:0};
+		}
+		selector.__proto__ = this.__proto__;
+		return selector;
+	}
 
-                var obj = {};
-                for(var k in selector){
-                    if(self.isDomAll(selector[k])) {
-                        obj[k] = selector[k];
-                    }
-                }
-                selector = obj;
-                selector.length = length;
-            }else{
-                selector = {length:0};
-            }
-
-            self = $.arrayMerge(self, selector);
-            return self;
-        }
+	K_S_A.prototype = K = $.prototype = $.__proto__ = {
+		version : '1.0'
 	};
 
-    $.prototype = $.__proto__ = K.A.prototype = K;
+
 
     K.ready = function(callback) {
         if (/complete|loaded|interactive/.test(document.readyState)) {
@@ -177,17 +174,6 @@ function debugTime(key){
 		return this;
 	}
 
-	K.isAttr = function (key) {
-		key = $.explode(' ', key, '');
-
-		for(var k in key){
-			if(this[0].getAttribute(key[k]) !== null){
-				return true;
-			}
-		}
-		return false;
-	}
-
     /**
      * attr操作
      * key与value都不传值时表示读取所有属性 以object方式返回
@@ -203,44 +189,41 @@ function debugTime(key){
             key = $.explode(' ', key, ' ');
         }
         var isvalue = $.isset(value);
-        var attrs = [];
+        var attrs = {};
 
         value = value === '' ? null : value;
-
         this.map(function (ele) {
-            var ats = {};
-            if(!isvalue && !isKey){
+			if(!isvalue && !isKey){
                 var a = ele.attributes;
                 for(var i=a.length-1; i>=0; i--) {
                 	var k = a[i].name;
-                    ats[k] = a[i].value;
+                    attrs[k] = a[i].value;
                 }
-				//attrs.push(ats);
             }else{
                 var setDt = {}, setDtCount =0;
-                $.loop(key, function( v, k){
+                $.loop(key, function(v, k){
                     //移除属性
                     if (value === null) {
                         ele.removeAttribute(v);
-                        //读取属性
+					//读取属性
                     }else if(!isvalue && !keyIsobj){
                     	if(ele.tagName ==='INPUT' && v ==='checked'){
-							ats[v] = ele.checked;
+							attrs[v] = ele.checked;
 						}else{
-							ats[v] = ele.getAttribute(v);
+							attrs[v] = ele.getAttribute(v);
 						}
                     }else if(keyIsobj){
 						if(ele.tagName ==='INPUT' && v ==='checked'){
 							ele.checked = !!v;
 						}else {
 							ele.setAttribute(k, v);
-							if (k.indexOf('data-') == 0) {
+							if (k.indexOf('data-') === 0) {
 								setDt[k] = v;
 								setDtCount++;
 							}
 						}
                     }else if(isvalue && !keyIsobj){
-                        if (v.indexOf('data-') == 0) {
+                        if (v.indexOf('data-') === 0) {
                             setDt[v] = value; setDtCount ++;
                         }
                         ele.setAttribute(v, value);
@@ -248,21 +231,22 @@ function debugTime(key){
                 });
                 //写入data属性
                 if(setDtCount >0){
-                    if (!ele._KSADATA) {ele._KSADATA = {};}
+                    if (!ele._KSA_ELE_DATA) {ele._KSA_ELE_DATA = {};}
                     $.loop(setDt, function( v, k){
-                        ele._KSADATA[k.substr(5)] = v;
+                        ele._KSA_ELE_DATA[k.substr(5)] = v;
                     });
                 }
             }
-            if(isKey && $.count(ats) == 1){
-                ats = Object.values(ats)[0];
-            }
-            attrs.push(ats);
         });
         if(!isvalue){
-            if(attrs.length == 1){
-                attrs = attrs[0];
-            }
+        	if(isKey){
+				var values = Object.values(attrs);
+				if(!values.length){
+					attrs = undefined;
+				}else if(values.length == 1){
+					attrs = values[0];
+				}
+			}
             return attrs;
         }
 	    return this;
@@ -294,22 +278,21 @@ function debugTime(key){
             });
         }
 
-	    var getData = [];
+	    var getdt = [];
         this.map(function (ele) {
-            if(!ele._KSADATA){
-                ele._KSADATA = {};
+            if(!ele._KSA_ELE_DATA){
+                ele._KSA_ELE_DATA = {};
             }
-            var getdt = {};
             if(setData){
                 $.loop(setData, function( v, k){
                     if(!$.isObject(v) && ele.attributes['data-'+k]){
                         ele.setAttribute('data-'+k, v);
                     }
-                    ele._KSADATA[k] = v;
+                    ele._KSA_ELE_DATA[k] = v;
                 });
             }else if(getKey.length){
                 $.loop(getKey, function( k, _){
-                    var v = ele._KSADATA[k] || (ele.getAttribute('data-'+k) || undefined);
+                    var v = ele._KSA_ELE_DATA[k] || (ele.getAttribute('data-'+k) || undefined);
                     if($.isset(v)) {
                         getdt[k] = v;
                     }
@@ -317,7 +300,7 @@ function debugTime(key){
 
 
             }else if(!key && !isvalue){
-                getdt = ele._KSADATA;
+                getdt = ele._KSA_ELE_DATA;
                 var a = ele.attributes;
                 for(var i=a.length-1; i>=0; i--) {
                     if(a[i].name.indexOf('data-') ===0){
@@ -327,25 +310,29 @@ function debugTime(key){
 
             }else if(isdel){
                 $.loop(key, function( k, _){
-                    delete ele._KSADATA[k];
+                    delete ele._KSA_ELE_DATA[k];
                 });
             }
-
-            if($.count(getdt) == 1){
-                getdt = Object.values(getdt)[0];
-            }
-            getData.push(getdt);
         });
 
         if(!keyisobj && !isvalue){
-            if(getData.length == 1){
-                getData = getData[0];
+        	var values = Object.values(getdt);
+        	if(!values.length){
+        		getdt = undefined;
+			}else if(values.length == 1){
+				getdt = values[0];
             }
-            return getData;
+            return getdt;
         }
 
 	    return this;
     }
+    K.removeData = function(key){
+		if(key) {
+			this.data(key, null);
+		}
+		return this;
+	}
 
 	/**
 	 * 清空节点
@@ -405,6 +392,11 @@ function debugTime(key){
 		}
 	}
 
+	/**
+	 * 读取值对应文字
+	 * @param value
+	 * @returns {K|string}
+	 */
 	K.valText = function(value){
 		if($.isset(value)){
 
@@ -419,7 +411,6 @@ function debugTime(key){
 							$.map(ele.selectedOptions, function (val) {
 								t.push(val.text);
 							});
-
 						}else{
 							t.push(ele.options[ele.selectedIndex].text);
 						}
@@ -432,6 +423,7 @@ function debugTime(key){
 			return t.join("\n");
 		}
 	};
+
 	/**
 	 * 写入或读取文本
 	 * @param {html|Node} value 传值表示写入
@@ -568,35 +560,28 @@ function debugTime(key){
 
 // ====================== 遍历 ====================== //
 
-	K.instanceof = function(a, b){
-		return a instanceof b;
-	}
-
-    /**
-     * 循环函数
-     * @param {object} dt 数组或对象
-     * @param {func} 每次循环的函数 function(key,value){...}
-     */
-    K.loop = function(dt, fun, actions){
-		if(dt && ($.isArray(dt) || $.instanceof(dt,NodeList))){
+	/**
+	 * 循环函数
+	 * @param {object/array/NodeList} dt 数组或对象
+	 * @param {function} fun 每次循环函数(value, key, index)
+	 * @param {string} actions 取值动作 first=只取第一个 last=只取最后一个
+	 * @returns {*}
+	 */
+	K.loop = function(dt, fun, actions){
+		var val;
+		if(dt && $.isArrayLike(dt)){
 			for(i=0;i<dt.length;i++){
 				val = dt[i];
-				if(actions ==='first' || (actions ==='last' && i === dt.length -1)){
+				if((actions && (actions ==='first' || (actions ==='last' && i === dt.length -1))) || fun(val, i, i) === true){
 					return val;
-				}
-				if(fun(dt[i] ,i) === true){
-					return;
 				}
 			}
 		}else if(dt && $.isObject(dt)){
 			var i=0;
 			for(var k in dt){
 				val = dt[k];
-				if(actions ==='first' || (actions ==='last' && i === dt.length -1)){
+				if((actions && (actions ==='first' || (actions ==='last' && i === dt.length -1))) || fun(val, k, i) === true){
 					return val;
-				}
-				if(fun(dt[k], k, i) === true){
-					return;
 				}
 				i++;
 			}
@@ -610,6 +595,17 @@ function debugTime(key){
 	 * @returns {*}
 	 */
 	K.each = function(obj, callback) {
+		var objIsFunc = $.isFunction(obj);
+		var isThis;
+		if(objIsFunc && !callback){
+			callback = obj;
+			obj = this;
+			isThis = 1;
+		}
+		$.loop(obj, function(value, key, index){
+			callback.call(value, key, value, index);
+		});
+		/*
 		var k, i=0;
 		if ($.isArray(obj) || $.isObject(obj)) {
 			for (k in obj) {
@@ -617,7 +613,7 @@ function debugTime(key){
 				i ++;
 			}
 		} else {
-			callback = callback || (typeof(obj) =='function' ? obj : null);
+			callback = callback || ($.isFunction(obj) ? obj : null);
 			obj = $.isFunction(obj) ? this : obj;
 
 			for (k in obj) {
@@ -628,6 +624,7 @@ function debugTime(key){
 				}
 			}
 		}
+		 */
 		return obj;
 	}
 
@@ -1105,7 +1102,7 @@ function debugTime(key){
 	}
 
 // ====================== AJAX ====================== //
-	jsonpID = 1;
+	var jsonpID = 1;
 	/**
 	 * ajax方法与jQuery基本一致
 	 * 注：data值不再做任何二次处理，直接放入FormData提交，所以POST时支持文件与参数同时传递，无需其他设置
@@ -1327,7 +1324,7 @@ function debugTime(key){
 			});
 		},
 	}
-
+/*
 	K.objectDel = function(obj, key){
 		if(typeof(obj[key]) !=="undefined"){
 			var objID = $.objectID(obj);
@@ -1353,30 +1350,8 @@ function debugTime(key){
 				});
 			}
 		}
-
 	};
-
-	/**
-	 * 创建匿名回调函数解析模板实际值
-	 * @param evalCode 需要解析的js
-	 * @param {object} addVariables 附加回调参数 键名=参数名 键值=回调值
-	 */
-	K.eval = function(evalCode, addVariables){
-		if(!evalCode){
-			return;
-		}
-		var __vkey = addVariables ? Object.keys(addVariables).join(',') : '';
-		var __vValue = addVariables ? Object.values(addVariables) : [];
-		var funCode = 'function _Vcall('+__vkey+'){ return '+evalCode+'}';
-		eval(funCode);
-		return _Vcall.apply('', __vValue);
-	}
-
-// ====================== 元素监听 ====================== //
-	K.V = function(val){
-		return val === undefined ? '' : val;
-	}
-
+*/
 	/**
 	 * 获取调用此函数的参数名与参数值
 	 * @param Args
@@ -1393,8 +1368,17 @@ function debugTime(key){
 			return dt;
 		}
 	}
-	K.setTimeoutMap = {};
+
+	/***
+	 * setTimeout防重复
+	 * @param skey 唯一标示，作为防重复依据
+	 * @param func 回调函数
+	 * @param time 时间
+	 */
 	K.setTimeout = function(skey, func, time){
+		if(!this.setTimeoutMap){
+			this.setTimeoutMap = {};
+		}
 		if(this.setTimeoutMap[skey]){
 			window.clearTimeout(this.setTimeoutMap[skey]);
 			delete this.setTimeoutMap[skey];
@@ -1430,6 +1414,10 @@ function debugTime(key){
 	}
 
 // ====================== 判断与重写函数类 ====================== //
+	K.instanceof = function(a, b){
+		return a instanceof b;
+	}
+
 	K.isWindow = function isWindow(obj) {
 		return obj != null && obj === obj.window;
 	};
@@ -1540,6 +1528,7 @@ function debugTime(key){
 	K.isNull = function(v){
 		return v === null;
 	}
+
 	K.inArray = function(val,dt, rkey){
 		var S = false;
 		$.loop(dt,function(v, k){
@@ -1550,9 +1539,10 @@ function debugTime(key){
 		});
 		return S;
 	}
+
 	K.count = function(dt){
 		var S = 0;
-		$.each(dt,function(){
+		$.loop(dt,function(){
 			S ++;
 		});
 		return S;
@@ -1560,9 +1550,9 @@ function debugTime(key){
 
 	K.arrayMerge = function(){
 		var arr = arguments[0] || {};
-		$.each(arguments, function(key, value){
+		$.loop(arguments, function(value, key){
 			if(key > 0){
-				$.each(value,function(k, val){
+				$.loop(value,function(val, k){
 					arr[k] = val;
 				});
 			}
@@ -1581,11 +1571,10 @@ function debugTime(key){
 		str = ft && str ? str.toString().split(ft) : [];
 		//如果需要排除空值
 		if($.isset(notemp)){
-			var news = [], i =0;
-			$.each(str, function(_, v){
+			var news = [];
+			$.loop(str, function(v){
 				if(v != notemp){
-					news[i] = v;
-					i ++;
+					news.push(v);
 				}
 			});
 			str = news;
@@ -1600,23 +1589,29 @@ function debugTime(key){
 		}
 		return str;
 	}
+
 	K.unset = function(dt,keys){
-		keys = $.explode(' ', keys);
-		var newDt = {};
-		$.each(dt,function(k, v){
-			if(!$.inArray(k,keys)){
-				newDt[k] = v;
-			}
-		});
-		if($.isArray(dt)){
-			newDt = Array.from(newDt);
+		var at = $.isObject(dt) ? 'object' : ($.isArray(dt) ? 'array' : null);
+		if(at){
+			keys = $.explode(' ', keys);
+
+			$.loop(dt,function(v, k){
+				if($.inArray(k,keys)){
+					if(isObj){
+						delete dt[k];
+					}else{
+						dt.splice(k,1);
+					}
+				}
+			});
 		}
-		return newDt;
+
+		return dt;
 	}
 
     K.trim = function(str, char){
         str = str.toString();
-        if(!char){
+        if(char){
             str = str.replace(new RegExp('^\\'+char+'+', 'g'),'');
             str = str.replace(new RegExp('\\'+char+'+$', 'g'),'')
         }else{
@@ -1625,7 +1620,7 @@ function debugTime(key){
         return str;
     }
 
-	K.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (name) {
+	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};
