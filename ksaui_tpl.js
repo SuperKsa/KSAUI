@@ -1,4 +1,4 @@
-$.__proto__.tpl = function(_DATA){
+$.tpl = function(_DATA){
 	var $this = this;
 
 	//匹配模板变量正则 {xxx}

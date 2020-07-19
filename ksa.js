@@ -11,20 +11,20 @@ function debug(data){
 }
 var consoleGroupN = {};
 function debugTime(key){
-    consoleGroupN[key] = consoleGroupN[key] >=0 ? consoleGroupN[key] +1 : 0;
-    key = key+'-'+consoleGroupN[key];
-    console.time(key);
-    return function(){
-        console.timeEnd(key);
-    };
+	consoleGroupN[key] = consoleGroupN[key] >=0 ? consoleGroupN[key] +1 : 0;
+	key = key+'-'+consoleGroupN[key];
+	console.time(key);
+	return function(){
+		console.timeEnd(key);
+	};
 }
 
 (function(document, undefined, K) {
 	"use strict";
 
 	function newFragment(){
-        return document.createDocumentFragment();
-    }
+		return document.createDocumentFragment();
+	}
 
 	/**
 	 * 字符串转虚拟dom
@@ -45,17 +45,17 @@ function debugTime(key){
 	 * @returns {tempDom}
 	 */
 	function tempDom(code, callback, reOrder){
-	    var dom;
-	    if(code instanceof $){
-            dom = code;
-        }else if($.isDomAll(code)) {
+		var dom;
+		if(code instanceof $){
+			dom = code;
+		}else if($.isDomAll(code)) {
 			dom = code instanceof  NodeList ? code : [code];
 		}else if($.isArray(code)){
-	    	dom = code;
-        //创建一个虚拟dom
-        }else{
-            dom = createDom(code);
-        }
+			dom = code;
+			//创建一个虚拟dom
+		}else{
+			dom = createDom(code);
+		}
 
 		//将传入的html或dom对象添加到虚拟dom中
 		$.map(this, function (ele) {
@@ -71,6 +71,13 @@ function debugTime(key){
 			}
 		});
 		return this;
+	}
+
+	function selectorStr(selector){
+		if(selector){
+			selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
+		}
+		return selector;
 	}
 
 	function $(selector){
@@ -89,41 +96,40 @@ function debugTime(key){
 				selector = createDom(selector);
 
 			}else if($.isString(selector)) {
-				selector = [].slice.call(document.querySelectorAll(selector));
+				selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
+				selector = [].slice.call(document.querySelectorAll(selectorStr(selector)));
 			}
 			var length = selector.length;
 
 			var obj = {};
-			for(var k in selector){
-				if($.isDomAll(selector[k])) {
-					obj[k] = selector[k];
-				}
-			}
+			$.loop(selector, function(ele, key){
+				obj[key] = ele;
+			});
 			selector = obj;
 			selector.length = length;
 		}else{
 			selector = {length:0};
 		}
-		selector.__proto__ = this.__proto__;
-		return selector;
+		//selector.__proto__ = this.__proto__;
+		if(selector.length) {
+			$.arrayMerge(this, selector);
+			this.length = selector.length;
+		}
+		return this;
 	}
 
-	K_S_A.prototype = K = $.prototype = $.__proto__ = {
-		version : '1.0'
-	};
+	K_S_A.prototype =  $.prototype = $.__proto__ = K = {};
 
-
-
-    K.ready = function(callback) {
-        if (/complete|loaded|interactive/.test(document.readyState)) {
-            callback($);
-        } else {
-            document.addEventListener('DOMContentLoaded', function() {
-                callback($);
-            }, false);
-        }
-        return this;
-    }
+	K.ready = function(callback) {
+		if (/complete|loaded|interactive/.test(document.readyState)) {
+			callback($);
+		} else {
+			document.addEventListener('DOMContentLoaded', function() {
+				callback($);
+			}, false);
+		}
+		return this;
+	}
 // ====================== 创建虚拟DOM ====================== //
 	K.dom = function(code){
 		return createDom(code);
@@ -174,72 +180,91 @@ function debugTime(key){
 		return this;
 	}
 
-    /**
-     * attr操作
-     * key与value都不传值时表示读取所有属性 以object方式返回
-     * 如选择器有多个节点，则根据节点序号以数组方式返回
-     * @param {string|object} key 属性名支持单个值、多个值(空格分开)、对象（写入模式，键名=属性名 键值=属性值）
-     * @param value 属性值 不传入=读取模式 null|空值=删除模式
-     * @returns {K|[]}
-     */
-	K.attr = function (key, value) {
-        var isKey = $.isset(key);
-        var keyIsobj = $.isObject(key);
-        if (isKey && !keyIsobj) {
-            key = $.explode(' ', key, ' ');
-        }
-        var isvalue = $.isset(value);
-        var attrs = {};
+	K.hasClass = function(cls){
 
-        value = value === '' ? null : value;
-        this.map(function (ele) {
+		var ele, i = 0;
+		while ((ele = this[i++])) {
+			if (ele.nodeType === 1){
+				var cl = ele.getAttribute('class');
+				if(cl && cl.length && $.inArray(cls, cl)){
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * attr操作
+	 * key与value都不传值时表示读取所有属性 以object方式返回
+	 * 如选择器有多个节点，则根据节点序号以数组方式返回
+	 * @param {string|object} key 属性名支持单个值、多个值(空格分开)、对象（写入模式，键名=属性名 键值=属性值）
+	 * @param value 属性值 不传入=读取模式 null|空值=删除模式
+	 * @returns {K|[]}
+	 */
+	K.attr = function (key, value) {
+		var isKey = $.isset(key);
+		var keyIsobj = $.isObject(key);
+		if (isKey && !keyIsobj) {
+			key = $.explode(' ', key, ' ');
+		}
+		var isvalue = $.isset(value);
+		var attrs = {};
+		value = value === '' ? null : value;
+		var BooleanArr = ['checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
+		this.map(function (ele) {
 			if(!isvalue && !isKey){
-                var a = ele.attributes;
-                for(var i=a.length-1; i>=0; i--) {
-                	var k = a[i].name;
-                    attrs[k] = a[i].value;
-                }
-            }else{
-                var setDt = {}, setDtCount =0;
-                $.loop(key, function(v, k){
-                    //移除属性
-                    if (value === null) {
-                        ele.removeAttribute(v);
-					//读取属性
-                    }else if(!isvalue && !keyIsobj){
-                    	if(ele.tagName ==='INPUT' && v ==='checked'){
-							attrs[v] = ele.checked;
+				var a = ele.attributes;
+				for(var i=a.length-1; i>=0; i--) {
+					var k = a[i].name;
+					attrs[k] = a[i].value;
+				}
+			}else{
+				var setDt = {}, setDtCount =0;
+				$.loop(key, function(v, k){
+					//移除属性
+					if (value === null) {
+						if($.inArray(k, BooleanArr)){
+							ele[k] = v;
+						}
+						ele.removeAttribute(v);
+						//读取属性
+					}else if(!isvalue && !keyIsobj){
+						if($.inArray(v, BooleanArr)){
+							attrs[v] = ele[v];
 						}else{
 							attrs[v] = ele.getAttribute(v);
 						}
-                    }else if(keyIsobj){
-						if(ele.tagName ==='INPUT' && v ==='checked'){
-							ele.checked = !!v;
-						}else {
-							ele.setAttribute(k, v);
-							if (k.indexOf('data-') === 0) {
-								setDt[k] = v;
-								setDtCount++;
-							}
+					}else if(keyIsobj){
+						if($.inArray(k, BooleanArr)){
+							ele[k] = v;
 						}
-                    }else if(isvalue && !keyIsobj){
-                        if (v.indexOf('data-') === 0) {
-                            setDt[v] = value; setDtCount ++;
-                        }
-                        ele.setAttribute(v, value);
-                    }
-                });
-                //写入data属性
-                if(setDtCount >0){
-                    if (!ele._KSA_ELE_DATA) {ele._KSA_ELE_DATA = {};}
-                    $.loop(setDt, function( v, k){
-                        ele._KSA_ELE_DATA[k.substr(5)] = v;
-                    });
-                }
-            }
-        });
-        if(!isvalue){
-        	if(isKey){
+						ele.setAttribute(k, v);
+						if (k.indexOf('data-') === 0) {
+							setDt[k] = v;
+							setDtCount++;
+						}
+					}else if(isvalue && !keyIsobj){
+						if($.inArray(v, BooleanArr)){
+							ele[v] = value;
+						}else if (v.indexOf('data-') === 0) {
+							setDt[v] = value; setDtCount ++;
+						}
+						ele.setAttribute(v, value);
+					}
+				});
+				//写入data属性
+				if(setDtCount >0){
+					if (!ele._KSA_ELE_DATA) {ele._KSA_ELE_DATA = {};}
+					$.loop(setDt, function( v, k){
+						ele._KSA_ELE_DATA[k.substr(5)] = v;
+					});
+				}
+			}
+		});
+		if(!isvalue){
+			if(isKey){
 				var values = Object.values(attrs);
 				if(!values.length){
 					attrs = undefined;
@@ -247,87 +272,87 @@ function debugTime(key){
 					attrs = values[0];
 				}
 			}
-            return attrs;
-        }
-	    return this;
+			return attrs;
+		}
+		return this;
 	}
 
-    K.removeAttr = function (key) {
-	    if(key) {
-            this.attr(key, null);
-        }
-        return this;
-    }
+	K.removeAttr = function (key) {
+		if(key) {
+			this.attr(key, null);
+		}
+		return this;
+	}
 
-    K.data = function(key, value){
-	    var keyisobj = $.isObject(key),
-            isvalue = $.isset(value),
-            isdel = key && value ==='';
+	K.data = function(key, value){
+		var keyisobj = $.isObject(key),
+			isvalue = $.isset(value),
+			isdel = key && value ==='';
 
-	    var setData = keyisobj ? key : (isvalue ? {} : null);
-	    var getKey = [];
+		var setData = keyisobj ? key : (isvalue ? {} : null);
+		var getKey = [];
 
-	    if(!keyisobj && key){
-            key = $.explode(' ', key, '');
-            $.each(key, function(k, v){
-                if(isvalue){
-                    setData[v] = value;
-                }else{
-                    getKey.push(v);
-                }
-            });
-        }
+		if(!keyisobj && key){
+			key = $.explode(' ', key, '');
+			$.each(key, function(k, v){
+				if(isvalue){
+					setData[v] = value;
+				}else{
+					getKey.push(v);
+				}
+			});
+		}
 
-	    var getdt = [];
-        this.map(function (ele) {
-            if(!ele._KSA_ELE_DATA){
-                ele._KSA_ELE_DATA = {};
-            }
-            if(setData){
-                $.loop(setData, function( v, k){
-                    if(!$.isObject(v) && ele.attributes['data-'+k]){
-                        ele.setAttribute('data-'+k, v);
-                    }
-                    ele._KSA_ELE_DATA[k] = v;
-                });
-            }else if(getKey.length){
-                $.loop(getKey, function( k, _){
-                    var v = ele._KSA_ELE_DATA[k] || (ele.getAttribute('data-'+k) || undefined);
-                    if($.isset(v)) {
-                        getdt[k] = v;
-                    }
-                });
+		var getdt = [];
+		this.map(function (ele) {
+			if(!ele._KSA_ELE_DATA){
+				ele._KSA_ELE_DATA = {};
+			}
+			if(setData){
+				$.loop(setData, function( v, k){
+					if(!$.isObject(v) && ele.attributes['data-'+k]){
+						ele.setAttribute('data-'+k, v);
+					}
+					ele._KSA_ELE_DATA[k] = v;
+				});
+			}else if(getKey.length){
+				$.loop(getKey, function( k, _){
+					var v = ele._KSA_ELE_DATA[k] || (ele.getAttribute('data-'+k) || undefined);
+					if($.isset(v)) {
+						getdt[k] = v;
+					}
+				});
 
 
-            }else if(!key && !isvalue){
-                getdt = ele._KSA_ELE_DATA;
-                var a = ele.attributes;
-                for(var i=a.length-1; i>=0; i--) {
-                    if(a[i].name.indexOf('data-') ===0){
-                        getdt[a[i].name.substr(5)] = a[i].value;
-                    }
-                }
+			}else if(!key && !isvalue){
+				getdt = ele._KSA_ELE_DATA;
+				var a = ele.attributes;
+				for(var i=a.length-1; i>=0; i--) {
+					if(a[i].name.indexOf('data-') ===0){
+						getdt[a[i].name.substr(5)] = a[i].value;
+					}
+				}
 
-            }else if(isdel){
-                $.loop(key, function( k, _){
-                    delete ele._KSA_ELE_DATA[k];
-                });
-            }
-        });
+			}else if(isdel){
+				$.loop(key, function( k, _){
+					delete ele._KSA_ELE_DATA[k];
+				});
+			}
+		});
 
-        if(!keyisobj && !isvalue){
-        	var values = Object.values(getdt);
-        	if(!values.length){
-        		getdt = undefined;
+		if(!keyisobj && !isvalue){
+			var values = Object.values(getdt);
+			if(!values.length){
+				getdt = undefined;
 			}else if(values.length == 1){
 				getdt = values[0];
-            }
-            return getdt;
-        }
+			}
+			return getdt;
+		}
 
-	    return this;
-    }
-    K.removeData = function(key){
+		return this;
+	}
+	K.removeData = function(key){
 		if(key) {
 			this.data(key, null);
 		}
@@ -369,7 +394,7 @@ function debugTime(key){
 				}
 			});
 			return this;
-		//获取值，如果有多个对象，则按数组顺序返回对应值
+			//获取值，如果有多个对象，则按数组顺序返回对应值
 		}else {
 			var t = [];
 			this.map(function (ele, i) {
@@ -543,7 +568,7 @@ function debugTime(key){
 			}
 
 			var el = ele.appendChild(node);
-            callback && callback.call(ele, el);
+			callback && callback.call(ele, el);
 		});
 	}
 
@@ -558,6 +583,142 @@ function debugTime(key){
 		}, true);
 	}
 
+	K.wrap = function(html){
+		var doms = [];
+		this.map(function(e){
+			var dom = $.dom(html)[0];
+			e.after(dom);
+			$(dom).html(e);
+			doms.push(dom);
+		});
+
+		return $(doms);
+	}
+// ====================== 尺寸 、位置 ====================== //
+
+	K.height = function(val){
+		if(!$.isset(val) || val === true){
+			return this[0] ? (val === true ? this[0].offsetHeight : this[0].clientHeight) : 0;
+		}else{
+			this.map(function(e){
+				e.style.height = parseFloat(val)+'px';
+			});
+		}
+	}
+
+	K.width = function(val){
+		if(!$.isset(val) || val === true){
+			return this[0] ? (val === true ? this[0].offsetWidth : this[0].clientWidth) : 0;
+		}else{
+			this.map(function(e){
+				e.style.width = parseFloat(val)+'px';
+			});
+			return this;
+		}
+	}
+
+	K.offset = function(){
+		var elem = this[0];
+		if (!elem) {
+			return;
+		}
+		if (!elem.getClientRects().length) {
+			return {
+				top: 0,
+				left: 0
+			};
+		}
+
+		var rect = elem.getBoundingClientRect();
+		var win = elem.ownerDocument.defaultView;
+		return {
+			top: rect.top + win.pageYOffset,
+			left: rect.left + win.pageXOffset
+		};
+	}
+
+	K.offsetLeft = function(val){
+		return this[0] ? this[0].offsetLeft : null;
+	}
+
+	K.show = function(){
+		this.map(function(e){
+			e.style.display = "block";
+		});
+		return this;
+	}
+
+	K.hide = function(){
+		this.map(function(e){
+			e.style.display = "none";
+		});
+		return this;
+	}
+
+	K.scrollTop = function(val){
+		if(!$.isset(val)){
+			return this[0] ? this[0].scrollTop : 0;
+		}else{
+			this.map(function(e){
+				e.scrollTop = parseFloat(val);
+			});
+			return this;
+		}
+	}
+
+	K.scrollLeft = function(val){
+		if(!$.isset(val)){
+			return this[0] ? this[0].scrollLeft : 0;
+		}else{
+			this.map(function(e){
+				e.scrollLeft = parseFloat(val);
+			});
+			return this;
+		}
+	}
+
+	K.css = function(key, value){
+		var cssNumber = [
+			'animation-iteration-count', 'column-count', 'fill-opacity', 'flex-grow', 'flex-shrink', 'font-weight', 'grid-area', 'grid-column', 'grid-column-end', 'grid-column-start', 'grid-row', 'grid-row-end', 'grid-row-start', 'line-height', 'opacity', 'order', 'orphans', 'widows', 'z-index', 'zoom'];
+
+		var sets, gets={}, keyIsObj = $.isObject(key), isValue = $.isset(value);
+		if(key) {
+			if (!isValue && keyIsObj) {
+				sets = key;
+			} else if(isValue){
+				sets = {[key] : value};
+			}
+			$.loop(sets, function(value, key){
+				var soukey = key.replace(/^(-moz-|-ms-|-webkit-|-o-|\+|_|\*)/ig, '');
+				if(!$.inArray(soukey, cssNumber) && $.isNumber(value)){
+					sets[key] = value + 'px';
+				}
+			});
+
+			if(sets) {
+				this.map(function (e) {
+					$.loop(sets, function (val, k) {
+						e.style[k] = val;
+					});
+				});
+				return this;
+			}else{
+				var getkeys = $.explode(' ', key,  '');
+				this.map(function (e) {
+					$.loop(getkeys, function (val) {
+						gets[val] = e.style[val];
+					});
+				});
+				if(getkeys.length === 1){
+					return Object.values(gets)[0];
+				}else{
+					return gets;
+				}
+			}
+		}
+	}
+
+
 // ====================== 遍历 ====================== //
 
 	/**
@@ -568,25 +729,36 @@ function debugTime(key){
 	 * @returns {*}
 	 */
 	K.loop = function(dt, fun, actions){
-		var val;
+		var val, length;
 		if(dt && $.isArrayLike(dt)){
+			length = dt.length;
 			for(i=0;i<dt.length;i++){
 				val = dt[i];
-				if((actions && (actions ==='first' || (actions ==='last' && i === dt.length -1))) || fun(val, i, i) === true){
+				if(dt.hasOwnProperty(val)){
+					continue;
+				}
+				if((actions && (actions ==='first' || (actions ==='last' && i === length -1))) || fun(val, i, i) === true){
 					return val;
 				}
 			}
 		}else if(dt && $.isObject(dt)){
-			var i=0;
-			for(var k in dt){
-				val = dt[k];
-				if((actions && (actions ==='first' || (actions ==='last' && i === dt.length -1))) || fun(val, k, i) === true){
+			var i=0,
+				kdt = Object.keys(dt);
+
+			length = kdt.length;
+
+			for(i=0;i<kdt.length;i++){
+				if(dt.hasOwnProperty(k)){
+					continue;
+				}
+				val = dt[kdt[i]];
+				if((actions && (actions ==='first' || (actions ==='last' && i === length -1))) || fun(val, k, i) === true){
 					return val;
 				}
 				i++;
 			}
 		}
-    }
+	}
 
 	/**
 	 * 循环遍历
@@ -603,28 +775,8 @@ function debugTime(key){
 			isThis = 1;
 		}
 		$.loop(obj, function(value, key, index){
-			callback.call(value, key, value, index);
+			return callback.call(value, key, value, index);
 		});
-		/*
-		var k, i=0;
-		if ($.isArray(obj) || $.isObject(obj)) {
-			for (k in obj) {
-				callback(k, obj[k], i);
-				i ++;
-			}
-		} else {
-			callback = callback || ($.isFunction(obj) ? obj : null);
-			obj = $.isFunction(obj) ? this : obj;
-
-			for (k in obj) {
-				var value = obj[k];
-				if($.isDomAll(value)) {
-					callback.call(value, k, value, i);
-					i ++;
-				}
-			}
-		}
-		 */
 		return obj;
 	}
 
@@ -635,14 +787,14 @@ function debugTime(key){
 	 * @param callback
 	 * @returns {[]}
 	 */
-    K.map = function(elements, callback){
-    	if(!callback && $.isFunction(elements)){
+	K.map = function(elements, callback){
+		if(!callback && $.isFunction(elements)){
 			callback = elements;
 			elements = this;
 		}
-        var value, values = [], i, key;
+		var value, values = [], i, key;
 
-        if ($.isArrayLike(elements)) {
+		if ($.isArrayLike(elements)) {
 			for(i = 0; i < elements.length; i++){
 				value = callback(elements[i], i);
 				if(value != null){
@@ -658,8 +810,8 @@ function debugTime(key){
 				}
 			}
 		}
-        return values;
-    }
+		return values;
+	}
 
 	/**
 	 * 取集合范围
@@ -676,13 +828,21 @@ function debugTime(key){
 	 */
 	K.eq = function(n){
 		var self = this;
-		n += 0;
-		this.each(function(i, ele){
-			if(i != n){
-				self.length --;
+
+		var ele;
+		this.map(function(e, i){
+			if(i === n){
+				ele = e;
+			}else{
 				delete self[i];
 			}
-		})
+		});
+		if(ele){
+			this[0] = ele;
+			this.length = 1;
+		}else{
+			delete this.length;
+		}
 		return this;
 	}
 
@@ -719,23 +879,23 @@ function debugTime(key){
 		return s;
 	}
 
-    /**
-     * 检查指定元素是否被选择器选择
-     * @param ele 需要检查的元素
-     * @param selector 选择器
-     * @returns {boolean|number|*}
-     */
-    var isSelectDom = function(ele, selector) {
-        if (!selector || !ele || ele.nodeType !== 1){
-            return false
-        }
-        var matchesSelector = ele.matches || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.oMatchesSelector || ele.matchesSelector;
-        try {
-            return matchesSelector.call(ele, selector);
-        }catch (e) {
-            console.error('isSelectDom执行错误，浏览器不支持matches');
-        }
-    }
+	/**
+	 * 检查指定元素是否被选择器选择
+	 * @param ele 需要检查的元素
+	 * @param selector 选择器
+	 * @returns {boolean|number|*}
+	 */
+	var isSelectDom = function(ele, selector) {
+		if (!selector || !ele || ele.nodeType !== 1){
+			return false
+		}
+		var matchesSelector = ele.matches || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.oMatchesSelector || ele.matchesSelector;
+		try {
+			return matchesSelector.call(ele, selector);
+		}catch (e) {
+			console.error('isSelectDom执行错误，浏览器不支持matches');
+		}
+	}
 
 	/**
 	 * 递归遍历DOM节点
@@ -744,8 +904,8 @@ function debugTime(key){
 	 * @param selector 选择器
 	 * @returns {[]}
 	 */
-    var dir = function (element, key, selector, isAll) {
-        var rdom = [];
+	var dir = function (element, key, selector, isAll) {
+		var rdom = [];
 		$.map(element,function(el){
 			if(isAll){
 				rdom.push(el);
@@ -756,115 +916,115 @@ function debugTime(key){
 			}
 
 		});
-        return rdom;
-    };
+		return rdom;
+	};
 
-    /**
-     * 子孙遍历
-     * @param selector
-     * @returns
-     */
-    K.find = function(selector){
-        selector = selector || '*';
-        var rdom = $(), ri =0;
+	/**
+	 * 子孙遍历
+	 * @param selector
+	 * @returns
+	 */
+	K.find = function(selector){
+		selector = selector || '*';
+		var rdom = $(), ri =0;
 		this.map(function(ele){
-			$.map(ele.querySelectorAll(selector), function(el){
+			$.map(ele.querySelectorAll(selectorStr(selector)), function(el){
 				rdom[ri] = el;
 				ri ++;
 			});
 		});
 		rdom.length = ri;
-        return rdom;
-    }
+		return rdom;
+	}
 
-    /**
-     * 直接子级遍历
-     * @param selector
-     */
+	/**
+	 * 直接子级遍历
+	 * @param selector
+	 */
 	K.children = function(selector){
-        selector = selector || '*';
-	    var self = this, rdom = $(), ri =0;
-	    this.map(function(ele){
-            self.map(ele.childNodes, function(el){
-                if (isSelectDom(el, selector)) {
-                    rdom[ri] = el;
-					ri ++;
-                }
-            });
-        });
-		rdom.length = ri;
-	    return rdom;
-    }
-
-    /**
-     * 遍历所有子级（包括文本节点）
-     */
-    K.childAll = function(){
-        var self = this, rdom = $(), ri =0;
-        this.map(function(ele){
-            self.map(ele.childNodes, function(el){
-                rdom[ri] = el;
-                ri ++;
-            });
-        });
-        rdom.length = ri;
-        return rdom;
-    }
-
-    /**
-     * 所有同辈
-     * @param selector
-     * @returns {*}
-     */
-    K.siblings = function(selector){
-        selector = selector || '*';
-        var rdom = $(), ri=0;
-        this.map(this, function(ele){
-            //同父级下所有直接子级（不包含自己）
-            $.map(ele.parentNode.childNodes, function(el){
-                if (el != ele && isSelectDom(el, selector)) {
+		selector = selector || '*';
+		var self = this, rdom = $(), ri =0;
+		this.map(function(ele){
+			self.map(ele.childNodes, function(el){
+				if (isSelectDom(el, selector)) {
 					rdom[ri] = el;
 					ri ++;
-                }
-            });
-        });
+				}
+			});
+		});
 		rdom.length = ri;
 		return rdom;
-    }
+	}
 
-    /**
-     * 父级
-     * @param selector
-     * @returns {*}
-     */
-    K.parent = function(selector){
-        selector = selector || '*';
-		var rdom = $(), ri=0;
-        this.map(this, function(ele){
-            var el = ele.parentNode;
-            if (el != ele && isSelectDom(el, selector)) {
+	/**
+	 * 遍历所有子级（包括文本节点）
+	 */
+	K.childAll = function(){
+		var self = this, rdom = $(), ri =0;
+		this.map(function(ele){
+			self.map(ele.childNodes, function(el){
 				rdom[ri] = el;
 				ri ++;
-            }
-        });
+			});
+		});
 		rdom.length = ri;
 		return rdom;
-    }
+	}
 
-    /**
-     * 祖先(直到匹配选择器)
-     * @param selector
-     * @returns {*}
-     */
-    K.parents = function(selector){
+	/**
+	 * 所有同辈
+	 * @param selector
+	 * @returns {*}
+	 */
+	K.siblings = function(selector){
+		selector = selector || '*';
+		var rdom = $(), ri=0;
+		this.map(this, function(ele){
+			//同父级下所有直接子级（不包含自己）
+			$.map(ele.parentNode.childNodes, function(el){
+				if (el != ele && isSelectDom(el, selector)) {
+					rdom[ri] = el;
+					ri ++;
+				}
+			});
+		});
+		rdom.length = ri;
+		return rdom;
+	}
+
+	/**
+	 * 父级
+	 * @param selector
+	 * @returns {*}
+	 */
+	K.parent = function(selector){
+		selector = selector || '*';
+		var rdom = $(), ri=0;
+		this.map(this, function(ele){
+			var el = ele.parentNode;
+			if (el != ele && isSelectDom(el, selector)) {
+				rdom[ri] = el;
+				ri ++;
+			}
+		});
+		rdom.length = ri;
+		return rdom;
+	}
+
+	/**
+	 * 祖先(直到匹配选择器)
+	 * @param selector
+	 * @returns {*}
+	 */
+	K.parents = function(selector){
 		var rdom = $(), ri=0;
 		$.map(dir(this, 'parentNode', selector), function(el){
 			rdom[ri] = el;
 			ri ++;
 		});
 		rdom.length = ri;
-        return rdom;
-    }
+		return rdom;
+	}
 
 	/**
 	 * 前一个元素
@@ -872,17 +1032,17 @@ function debugTime(key){
 	 * @returns {*}
 	 */
 	K.prev = function(selector){
-        selector = selector || '*';
+		selector = selector || '*';
 		var rdom = $(), ri=0;
-        this.map(this,function(ele, i){
-            if(isSelectDom(ele.previousElementSibling, selector)){
-            	rdom[ri] = ele.previousElementSibling;
+		this.map(this,function(ele, i){
+			if(isSelectDom(ele.previousElementSibling, selector)){
+				rdom[ri] = ele.previousElementSibling;
 				ri ++;
 			}
-        });
+		});
 		rdom.length = ri;
-        return rdom;
-    }
+		return rdom;
+	}
 
 	/**
 	 * 往前所有元素
@@ -904,18 +1064,18 @@ function debugTime(key){
 	 * @param selector
 	 * @returns {*}
 	 */
-    K.next = function(selector){
-        selector = selector || '*';
+	K.next = function(selector){
+		selector = selector || '*';
 		var rdom = $(), ri=0;
-        this.map(this,function(ele){
-            if(isSelectDom(ele.nextElementSibling, selector)){
+		this.map(this,function(ele){
+			if(isSelectDom(ele.nextElementSibling, selector)){
 				rdom[ri] = ele.nextElementSibling;
 				ri ++;
 			}
-        });
+		});
 		rdom.length = ri;
-        return rdom;
-    }
+		return rdom;
+	}
 
 	/**
 	 * 之后所有元素
@@ -930,15 +1090,15 @@ function debugTime(key){
 		}, isAll);
 		rdom.length = ri;
 		return rdom;
-    }
+	}
 
 
 
 // ====================== 事件处理 ====================== //
-    var bindEventData = {}, __kid__ = 1;
-    function KID(el){
-        return el._ksaID || (el._ksaID = __kid__++);
-    }
+	var bindEventData = {}, __kid__ = 1;
+	function KID(el){
+		return el._ksaID || (el._ksaID = __kid__++);
+	}
 	/**
 	 * 绑定事件
 	 * @param event 事件名称, 每个事件以空格分开，每个事件支持命名空间click.xx
@@ -947,14 +1107,13 @@ function debugTime(key){
 	 * @returns {$}
 	 */
 	K.on = function (event, selector, callback) {
-		var self = this;
 		if($.isFunction(selector) && !callback){
 			callback = selector;
 			selector = null;
 		}
 		callback = callback ? callback : function(){return false};
 
-		return self.each(function (_, ele) {
+		this.each(function (_, ele) {
 			var kid = KID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
 
@@ -967,7 +1126,7 @@ function debugTime(key){
 				var func = function(e){
 					//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
 					if(selector){
-						if(!$.inArray(e.target, ele.querySelectorAll(selector))){
+						if(!$.inArray(e.target, ele.querySelectorAll(selectorStr(selector)))){
 							return;
 						}
 					}
@@ -992,7 +1151,8 @@ function debugTime(key){
 				ele.addEventListener(evn, func, useCapture);
 
 			})
-		})
+		});
+		return this;
 	};
 
 	/**
@@ -1014,7 +1174,10 @@ function debugTime(key){
 					evnDt.map(function(val, i){
 						if(!isCall || val.callback == callback){
 							ele.removeEventListener(evn, val.addCallback, val.useCapture);
-							delete bindEventData[kid][evn][i];
+							if(bindEventData[kid][evn] && bindEventData[kid][evn][i]){
+								delete bindEventData[kid][evn][i];
+							}
+
 						}
 					});
 
@@ -1030,19 +1193,19 @@ function debugTime(key){
 		});
 	};
 
-    /**
-     * hover事件
-     * @param a
-     * @param b
-     * @returns {*}
-     */
-    K.hover = function(a, b){
-        return this.mouseenter(a).mouseleave(b || a);
-    }
+	/**
+	 * hover事件
+	 * @param a
+	 * @param b
+	 * @returns {*}
+	 */
+	K.hover = function(a, b){
+		return this.mouseenter(a).mouseleave(b || a);
+	}
 // ====================== 当前或指定url格式化为对象 ====================== //
-    K.urls = function(url){
-    	var P = {}, u = [];
-    	if(url){
+	K.urls = function(url){
+		var P = {}, u = [];
+		if(url){
 			u = url.match(/(([a-z]+)\:\/\/)?([^:/]*?)(:(\d+)?)([^?]*)([^#]*)(#.*)?/i);
 		}
 		P = {
@@ -1082,7 +1245,7 @@ function debugTime(key){
 	 * @returns {string}
 	 */
 	K.urlsAdd = function(url, query){
-    	return url + (url.indexOf('?') !== -1 ? '&' : '?') + query;
+		return url + (url.indexOf('?') !== -1 ? '&' : '?') + query;
 	}
 
 	/**
@@ -1108,7 +1271,7 @@ function debugTime(key){
 	 * 注：data值不再做任何二次处理，直接放入FormData提交，所以POST时支持文件与参数同时传递，无需其他设置
 	 * @param option
 	 */
-    K.ajax = function(option){
+	K.ajax = function(option){
 		var getType = option.contentType ? option.contentType.toUpperCase() : 'GET',
 			headers = option.headers || {},
 			dataType = option.dataType ? option.dataType.toLowerCase() : 'html',
@@ -1149,7 +1312,7 @@ function debugTime(key){
 			document.head.appendChild(script);
 			copyCallback = responseData = null;
 
-		//其他ajax请求采用XMLHttp
+			//其他ajax请求采用XMLHttp
 		}else{
 
 			if(getType =='POST'){
@@ -1189,7 +1352,7 @@ function debugTime(key){
 				}
 			}
 		}
-    }
+	}
 // ====================== 元素监听 ====================== //
 
 	/**
@@ -1324,34 +1487,34 @@ function debugTime(key){
 			});
 		},
 	}
-/*
-	K.objectDel = function(obj, key){
-		if(typeof(obj[key]) !=="undefined"){
-			var objID = $.objectID(obj);
-			if(this.def.DelEvent[objID] && this.def.DelEvent[objID].func[key]){
-				$.loop(this.def.DelEvent[objID].func[key], function(f){
-					f.call('', key);
-				});
-				delete this.def.DelEvent[objID].func[key];
-			}
-		}
-		delete obj[key];
-	};
+	/*
+        K.objectDel = function(obj, key){
+            if(typeof(obj[key]) !=="undefined"){
+                var objID = $.objectID(obj);
+                if(this.def.DelEvent[objID] && this.def.DelEvent[objID].func[key]){
+                    $.loop(this.def.DelEvent[objID].func[key], function(f){
+                        f.call('', key);
+                    });
+                    delete this.def.DelEvent[objID].func[key];
+                }
+            }
+            delete obj[key];
+        };
 
-	K.objectAdd = function(obj, key, data){
-		obj[key] = data;
+        K.objectAdd = function(obj, key, data){
+            obj[key] = data;
 
-		if(typeof(obj[key]) !=="undefined"){
-			var objID = $.objectID(obj);
-			if(this.def.AddEvent[objID]){
+            if(typeof(obj[key]) !=="undefined"){
+                var objID = $.objectID(obj);
+                if(this.def.AddEvent[objID]){
 
-				$.loop(this.def.AddEvent[objID].func, function(f){
-					f.call('', key, data);
-				});
-			}
-		}
-	};
-*/
+                    $.loop(this.def.AddEvent[objID].func, function(f){
+                        f.call('', key, data);
+                    });
+                }
+            }
+        };
+    */
 	/**
 	 * 获取调用此函数的参数名与参数值
 	 * @param Args
@@ -2211,9 +2374,9 @@ function debugTime(key){
 		return obj != null && obj === obj.window;
 	};
 
-    K.isDocument = function(obj){
-        return obj != null && obj.nodeType == obj.DOCUMENT_NODE;
-    }
+	K.isDocument = function(obj){
+		return obj != null && obj.nodeType == obj.DOCUMENT_NODE;
+	}
 
 	K.isArray = function(){
 		return v && v.constructor == Array;
@@ -2226,11 +2389,11 @@ function debugTime(key){
 	 * @returns {boolean}
 	 */
 	K.isset = function(key, str){
-        if(str !== undefined){
-            return key.indexOf(str) === -1;
-        }else{
-            return typeof(key) !== 'undefined';
-        }
+		if(str !== undefined){
+			return key.indexOf(str) === -1;
+		}else{
+			return typeof(key) !== 'undefined';
+		}
 	}
 	K.isTrue = function(v) {
 		return v === true;
@@ -2241,21 +2404,21 @@ function debugTime(key){
 	K.isArray = function(v){
 		return v && v.constructor == Array;
 	}
-    K.isArrayLike = function(obj) {
+	K.isArrayLike = function(obj) {
 
-        // Support: real iOS 8.2 only (not reproducible in simulator)
-        // `in` check used to prevent JIT error (gh-2145)
-        // hasOwn isn't used here due to false negatives
-        // regarding Nodelist length in IE
+		// Support: real iOS 8.2 only (not reproducible in simulator)
+		// `in` check used to prevent JIT error (gh-2145)
+		// hasOwn isn't used here due to false negatives
+		// regarding Nodelist length in IE
 		if ($.isFunction(obj) || $.isWindow(obj) || $.isString(obj)) {
 			return false;
 		}
 
-        var length = !!obj && "length" in obj && obj.length, type = typeof(obj);
+		var length = !!obj && "length" in obj && obj.length, type = typeof(obj);
 
-        return type === "array" || length === 0 ||
-            typeof length === "number" && length > 0 && (length - 1) in obj;
-    };
+		return type === "array" || length === 0 ||
+			typeof length === "number" && length > 0 && (length - 1) in obj;
+	};
 	K.isNumber = function(v){
 		return v && /^[0-9]+$/.test(v.toString());
 	}
@@ -2398,23 +2561,23 @@ function debugTime(key){
 		return dt;
 	}
 
-    K.trim = function(str, char){
-        str = str.toString();
-        if(char){
-            str = str.replace(new RegExp('^\\'+char+'+', 'g'),'');
-            str = str.replace(new RegExp('\\'+char+'+$', 'g'),'')
-        }else{
-            str = str.trim();
-        }
-        return str;
-    }
+	K.trim = function(str, char){
+		str = str.toString();
+		if(char){
+			str = str.replace(new RegExp('^\\'+char+'+', 'g'),'');
+			str = str.replace(new RegExp('\\'+char+'+$', 'g'),'')
+		}else{
+			str = str.trim();
+		}
+		return str;
+	}
 
 	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};
 	});
-	
+
 	window.KSA = window.$ = $;
 
 
