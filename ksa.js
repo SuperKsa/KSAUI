@@ -85,14 +85,13 @@ function debugTime(key){
 	}
 
 	function K_S_A(selector){
-
 		if(selector) {
 			if (selector instanceof $) {
 				return selector;
-			} else if ($.isDomAll(selector)) {
+			} else if ($.isWindow(selector) || $.isDomAll(selector)) {
 				selector = [selector];
 
-			}else if($.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1){
+			}else if($.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1 && selector.length >=3){
 				selector = createDom(selector);
 
 			}else if($.isString(selector)) {
@@ -100,7 +99,6 @@ function debugTime(key){
 				selector = [].slice.call(document.querySelectorAll(selectorStr(selector)));
 			}
 			var length = selector.length;
-
 			var obj = {};
 			$.loop(selector, function(ele, key){
 				obj[key] = ele;
@@ -110,7 +108,7 @@ function debugTime(key){
 		}else{
 			selector = {length:0};
 		}
-		//selector.__proto__ = this.__proto__;
+
 		if(selector.length) {
 			$.arrayMerge(this, selector);
 			this.length = selector.length;
@@ -248,10 +246,12 @@ function debugTime(key){
 					}else if(isvalue && !keyIsobj){
 						if($.inArray(v, BooleanArr)){
 							ele[v] = value;
-						}else if (v.indexOf('data-') === 0) {
-							setDt[v] = value; setDtCount ++;
+						}else{
+							if (v.indexOf('data-') === 0) {
+								setDt[v] = value; setDtCount ++;
+							}
+							ele.setAttribute(v, value);
 						}
-						ele.setAttribute(v, value);
 					}
 				});
 				//写入data属性
@@ -688,18 +688,20 @@ function debugTime(key){
 			} else if(isValue){
 				sets = {[key] : value};
 			}
+			var style = [];
 			$.loop(sets, function(value, key){
 				var soukey = key.replace(/^(-moz-|-ms-|-webkit-|-o-|\+|_|\*)/ig, '');
 				if(!$.inArray(soukey, cssNumber) && $.isNumber(value)){
-					sets[key] = value + 'px';
+					value = value + 'px';
 				}
+				sets[key] = value;
+				style.push(key+':'+value);
 			});
-
+			style = style.length ? $.implode('; ',style) : '';
 			if(sets) {
 				this.map(function (e) {
-					$.loop(sets, function (val, k) {
-						e.style[k] = val;
-					});
+					var st = e.getAttribute('style');
+					e.setAttribute('style' , st+'; '+style);
 				});
 				return this;
 			}else{
@@ -729,34 +731,27 @@ function debugTime(key){
 	 * @returns {*}
 	 */
 	K.loop = function(dt, fun, actions){
-		var val, length;
-		if(dt && $.isArrayLike(dt)){
-			length = dt.length;
+		if(!dt){
+			return;
+		}
+		if($.isArrayLike(dt)){
+			var length = dt.length;
 			for(i=0;i<dt.length;i++){
-				val = dt[i];
-				if(dt.hasOwnProperty(val)){
-					continue;
-				}
+				var val = dt[i];
 				if((actions && (actions ==='first' || (actions ==='last' && i === length -1))) || fun(val, i, i) === true){
 					return val;
 				}
 			}
-		}else if(dt && $.isObject(dt)){
-			var i=0,
-				kdt = Object.keys(dt);
+		}else{
+			var i=0, kdt = Object.keys(dt);
 
-			length = kdt.length;
-
-			for(i=0;i<kdt.length;i++){
-				if(dt.hasOwnProperty(k)){
-					continue;
-				}
-				val = dt[kdt[i]];
-				if((actions && (actions ==='first' || (actions ==='last' && i === length -1))) || fun(val, k, i) === true){
+			Object.keys(dt).forEach(function(k){
+				var val = dt[k];
+				if((actions && (actions ==='first' || (actions ==='last' && i === kdt.length -1))) || fun(val, k, i) === true){
 					return val;
 				}
 				i++;
-			}
+			})
 		}
 	}
 
@@ -891,9 +886,9 @@ function debugTime(key){
 		}
 		var matchesSelector = ele.matches || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.oMatchesSelector || ele.matchesSelector;
 		try {
-			return matchesSelector.call(ele, selector);
+			return matchesSelector.call(ele, selectorStr(selector));
 		}catch (e) {
-			console.error('isSelectDom执行错误，浏览器不支持matches');
+			console.error(new Error('isSelectDom执行错误，浏览器不支持matches'));
 		}
 	}
 
@@ -2420,7 +2415,7 @@ function debugTime(key){
 			typeof length === "number" && length > 0 && (length - 1) in obj;
 	};
 	K.isNumber = function(v){
-		return v && /^[0-9]+$/.test(v.toString());
+		return v && /^[0-9\.]+$/.test(v.toString());
 	}
 
 	K.isBool = function(v){
