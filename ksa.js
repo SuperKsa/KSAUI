@@ -141,9 +141,9 @@ function debugTime(key){
 	 * @returns {$}
 	 */
 	K.addClass = function(name){
-		name = $.explode(' ', name, '');
+		name = name ? $.explode(' ', name, '') : null;
 		if(name){
-			this.map(function(ele){
+			this.each(function(_, ele){
 				var classList = $.explode(' ', ele.getAttribute('class'),' ');
 				var addname = $.map(name, function (v) {
 					return !$.inArray(v, classList) ? v : null;
@@ -164,9 +164,9 @@ function debugTime(key){
 	 * @returns {$}
 	 */
 	K.removeClass = function(name){
-		name = $.explode(' ', name, '');
+		name = name ? $.explode(' ', name, '') : null;
 		if(name){
-			$.map(this,function(ele){
+			this.each(function(_, ele){
 				var classList = $.explode(' ', ele.getAttribute('class'),' ');
 				classList = $.map(classList, function (v) {
 					return !$.inArray(v, name) ? v : null;
@@ -470,6 +470,56 @@ function debugTime(key){
 			return t.join("\n");
 		}
 	};
+
+	/**
+	 * 获取指定域中的表单数据
+	 * 必须通过$选择器触发
+	 * @param isFormData 是否返回FormData对象
+	 * @returns {{}}
+	 */
+	K.formData = function(isFormData){
+		var formData = {};
+		var ele = this[0];
+		$(ele).find('input, textarea, select').each(function(i,el){
+			el = $(el);
+			var name = el.attr('name');
+			var val = el.val();
+			var type = el.attr('type');
+			if(name){
+				if(type =='file'){
+					formData[name] = el.files.length ? el.files[0] : '';
+				}else if($.isArray(type,['radio','checkbox'])){
+					if(el.attr('checked')){
+						formData[name] = val;
+					}
+				}else{
+					if($.isArray(val)){
+						formData[name] = [];
+						$.loop(val,function(v){
+							formData[name].push(v);
+						})
+					}else{
+						formData[name] = val;
+					}
+				}
+			}
+		});
+
+		if(isFormData){
+			var newformData = new FormData();
+			$.loop(formData, function(value, key){
+				if($.isArray(value)){
+					$.loop(value, function(val){
+						newformData.append(key, val);
+					})
+				}else{
+					newformData.append(key, value);
+				}
+			});
+			formData = newformData;
+		}
+		return formData;
+	}
 
 	/**
 	 * 读写文本节点
@@ -1233,13 +1283,23 @@ function debugTime(key){
 	/**
 	 * 表单submit事件
 	 */
-	K.submit = function(){
+	K.submit = function(callFun){
 		this.map(function(ele){
 			var evn = ele.onsubmit;
-			var result;
-			$.addEvent(ele, 'formEvent', function(e){
-				result = evn.apply(this, e);
+			var result = false;
+			$.addEvent(ele, 'formEvent', function (e) {
+				if(callFun){
+					if(callFun.apply(this, e) === false){
+						evn = null;
+					}
+				}
+
+				if(evn){
+					result = evn.apply(this, e);
+				}
+
 			}, false, 1, 1);
+
 			if(result !== false){
 				ele.submit();
 			}
@@ -1384,18 +1444,20 @@ function debugTime(key){
 			A.send(_data);
 
 			A.onreadystatechange = function(){
-				var result = A.responseText;
-				if(A.readyState == 4 && A.status == 200) {
-					if (dataType == 'script'){
-						(1,eval)(result);
-					}else if(dataType == 'xml'){
-						result = A.responseXML;
-					}else if (dataType == 'json'){
-						result = /^\s*$/.test(result) ? null : JSON.parse(result);
+				if(A.readyState == 4) {
+					var result = A.responseText;
+					if (A.status == 200) {
+						if (dataType == 'script') {
+							(1, eval)(result);
+						} else if (dataType == 'xml') {
+							result = A.responseXML;
+						} else if (dataType == 'json') {
+							result = /^\s*$/.test(result) ? null : JSON.parse(result);
+						}
+						$.isFunction(option.success) && option.success.call(this, result);
+					} else {
+						$.isFunction(option.error) && option.error.call(this, result);
 					}
-					$.isFunction(option.success) && option.success.call(this, result);
-				}else{
-					$.isFunction(option.error) && option.error.call(this, result);
 				}
 			}
 		}
