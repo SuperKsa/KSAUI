@@ -1315,7 +1315,7 @@ function debugTime(key){
 	 * @param option
 	 */
 	K.ajax = function(option){
-		var getType = option.contentType ? option.contentType.toUpperCase() : 'GET',
+		var getType = option.type ? option.type.toUpperCase() : 'GET',
 			headers = option.headers || {},
 			dataType = option.dataType ? option.dataType.toLowerCase() : 'html',
 			jsonpCallback = option.jsonpCallback || '',
@@ -1359,10 +1359,14 @@ function debugTime(key){
 		}else{
 
 			if(getType =='POST'){
-				_data = new FormData();
-				$.each(option.data, function(k, val){
-					_data.append(k, val);
-				});
+				if(option.data instanceof FormData) {
+					_data = option.data;
+				}else{
+					_data = new FormData();
+					$.loop(option.data, function(k, val){
+						_data.append(k, val);
+					});
+				}
 			}else if(getType =='GET'){
 				_data = $.urlsParam(option.data);
 				option.url = $.urlsAdd(option.url, _data);
