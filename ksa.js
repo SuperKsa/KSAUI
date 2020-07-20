@@ -184,7 +184,7 @@ function debugTime(key){
 		while ((ele = this[i++])) {
 			if (ele.nodeType === 1){
 				var cl = ele.getAttribute('class');
-				if(cl && cl.length && $.inArray(cls, cl)){
+				if(cl && cl.length && $.inArray(cls, $.explode(' ',cl,' '))){
 					return true;
 				}
 			}
@@ -1107,11 +1107,9 @@ function debugTime(key){
 			selector = null;
 		}
 		callback = callback ? callback : function(){return false};
-
 		this.each(function (_, ele) {
 			var kid = KID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
-
 			$.loop(event.split(/\s/), function (evn) {
 				if (evn == 'ready'){
 					return $(document).ready(callback);
@@ -1126,7 +1124,7 @@ function debugTime(key){
 						}
 					}
 					//回调函数并获取返回值，若返回值为false则阻止冒泡
-					var r = callback.call(this, e);
+					var r = callback.apply(e.target, arguments);
 					if(r === false){
 						e.preventDefault();
 						e.stopPropagation();
