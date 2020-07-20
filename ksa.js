@@ -2647,7 +2647,7 @@ function debugTime(key){
 
 			$.loop(dt,function(v, k){
 				if($.inArray(k,keys)){
-					if(isObj){
+					if(at =='object'){
 						delete dt[k];
 					}else{
 						dt.splice(k,1);
