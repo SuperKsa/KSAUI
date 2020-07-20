@@ -1107,10 +1107,11 @@ function debugTime(key){
 			selector = null;
 		}
 		callback = callback ? callback : function(){return false};
+		event = event.split(/\s/);
 		this.each(function (_, ele) {
 			var kid = KID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
-			$.loop(event.split(/\s/), function (evn) {
+			$.loop(event, function (evn) {
 				if (evn == 'ready'){
 					return $(document).ready(callback);
 				}
@@ -1194,6 +1195,55 @@ function debugTime(key){
 	 */
 	K.hover = function(a, b){
 		return this.mouseenter(a).mouseleave(b || a);
+	}
+
+	/**
+	 * 创建一个自定义事件
+	 * @param ele 事件对应绑定的元素
+	 * @param name 事件名称
+	 * @param func 回调函数
+	 * @param useCapture  addEventListener第三个参数
+	 * @param isRun 是否立即执行
+	 * @param runDel 立即执行后是否删除
+	 */
+	K.addEvent = function(ele, name, func, useCapture, isRun, runDel){
+		var result;
+		var eEvn = new Event(name);
+		ele.addEventListener(name, func, useCapture);
+		if(isRun) {
+			result = ele.dispatchEvent(eEvn);
+		}
+		if(runDel){
+			$.removeEvent(ele, name, func, useCapture);
+		}
+		return result;
+	}
+
+	/**
+	 * 移除一个事件
+	 * @param ele 绑定时对应的元素
+	 * @param name 绑定时使用的事件名称
+	 * @param func 绑定时的触发函数
+	 * @param useCapture addEventListener第三个参数
+	 */
+	K.removeEvent = function(ele, name, func, useCapture){
+		ele.removeEventListener(name, func, useCapture);
+	}
+
+	/**
+	 * 表单submit事件
+	 */
+	K.submit = function(){
+		this.map(function(ele){
+			var evn = ele.onsubmit;
+			var result;
+			$.addEvent(ele, 'formEvent', function(e){
+				result = evn.apply(this, e);
+			}, false, 1, 1);
+			if(result !== false){
+				ele.submit();
+			}
+		});
 	}
 // ====================== 当前或指定url格式化为对象 ====================== //
 	K.urls = function(url){
@@ -2565,7 +2615,7 @@ function debugTime(key){
 		return str;
 	}
 
-	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select submit keydown keypress keyup contextmenu').split(' '),function (name) {
+	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select keydown keypress keyup contextmenu').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};
