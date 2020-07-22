@@ -118,6 +118,8 @@ function debugTime(key){
 
 	K_S_A.prototype =  $.prototype = $.__proto__ = K = {};
 
+
+
 	K.ready = function(callback) {
 		if (/complete|loaded|interactive/.test(document.readyState)) {
 			callback($);
@@ -362,7 +364,7 @@ function debugTime(key){
 	/**
 	 * 清空节点
 	 */
-	K.clear = function(){
+	K.empty = function(){
 		this.map(function(ele){
 			ele.innerHTML = '';
 		});
@@ -497,7 +499,7 @@ function debugTime(key){
 		if($.isset(value)){
 			this.map(function(ele){
 				if($.isObject(value)){
-					$(ele).clear().append(value);
+					$(ele).empty().append(value);
 				}else{
 					ele.innerHTML = value;
 				}
@@ -672,6 +674,7 @@ function debugTime(key){
 		}
 
 		var rect = elem.getBoundingClientRect();
+
 		var win = elem.ownerDocument.defaultView;
 		return {
 			top: rect.top + win.pageYOffset,
@@ -866,9 +869,8 @@ function debugTime(key){
 		this.map(function(e, i){
 			if(i === n){
 				ele = e;
-			}else{
-				delete self[i];
 			}
+			delete self[i];
 		});
 		if(ele){
 			this[0] = ele;
@@ -1236,7 +1238,76 @@ function debugTime(key){
 	}
 
 	/**
+	 * 简化的touch事件
+	 * @param a 触摸开始
+	 * @param b 触摸过程
+	 * @param c 触摸结束
+	 * @returns {K}
+	 */
+	K.touch = function(a, b, c){
+		c && this.touchstart(a);
+		b && this.touchmove(b);
+		c && this.touchend(c);
+		return this;
+	}
+
+	/**
+	 * 长按事件（移动端）
+	 * Author: cr180.com <cr180@cr180.com>
+	 */
+	K.touchlong = function(fun) {
+		var S, x=0, y=0;
+		this.on('touchstart touchmove touchend mousedown mouseup mouseout mouseleave', function(e){
+
+			if($.inArray(e.type, ['touchstart','mousedown'])) {
+				if (e.type == 'touchstart') {
+					x = e.originalEvent.targetTouches[0].pageX || 0;
+					y = e.originalEvent.targetTouches[0].pageY || 0;
+				}
+				e.stopPropagation();
+				S = setTimeout(function () {
+					fun(e.delegateTarget);
+				}, 400);
+			}else if(e.type =='touchmove'){
+				var x1 = e.originalEvent.targetTouches[0].pageX || 0;
+				var y1 = e.originalEvent.targetTouches[0].pageY || 0;
+				if(Math.abs(x1 - x) >25 || Math.abs(y1 -y) >25){
+					clearTimeout(S);
+				}
+			}else{
+				clearTimeout(S);
+			}
+		});
+		return this;
+	}
+
+	/**
 	 * 创建一个自定义事件
+	 * @param name
+	 * @constructor
+	 */
+	K.Event = function(name){
+		var events
+		try{
+			events = new Event(name, {bubbles:true, cancelable:false});
+		}catch (e) {
+			events = document.createEvent('Events');
+			events.initEvent(name, true, true);
+		}
+		if(events) {
+			events.stopPropagation = function () {
+				this.preventDefault();
+				this.returnValue = false;
+				this.cancelBubble = true;
+				window.event.returnValue = false;
+				window.event.cancelBubble = true;
+			}
+		}
+		return events;
+	}
+
+	/**
+	 * 给指定元素绑定一个自定义事件
 	 * @param ele 事件对应绑定的元素
 	 * @param name 事件名称
 	 * @param func 回调函数
@@ -1246,7 +1317,7 @@ function debugTime(key){
 	 */
 	K.addEvent = function(ele, name, func, useCapture, isRun, runDel){
 		var result;
-		var eEvn = new Event(name);
+		var eEvn = $.Event(name);
 		ele.addEventListener(name, func, useCapture);
 		if(isRun) {
 			result = ele.dispatchEvent(eEvn);
@@ -1266,6 +1337,22 @@ function debugTime(key){
 	 */
 	K.removeEvent = function(ele, name, func, useCapture){
 		ele.removeEventListener(name, func, useCapture);
+	}
+
+	/**
+	 * 触发事件
+	 * @param evn
+	 */
+	K.trigger = function(event, args){
+		this.map(function(ele){
+			if ($.isFunction(ele[event.type])){
+				ele[event.type]();
+			}else{
+				var e = $.Event(event);
+				ele.dispatchEvent(e);
+			}
+		});
+		return this;
 	}
 
 	/**
@@ -1364,7 +1451,7 @@ function debugTime(key){
 	 */
 	K.ajax = function(option){
 		var getType = option.type ? option.type.toUpperCase() : 'GET',
-			headers = option.headers || {},
+			headers = option.header || {},
 			dataType = option.dataType ? option.dataType.toLowerCase() : 'html',
 			jsonpCallback = option.jsonpCallback || '',
 			jsonp = option.jsonp,
@@ -1399,6 +1486,7 @@ function debugTime(key){
 				}else{
 					$.isFunction(option.success) && option.success.call(this, result);
 				}
+				option.complete && option.complete.call(this, result, A.status); //请求完成执行回调
 			});
 			document.head.appendChild(script);
 			copyCallback = responseData = null;
@@ -1444,10 +1532,19 @@ function debugTime(key){
 						}
 						$.isFunction(option.success) && option.success.call(this, result);
 					} else {
-						$.isFunction(option.error) && option.error.call(this, result);
+						$.isFunction(option.error) && option.error.call(this, result, A.status);
 					}
+					option.complete && option.complete.call(this, result, A.status); //请求完成执行回调
 				}
 			}
+			//超时处理
+			var EvnTimeout;
+			if (option.timeout > 0) EvnTimeout = setTimeout(function(){
+				A.onreadystatechange = function(){}
+				A.abort()
+				$.isFunction(option.error) && option.error.call(this, result, A.status);
+				option.complete && option.complete.call(this, result, A.status); //请求完成执行回调
+			}, option.timeout)
 		}
 	}
 // ====================== 元素监听 ====================== //
@@ -1525,20 +1622,22 @@ function debugTime(key){
 				return;
 			}
 
-			var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
-			setTer = setTer ? setTer.set : setTer;
-			var setFunction = function(v){
-				setTer && setTer(v);
-				setFun(v);
-			};
-
-
 			try {
+
+				var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
+				setTer = setTer ? setTer.set : setTer;
+				var setFunction = function(v){
+					setTer && setTer(v);
+					setFun(v);
+				};
+
 				var _Svalue = obj[keyName];
+
 				Object.defineProperty(obj, keyName, {
 					enumerable: true,
 					configurable: true,
 					set : function(v){
+
 						if(v === _Svalue){//值相同时不回调函数
 							return;
 						}
@@ -1558,7 +1657,7 @@ function debugTime(key){
 					}
 				});
 			}catch (e) {
-
+				//console.error(new Error('window变量【'+keyName+'】无法监听，请去掉变量前面的var试试'));
 			}
 
 		},
@@ -1674,6 +1773,7 @@ function debugTime(key){
 	}
 // ====================== TPL模板语法 ====================== //
 	K.tpl = function(_DATA){
+		_DATA = _DATA || {};
 		var $this = this;
 
 		//匹配模板变量正则 {xxx}
@@ -1831,13 +1931,14 @@ function debugTime(key){
 						if(exp) {
 							rcode = exp[0];
 							if (exp[1]) {
-
 								//添加监听
 								$.loop(exp[1], function (skv, vname) {
 									if ($.isObject(skv)) {
 										monitor += "_$T._M(arguments[0], " + vname + ", '" + Object.keys(skv).join(',') + "');\n";
 									} else if (typeof (ths.data[vname]) !== "undefined") {
 										monitor += "_$T._M(arguments[0], _$data_, '" + vname + "');\n";
+									} else if (typeof (window[vname]) !== "undefined") {
+										monitor += "_$T._M(arguments[0], window, '" + vname + "');\n";
 									}
 								});
 							}
@@ -2222,7 +2323,7 @@ function debugTime(key){
 					}else{
 						dom.appendChild(element);
 					}
-					$(ths.E).clear();
+					$(ths.E).empty();
 					ths.E.appendChild(dom);
 					return dom;
 				}
@@ -2633,7 +2734,7 @@ function debugTime(key){
 	}
 	K.implode = function(n, arr){
 		var s = '', str = '';
-		for(k in arr){
+		for(var k in arr){
 			str += s+arr[k];
 			s = n;
 		}
@@ -2670,11 +2771,13 @@ function debugTime(key){
 		return str;
 	}
 
-	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select keydown keypress keyup contextmenu').split(' '),function (name) {
+	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};
 	});
+	//插件钩子 $.plugin.xxx = xxx;
+	K.plugin = $.__proto__;
 
 	window.KSA = window.$ = $;
 
