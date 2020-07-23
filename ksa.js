@@ -27,6 +27,24 @@ function debugTime(key){
 	}
 
 	/**
+	 * 给事件对象统一加上阻止冒泡事件
+	 * @param events
+	 * @returns {*}
+	 */
+	function eventAddstopPropagation(events){
+		if(events) {
+			events.stopPropagation = function () {
+				this.preventDefault();
+				this.returnValue = false;
+				this.cancelBubble = true;
+				window.event.returnValue = false;
+				window.event.cancelBubble = true;
+			}
+		}
+		return events;
+	}
+
+	/**
 	 * 字符串转虚拟dom
 	 * @param code
 	 * @returns {ActiveX.IXMLDOMNodeList | NodeListOf<ChildNode>}
@@ -460,7 +478,7 @@ function debugTime(key){
 		}else {
 			var t = [];
 			this.map(function (ele) {
-				t[k] = ele.innerText;
+				t.push(ele.innerText);
 			});
 			return t.join("\n");
 		}
@@ -531,7 +549,7 @@ function debugTime(key){
 			var type = el.attr('type');
 			if(name){
 				if(type =='file'){
-					formData[name] = el.files.length ? el.files[0] : '';
+					formData[name] = el[0].files.length ? el[0].files[0] : '';
 				}else if($.isArray(type,['radio','checkbox'])){
 					if(el.attr('checked')){
 						formData[name] = val;
@@ -563,6 +581,11 @@ function debugTime(key){
 			formData = newformData;
 		}
 		return formData;
+	}
+
+	K.serialize = function(){
+		var dt = this.formData();
+		return $.urlsParam(dt);
 	}
 
 
@@ -1182,13 +1205,15 @@ function debugTime(key){
 				 */
 				evn = evn.replace(/\..*/,'');
 
-				ele.addEventListener(evn, func, useCapture);
+				ele.addEventListener(evn, function(e){
+					eventAddstopPropagation(e);
+					func.call(ele, e);
+				}, useCapture);
 
 			})
 		});
 		return this;
 	};
-
 	/**
 	 * 解除绑定事件
 	 * @param event 事件名称 on绑定的事件名称
@@ -1226,7 +1251,6 @@ function debugTime(key){
 
 		});
 	};
-
 	/**
 	 * hover事件
 	 * @param a
@@ -1236,21 +1260,6 @@ function debugTime(key){
 	K.hover = function(a, b){
 		return this.mouseenter(a).mouseleave(b || a);
 	}
-
-	/**
-	 * 简化的touch事件
-	 * @param a 触摸开始
-	 * @param b 触摸过程
-	 * @param c 触摸结束
-	 * @returns {K}
-	 */
-	K.touch = function(a, b, c){
-		c && this.touchstart(a);
-		b && this.touchmove(b);
-		c && this.touchend(c);
-		return this;
-	}
-
 	/**
 	 * 长按事件（移动端）
 	 * Author: cr180.com <cr180@cr180.com>
@@ -1261,16 +1270,16 @@ function debugTime(key){
 
 			if($.inArray(e.type, ['touchstart','mousedown'])) {
 				if (e.type == 'touchstart') {
-					x = e.originalEvent.targetTouches[0].pageX || 0;
-					y = e.originalEvent.targetTouches[0].pageY || 0;
+					x = (e.targetTouches ? e.targetTouches[0].pageX : e.pageX) || 0;
+					y = (e.targetTouches ? e.targetTouches[0].pageY : e.pageY) || 0;
 				}
 				e.stopPropagation();
 				S = setTimeout(function () {
 					fun(e.delegateTarget);
 				}, 400);
-			}else if(e.type =='touchmove'){
-				var x1 = e.originalEvent.targetTouches[0].pageX || 0;
-				var y1 = e.originalEvent.targetTouches[0].pageY || 0;
+			}else if($.inArray(e.type,['touchmove','mouseleave'])){
+				var x1 = (e.changedTouches ? e.changedTouches[0].pageX : e.pageX) || 0;
+				var y1 = (e.changedTouches ? e.changedTouches[0].pageY : e.pageY) || 0;
 				if(Math.abs(x1 - x) >25 || Math.abs(y1 -y) >25){
 					clearTimeout(S);
 				}
@@ -1280,6 +1289,100 @@ function debugTime(key){
 		});
 		return this;
 	}
+	/**
+	 * 触摸过程回调
+	 * @param startFun 触摸开始回调函数
+	 * @param moveFun 触摸过程回调函数
+	 * @param endFun 触摸结束回调函数
+	 * @returns {K}
+	 */
+	K.touch = function(startFun, moveFun, endFun){
+		var X=0, Y=0, action, Run;
+		this.on('touchstart touchmove touchend mousedown mousemove mouseup mouseout', function(e){
+
+			e.stopPropagation();
+
+			var ex = 0, ey = 0, cx=0, cy=0;
+			//鼠标或手指按下
+			if($.inArray(e.type, ['touchstart','mousedown'])) {
+				X = ex = (e.targetTouches ? e.targetTouches[0].pageX : e.pageX) || 0;
+				Y = ey = (e.targetTouches ? e.targetTouches[0].pageY : e.pageY) || 0;
+				startFun && startFun.call('', e, {currentX:ex, currentY:ey, startX:X, startY:Y});
+				Run = true;
+				//鼠标或手指在元素上移动
+			}else if(Run && $.inArray(e.type,['touchmove','mousemove'])){
+				ex = (e.targetTouches ? e.targetTouches[0].pageX : e.pageX) || 0;
+				ey = (e.targetTouches ? e.targetTouches[0].pageY : e.pageY) || 0;
+
+
+				cx = ex-X;
+				cy = ey - Y; //得到xy终点坐标
+				//滑动距离必须超过10个像素时才触发
+				if(!action && (Math.abs(cx) >=5 || Math.abs(cy) >=5)) {
+					var ages = $.rightTriangleAge(cx, cy);
+					//向下滑动
+					if (cy > 0) {
+						if (ages.age.ac < 80) {
+							action = 'down';
+						} else if (cx > 0) {
+							action = 'right'
+						} else {
+							action = 'left';
+						}
+						//向上滑动
+					} else {
+						if (ages.age.ac < 80) {
+							action = 'top';
+						} else if (cx > 0) {
+							action = 'right'
+						} else {
+							action = 'left';
+						}
+					}
+				}
+				//动作存在 回调
+				if (action) {
+					moveFun && moveFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y});
+				}
+				//鼠标或手指在元素上释放（离开）
+			}else if(Run){
+				ex = (e.changedTouches ? e.changedTouches[0].pageX : e.pageX) || 0;
+				ey = (e.changedTouches ? e.changedTouches[0].pageY : e.pageY) || 0;
+				cx = ex-X;
+				cy = ey - Y; //得到xy终点坐标
+				endFun && endFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y});
+
+				X=0;
+				Y=0;
+				action = null;
+				Run = null;
+			}
+		});
+		return this;
+	}
+
+	/**
+	 * 根据两个直角边长推测三角度数
+	 * 必须是直角
+	 * @param a A边长
+	 * @param b B边长
+	 * return {object}
+	 */
+	K.rightTriangleAge = function(a, b){
+		//已知四个坐标组成直角四边形 根据勾股定理推测出直角三角形后得到每个角的角度
+		a = Math.abs(a); //取绝对值
+		b = Math.abs(b); // 取绝对值
+		var c = Math.sqrt(a*a+b*b); //求c边长
+		//余弦定理 求bc的弧度
+		var bc = Math.acos((a*a + c*c - b*b)/(2.0*a*c));
+		//bc弧度转角度 得到结束坐标端三角度数
+		bc = parseInt((bc / Math.PI * 180) * 10000) / 10000;
+		//ac角度 = 90 - bc角度
+		var ac = 90 - bc;
+		return {a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
+	}
+
+
 
 	/**
 	 * 创建一个自定义事件
@@ -1294,15 +1397,7 @@ function debugTime(key){
 			events = document.createEvent('Events');
 			events.initEvent(name, true, true);
 		}
-		if(events) {
-			events.stopPropagation = function () {
-				this.preventDefault();
-				this.returnValue = false;
-				this.cancelBubble = true;
-				window.event.returnValue = false;
-				window.event.cancelBubble = true;
-			}
-		}
+		eventAddstopPropagation(events);
 		return events;
 	}
 
@@ -1760,14 +1855,20 @@ function debugTime(key){
 		return autoIDMap[key] ++;
 	};
 
+
+
 	/**
 	 * 获取一个对象的唯一ID
-	 * @type {number}
+	 * 支持 对象、数组、函数
+	 * @param obj
+	 * @returns {number}
 	 */
 	var objectIDIndex = 1;
 	K.objectID = function (obj) {
-		if(!obj.__$_objectID_$__) {
-			obj.__$_objectID_$__ = objectIDIndex++;
+		if($.isObject(obj) || $.isFunction(obj) || $.isArray(obj)){
+			if(!obj.__proto__.__$_objectID_$__) {
+				obj.__proto__.__$_objectID_$__ = objectIDIndex++;
+			}
 		}
 		return obj.__$_objectID_$__;
 	}
