@@ -154,24 +154,56 @@ function debugTime(key){
 	}
 // ====================== 文档操作 ====================== //
 
+	function eleUpdateClass(ele, inClass, isDel, ms){
+		if(!inClass){
+			return ;
+		}
+		function _clsrun() {
+			var className = ele.getAttribute('class') || '';
+			var newClass = {};
+			$.loop($.explode(' ', (className + ' ' + inClass), ' '), function (val) {
+				val = val.trim();
+				if (val) {
+					newClass[val] = 1;
+				}
+			});
+
+			if (isDel) {
+				inClass = $.explode(' ', inClass, ' ');
+				$.loop(newClass, function (val, key) {
+					if ($.inArray(key, inClass)) {
+						delete newClass[key];
+					}
+				});
+			}
+
+			newClass = $.implode(' ', Object.keys(newClass));
+			if (newClass && newClass != className) {
+				ele.className = newClass;
+			} else if (!newClass) {
+				ele.removeAttribute('class');
+			}
+		}
+		if(ms >0){
+			window.setTimeout(_clsrun,ms);
+		}else{
+			_clsrun();
+		}
+	}
+
 	/**
 	 * 添加class
 	 * 最后更新 : 2020年6月19日 20:01:50
 	 * @param name 需要添加的class值，多个以空格分割
+	 * @param ms 延迟多少毫秒后添加
 	 * @returns {$}
 	 */
-	K.addClass = function(name){
-		name = name ? $.explode(' ', name, '') : null;
+	K.addClass = function(name, ms){
 		if(name){
-			this.each(function(_, ele){
-				var classList = $.explode(' ', ele.getAttribute('class'),' ');
-				var addname = $.map(name, function (v) {
-					return !$.inArray(v, classList) ? v : null;
-				});
-				addname = $.implode(' ',addname);
-				if(addname){
-					ele.className = ele.className + (ele.className ? ' ' : '') +addname;
-				}
+			var msArr = ms && $.isArray(ms) ? ms : null;
+			this.each(function(index, ele){
+				var inms = msArr ? msArr[index] : ms;
+				eleUpdateClass(ele, name, false, inms);
 			});
 		}
 		return this;
@@ -181,18 +213,15 @@ function debugTime(key){
 	 * 删除class
 	 * 最后更新 : 2020年6月19日 20:01:50
 	 * @param name 需要删除的class值，多个以空格分割
+	 * @param ms 多少毫秒后删除
 	 * @returns {$}
 	 */
-	K.removeClass = function(name){
-		name = name ? $.explode(' ', name, '') : null;
+	K.removeClass = function(name, ms){
 		if(name){
-			this.each(function(_, ele){
-				var classList = $.explode(' ', ele.getAttribute('class'),' ');
-				classList = $.map(classList, function (v) {
-					return !$.inArray(v, name) ? v : null;
-				});
-				classList = $.implode(' ',classList);
-				classList ? ele.setAttribute('class', classList) : ele.removeAttribute('class');
+			var msArr = ms && $.isArray(ms) ? ms : null;
+			this.each(function(index, ele){
+				var inms = msArr ? msArr[index] : ms;
+				eleUpdateClass(ele, name, true, inms);
 			});
 		}
 		return this;
@@ -665,7 +694,12 @@ function debugTime(key){
 
 	K.height = function(val){
 		if(!$.isset(val) || val === true){
-			return this[0] ? (val === true ? this[0].offsetHeight : this[0].clientHeight) : 0;
+			var dom = this[0];
+			if(dom === window || dom === document){
+				return document.documentElement.clientHeight || document.body.clientHeight;
+			}else{
+				return dom ? (val === true ? dom.offsetHeight : dom.clientHeight) : 0;
+			}
 		}else{
 			this.map(function(e){
 				e.style.height = parseFloat(val)+'px';
@@ -675,7 +709,13 @@ function debugTime(key){
 
 	K.width = function(val){
 		if(!$.isset(val) || val === true){
-			return this[0] ? (val === true ? this[0].offsetWidth : this[0].clientWidth) : 0;
+			var dom = this[0];
+			if(dom === window || dom === document){
+				return document.documentElement.clientWidth || document.body.clientWidth;
+			}else{
+				return dom ? (val === true ? dom.offsetWidth : dom.clientWidth) : 0;
+			}
+
 		}else{
 			this.map(function(e){
 				e.style.width = parseFloat(val)+'px';
@@ -743,7 +783,7 @@ function debugTime(key){
 
 	K.css = function(key, value){
 		var cssNumber = [
-			'animation-iteration-count', 'column-count', 'fill-opacity', 'flex-grow', 'flex-shrink', 'font-weight', 'grid-area', 'grid-column', 'grid-column-end', 'grid-column-start', 'grid-row', 'grid-row-end', 'grid-row-start', 'line-height', 'opacity', 'order', 'orphans', 'widows', 'z-index', 'zoom'];
+			'animationIterationCount','columnCount','fillOpacity','flexGrow','flexShrink','fontWeight','gridArea','gridColumn','gridColumnEnd','gridColumnStart','gridRow','gridRowEnd','gridRowStart','lineHeight','opacity','order','orphans','widows','zIndex','zoom'];
 
 		var sets, gets={}, keyIsObj = $.isObject(key), isValue = $.isset(value);
 		if(key) {
@@ -754,6 +794,7 @@ function debugTime(key){
 			}
 			var style = [];
 			$.loop(sets, function(value, key){
+				key = key.replace(/\-([a-z]{1})/g,function(_1,_2){return _2.toUpperCase()+'';});
 				var soukey = key.replace(/^(-moz-|-ms-|-webkit-|-o-|\+|_|\*)/ig, '');
 				if(!$.inArray(soukey, cssNumber) && $.isNumber(value)){
 					value = value + 'px';
@@ -764,8 +805,9 @@ function debugTime(key){
 			style = style.length ? $.implode('; ',style) : '';
 			if(sets) {
 				this.map(function (e) {
-					var st = e.getAttribute('style');
-					e.setAttribute('style' , st+'; '+style);
+					$.loop(sets, function(v, k){
+						e.style[k] = v;
+					});
 				});
 				return this;
 			}else{
@@ -1865,7 +1907,11 @@ function debugTime(key){
 	 */
 	var objectIDIndex = 1;
 	K.objectID = function (obj) {
-		if($.isObject(obj) || $.isFunction(obj) || $.isArray(obj)){
+		if($.isIndom(obj)){
+			if(!obj.__$_objectID_$__) {
+				obj.__$_objectID_$__ = objectIDIndex++;
+			}
+		}else if($.isObject(obj) || $.isFunction(obj) || $.isArray(obj)){
 			if(!obj.__proto__.__$_objectID_$__) {
 				obj.__proto__.__$_objectID_$__ = objectIDIndex++;
 			}
@@ -2774,7 +2820,7 @@ function debugTime(key){
 	 * @returns {*|boolean}
 	 */
 	K.isIndom = function(e){
-		return e && !$.inArray(document.compareDocumentPosition(e), [35, 37]);
+		return e && !$.isObjectPlain(e) && !$.inArray(document.compareDocumentPosition(e), [35, 37]);
 	}
 
 	K.isNull = function(v){
@@ -2881,7 +2927,6 @@ function debugTime(key){
 	K.plugin = $.__proto__;
 
 	window.KSA = window.$ = $;
-
 
 	/**
 	 * 兼容 AMD 模块
