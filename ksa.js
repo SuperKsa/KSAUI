@@ -76,7 +76,7 @@ function debugTime(key){
 		}
 
 		//将传入的html或dom对象添加到虚拟dom中
-		$.map(this, function (ele) {
+		$.loop(this, function (ele) {
 			var n = !reOrder ? dom.length : 0;
 			var i = reOrder ? dom.length -1 : 0;
 			while (reOrder ? i >=0 : i < n){
@@ -351,7 +351,6 @@ function debugTime(key){
 				}
 			});
 		}
-
 		var getdt = [];
 		this.map(function (ele) {
 			if(!ele._KSA_ELE_DATA){
@@ -390,11 +389,11 @@ function debugTime(key){
 		});
 
 		if(!keyisobj && !isvalue){
-			var values = Object.values(getdt);
-			if(!values.length){
+			var keys = Object.keys(getdt);
+			if(!keys.length){
 				getdt = undefined;
-			}else if(values.length == 1){
-				getdt = values[0];
+			}else if(key && keys.length == 1){
+				getdt = getdt[key];
 			}
 			return getdt;
 		}
@@ -831,7 +830,7 @@ function debugTime(key){
 
 	/**
 	 * 循环函数
-	 * @param {object/array/NodeList} dt 数组或对象
+	 * @param {object/array/NodeList/Number} dt
 	 * @param {function} fun 每次循环函数(value, key, index)
 	 * @param {string} actions 取值动作 first=只取第一个 last=只取最后一个
 	 * @returns {*}
@@ -840,17 +839,24 @@ function debugTime(key){
 		if(!dt){
 			return;
 		}
-		if($.isArrayLike(dt)){
+		if($.isArrayLike(dt)) {
 			var length = dt.length;
-			for(i=0;i<dt.length;i++){
+			for (i = 0; i < dt.length; i++) {
 				var val = dt[i];
-				if((actions && (actions ==='first' || (actions ==='last' && i === length -1))) || fun(val, i, i) === true){
+				if ((actions && (actions === 'first' || (actions === 'last' && i === length - 1))) || fun(val, i, i) === true) {
+					return val;
+				}
+			}
+
+		}else if($.isNumber(dt)){
+			for (i = 0; i <= dt; i++) {
+				var val = i +1;
+				if ((actions && (actions === 'first' || (actions === 'last' && i === dt - 1))) || fun(i, val, i) === true) {
 					return val;
 				}
 			}
 		}else{
 			var i=0, kdt = Object.keys(dt);
-
 			Object.keys(dt).forEach(function(k){
 				var val = dt[k];
 				if((actions && (actions ==='first' || (actions ==='last' && i === kdt.length -1))) || fun(val, k, i) === true){
@@ -893,25 +899,22 @@ function debugTime(key){
 			callback = elements;
 			elements = this;
 		}
-		var value, values = [], i, key;
+		var i=0, isObj = $.isObject(elements);
 
-		if ($.isArrayLike(elements)) {
-			for(i = 0; i < elements.length; i++){
-				value = callback(elements[i], i);
-				if(value != null){
-					values.push(value);
+		$.loop(elements, function(val, k){
+			var r = callback(val, k);
+			if(r === null){
+				if(isObj){
+					delete elements[k];
+				}else{
+					elements.splice(k,1);
 				}
+			}else{
+				i ++;
 			}
-		}else {
-
-			for(key in elements){
-				value = callback(elements[key], key);
-				if (value != null){
-					values.push(value);
-				}
-			}
-		}
-		return values;
+		});
+		elements.length = i;
+		return elements;
 	}
 
 	/**
@@ -923,27 +926,57 @@ function debugTime(key){
 	}
 
 	/**
+	 * 在当前选择器集合中添加一个新的
+	 * @param e
+	 */
+	K.push = function(ele){
+		var ths = this;
+		var length = ths.length ? ths.length : 0;
+		if(ele instanceof $){
+			ele.each(function(_, e){
+				ths[length] = e;
+				length ++;
+			});
+		}else{
+			ths[length] = ele;
+			length ++;
+		}
+		if(length){
+			ths.length = length;
+		}
+		return ths;
+	}
+
+	/**
 	 * 取匹配集合 顺序为n的节点
-	 * @param n
+	 * 支持以数字数组方式取
+	 * @param {number/array} n
 	 * @returns {*}
 	 */
 	K.eq = function(n){
-		var self = this;
+		var isArr = $.isArray(n);
 
-		var ele;
+		var obj = $();
 		this.map(function(e, i){
-			if(i === n){
-				ele = e;
+			if((isArr && $.inArray(i, n)) || (!isArr && i === n)){
+				obj.push(e);
 			}
-			delete self[i];
 		});
-		if(ele){
-			this[0] = ele;
-			this.length = 1;
-		}else{
-			delete this.length;
+		return obj;
+	}
+
+	K.index = function(){
+		var ele = this[0];
+		if(!ele){
+			return;
 		}
-		return this;
+		var index;
+		$(ele).parent().children().each(function(i, e){
+			if(e == ele){
+				index = i;
+			}
+		});
+		return index;
 	}
 
 	/**
@@ -970,7 +1003,7 @@ function debugTime(key){
 	 */
 	K.is = function(selector){
 		var s = false;
-		$.map(this,function(ele){
+		this.map(function(ele){
 
 			if(isSelectDom(ele, selector)){
 				s = true;
@@ -1006,7 +1039,7 @@ function debugTime(key){
 	 */
 	var dir = function (element, key, selector, isAll) {
 		var rdom = [];
-		$.map(element,function(el){
+		$.loop(element,function(el){
 			if(isAll){
 				rdom.push(el);
 			}else{
@@ -1028,7 +1061,7 @@ function debugTime(key){
 		selector = selector || '*';
 		var rdom = $(), ri =0;
 		this.map(function(ele){
-			$.map(ele.querySelectorAll(selectorStr(selector)), function(el){
+			$.loop(ele.querySelectorAll(selectorStr(selector)), function(el){
 				rdom[ri] = el;
 				ri ++;
 			});
@@ -1045,7 +1078,7 @@ function debugTime(key){
 		selector = selector || '*';
 		var self = this, rdom = $(), ri =0;
 		this.map(function(ele){
-			self.map(ele.childNodes, function(el){
+			$.loop(ele.childNodes, function(el){
 				if (isSelectDom(el, selector)) {
 					rdom[ri] = el;
 					ri ++;
@@ -1062,7 +1095,7 @@ function debugTime(key){
 	K.childAll = function(){
 		var self = this, rdom = $(), ri =0;
 		this.map(function(ele){
-			self.map(ele.childNodes, function(el){
+			$.loop(ele.childNodes, function(el){
 				rdom[ri] = el;
 				ri ++;
 			});
@@ -1079,9 +1112,9 @@ function debugTime(key){
 	K.siblings = function(selector){
 		selector = selector || '*';
 		var rdom = $(), ri=0;
-		this.map(this, function(ele){
+		this.map(function(ele){
 			//同父级下所有直接子级（不包含自己）
-			$.map(ele.parentNode.childNodes, function(el){
+			$.loop(ele.parentNode.childNodes, function(el){
 				if (el != ele && isSelectDom(el, selector)) {
 					rdom[ri] = el;
 					ri ++;
@@ -1100,7 +1133,7 @@ function debugTime(key){
 	K.parent = function(selector){
 		selector = selector || '*';
 		var rdom = $(), ri=0;
-		this.map(this, function(ele){
+		this.map(function(ele){
 			var el = ele.parentNode;
 			if (el != ele && isSelectDom(el, selector)) {
 				rdom[ri] = el;
@@ -1118,7 +1151,7 @@ function debugTime(key){
 	 */
 	K.parents = function(selector){
 		var rdom = $(), ri=0;
-		$.map(dir(this, 'parentNode', selector), function(el){
+		$.loop(dir(this, 'parentNode', selector), function(el){
 			rdom[ri] = el;
 			ri ++;
 		});
@@ -1134,7 +1167,7 @@ function debugTime(key){
 	K.prev = function(selector){
 		selector = selector || '*';
 		var rdom = $(), ri=0;
-		this.map(this,function(ele, i){
+		this.map(function(ele, i){
 			if(isSelectDom(ele.previousElementSibling, selector)){
 				rdom[ri] = ele.previousElementSibling;
 				ri ++;
@@ -1151,7 +1184,7 @@ function debugTime(key){
 	 */
 	K.prevAll = function(selector){
 		var rdom = $(), ri=0;
-		$.map(dir(this, 'previousElementSibling', selector), function(el){
+		$.loop(dir(this, 'previousElementSibling', selector), function(el){
 			rdom[ri] = el;
 			ri ++;
 		});
@@ -1167,7 +1200,7 @@ function debugTime(key){
 	K.next = function(selector){
 		selector = selector || '*';
 		var rdom = $(), ri=0;
-		this.map(this,function(ele){
+		this.map(function(ele){
 			if(isSelectDom(ele.nextElementSibling, selector)){
 				rdom[ri] = ele.nextElementSibling;
 				ri ++;
@@ -2030,7 +2063,7 @@ function debugTime(key){
 					if (ele.attributes && ele.attributes.length) {
 						attrs = [];
 						var attrsIsP = [];
-						$.map(ele.attributes, function (v) {
+						$.loop(ele.attributes, function (v) {
 							var value = v.value, key = v.name;
 							if(!$.inArray(key, ['ksafactor','ksaaction'])) {
 								var ep = ths.parseText(value);
@@ -2759,7 +2792,7 @@ function debugTime(key){
 		// `in` check used to prevent JIT error (gh-2145)
 		// hasOwn isn't used here due to false negatives
 		// regarding Nodelist length in IE
-		if ($.isFunction(obj) || $.isWindow(obj) || $.isString(obj)) {
+		if ($.isFunction(obj) || $.isWindow(obj) || $.isString(obj) || $.isNumber(obj)) {
 			return false;
 		}
 
