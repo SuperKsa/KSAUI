@@ -253,14 +253,34 @@ function debugTime(key){
 	K.attr = function (key, value) {
 		var isKey = $.isset(key);
 		var keyIsobj = $.isObject(key);
-		if (isKey && !keyIsobj) {
+		var isvalue = $.isset(value);
+		var md = 'get';
+		if(keyIsobj || (key && value !== undefined && value !== '' && value !== null)){
+			md = 'set';
+		}else if(isKey && value === '' && value === null){
+			md = 'del';
+		}
+
+		var sets;
+		if(keyIsobj){
+			sets = key;
+		}else{
 			key = $.explode(' ', key, ' ');
 		}
-		var isvalue = $.isset(value);
+		if(isKey && !keyIsobj && value !== undefined && value !== '' && value !== null) {
+			sets = {};
+			$.loop(key, function(val){
+				sets[val] = value;
+			});
+		}
+
+
+
 		var attrs = {};
 		value = value === '' ? null : value;
 		var BooleanArr = ['checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
 		this.map(function (ele) {
+			//读取所有属性
 			if(!isvalue && !isKey){
 				var a = ele.attributes;
 				for(var i=a.length-1; i>=0; i--) {
@@ -268,34 +288,85 @@ function debugTime(key){
 					attrs[k] = a[i].value;
 				}
 			}else{
-				var setDt = {}, setDtCount =0;
+				var setDt;
+				//写入模式
+				if(md =='set' && sets){
+					$.loop(sets, function(val, k){
+						var isBoolean = $.inArray(k, BooleanArr);
+						//元素属性支持布尔值
+						if($.isset(ele[k]) && isBoolean){
+							ele[k] = val;
+						}
+						if(isBoolean){
+							val = val ? k : undefined;
+						}
+						if(val === undefined) {
+							ele.removeAttribute(k);
+						}else{
+							ele.setAttribute(k, val);
+						}
+
+						if (k.indexOf('data-') === 0) {
+							setDt = setDt ? setDt : {};
+							setDt[k]  = val;
+						}
+
+					});
+					//删除模式
+				}else if(md =='del'){
+					$.loop(key, function(k){
+						if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
+							ele[k] = false;
+						}
+						ele.removeAttribute(k);
+					});
+					//读取模式
+				}else if(md =='get'){
+					$.loop(key, function(k) {
+						var isBoolean = $.inArray(k, BooleanArr);
+						if ($.isset(ele[k]) && isBoolean) {
+							attrs[k] = ele[k];
+						} else {
+							var attrV = ele.getAttribute(k);
+							if (!$.isNull(attrV)) {
+								attrs[k] = attrV;
+							}
+						}
+					});
+				}
+				/*
 				$.loop(key, function(v, k){
 					//移除属性
 					if (value === null) {
-						if($.inArray(k, BooleanArr)){
+						if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
 							ele[k] = v;
 						}
 						ele.removeAttribute(v);
 						//读取属性
 					}else if(!isvalue && !keyIsobj){
-						if($.inArray(v, BooleanArr)){
+						if($.isset(ele[k]) && $.inArray(v, BooleanArr)){
 							attrs[v] = ele[v];
 						}else{
-							attrs[v] = ele.getAttribute(v);
+							var attrV = ele.getAttribute(v);
+							if(!$.isNull(attrV)){
+								attrs[v] = attrV;
+							}
 						}
 					}else if(keyIsobj){
-						if($.inArray(k, BooleanArr)){
+						if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
 							ele[k] = v;
 						}
-						ele.setAttribute(k, v);
+
+						ele.setAttribute(k, $.isset(ele[k]) ? v : k);
 						if (k.indexOf('data-') === 0) {
 							setDt[k] = v;
 							setDtCount++;
 						}
 					}else if(isvalue && !keyIsobj){
-						if($.inArray(v, BooleanArr)){
+						if($.isset(ele[v]) && $.inArray(v, BooleanArr)){
 							ele[v] = value;
 						}else{
+							value = $.isset(ele[v]) ? value : v;
 							if (v.indexOf('data-') === 0) {
 								setDt[v] = value; setDtCount ++;
 							}
@@ -303,8 +374,9 @@ function debugTime(key){
 						}
 					}
 				});
+				*/
 				//写入data属性
-				if(setDtCount >0){
+				if(setDt >0){
 					if (!ele._KSA_ELE_DATA) {ele._KSA_ELE_DATA = {};}
 					$.loop(setDt, function( v, k){
 						ele._KSA_ELE_DATA[k.substr(5)] = v;
@@ -321,6 +393,7 @@ function debugTime(key){
 					attrs = values[0];
 				}
 			}
+
 			return attrs;
 		}
 		return this;
@@ -434,9 +507,6 @@ function debugTime(key){
 						case 'SELECT':
 							value = $.isArray(value) ? value : [value];
 							var options = ele.options;
-							if(!ele.multiple) {
-								options = [options];
-							}
 							if(options) {
 								$.loop(options, function (e) {
 									var r = $.inArray(e.value, value);
@@ -464,9 +534,6 @@ function debugTime(key){
 						break;
 					case 'SELECT':
 						var options = ele.selectedOptions;
-						if(!ele.multiple) {
-							options = [options];
-						}
 						if(options) {
 							$.loop(options, function (e) {
 								if (isTxt) {
@@ -679,15 +746,13 @@ function debugTime(key){
 	}
 
 	K.wrap = function(html){
-		var doms = [];
 		this.map(function(e){
 			var dom = $.dom(html)[0];
 			e.after(dom);
 			$(dom).html(e);
-			doms.push(dom);
 		});
 
-		return $(doms);
+		return this;
 	}
 // ====================== 尺寸 、位置 ====================== //
 
@@ -839,7 +904,7 @@ function debugTime(key){
 		if(!dt){
 			return;
 		}
-		if($.isArrayLike(dt)) {
+		if(dt instanceof $ || $.isArrayLike(dt)) {
 			var length = dt.length;
 			for (i = 0; i < dt.length; i++) {
 				var val = dt[i];
@@ -958,7 +1023,7 @@ function debugTime(key){
 
 		var obj = $();
 		this.map(function(e, i){
-			if((isArr && $.inArray(i, n)) || (!isArr && i === n)){
+			if((isArr && $.inArray(i, n)) || (!isArr && i == n)){
 				obj.push(e);
 			}
 		});
@@ -1059,14 +1124,17 @@ function debugTime(key){
 	 */
 	K.find = function(selector){
 		selector = selector || '*';
-		var rdom = $(), ri =0;
+		var rdom = $();
+		var doms = [];
 		this.map(function(ele){
 			$.loop(ele.querySelectorAll(selectorStr(selector)), function(el){
-				rdom[ri] = el;
-				ri ++;
+				if(!$.inArray(el, doms)){
+					rdom.push(el);
+					doms.push(el);
+				}
+
 			});
 		});
-		rdom.length = ri;
 		return rdom;
 	}
 
