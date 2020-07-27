@@ -257,7 +257,7 @@ function debugTime(key){
 		var md = 'get';
 		if(keyIsobj || (key && value !== undefined && value !== '' && value !== null)){
 			md = 'set';
-		}else if(isKey && value === '' && value === null){
+		}else if(isKey && (value === '' || value === null)){
 			md = 'del';
 		}
 
@@ -273,8 +273,6 @@ function debugTime(key){
 				sets[val] = value;
 			});
 		}
-
-
 
 		var attrs = {};
 		value = value === '' ? null : value;
@@ -300,7 +298,7 @@ function debugTime(key){
 						if(isBoolean){
 							val = val ? k : undefined;
 						}
-						if(val === undefined) {
+						if(val === undefined || val === '' || val === null) {
 							ele.removeAttribute(k);
 						}else{
 							ele.setAttribute(k, val);
@@ -334,47 +332,6 @@ function debugTime(key){
 						}
 					});
 				}
-				/*
-				$.loop(key, function(v, k){
-					//移除属性
-					if (value === null) {
-						if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
-							ele[k] = v;
-						}
-						ele.removeAttribute(v);
-						//读取属性
-					}else if(!isvalue && !keyIsobj){
-						if($.isset(ele[k]) && $.inArray(v, BooleanArr)){
-							attrs[v] = ele[v];
-						}else{
-							var attrV = ele.getAttribute(v);
-							if(!$.isNull(attrV)){
-								attrs[v] = attrV;
-							}
-						}
-					}else if(keyIsobj){
-						if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
-							ele[k] = v;
-						}
-
-						ele.setAttribute(k, $.isset(ele[k]) ? v : k);
-						if (k.indexOf('data-') === 0) {
-							setDt[k] = v;
-							setDtCount++;
-						}
-					}else if(isvalue && !keyIsobj){
-						if($.isset(ele[v]) && $.inArray(v, BooleanArr)){
-							ele[v] = value;
-						}else{
-							value = $.isset(ele[v]) ? value : v;
-							if (v.indexOf('data-') === 0) {
-								setDt[v] = value; setDtCount ++;
-							}
-							ele.setAttribute(v, value);
-						}
-					}
-				});
-				*/
 				//写入data属性
 				if(setDt >0){
 					if (!ele._KSA_ELE_DATA) {ele._KSA_ELE_DATA = {};}
@@ -384,7 +341,7 @@ function debugTime(key){
 				}
 			}
 		});
-		if(!isvalue){
+		if(md =='get' && !isvalue){
 			if(isKey){
 				var values = Object.values(attrs);
 				if(!values.length){
