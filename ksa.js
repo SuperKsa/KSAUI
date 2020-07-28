@@ -780,25 +780,132 @@ function debugTime(key){
 		return this;
 	}
 
-	K.animation
 
-	K.scrollTop = function(val){
+
+	/**
+	 * 执行一个动画
+	 * @param {int/arrat} numbers 需要动画的数值 数字 或 数字数组
+	 * @param Atimes 动画时间 （毫秒）
+	 * @param callFunc 每帧动画回调函数
+	 * 				参数1 = 根据numbers参数回调当前帧下的动画偏移值
+	 * 				参数2 = 当前帧顺序值
+	 * 				参数3 = 距离上一次的时间间隔（毫秒）
+	 * @returns {{}}
+	 * @constructor
+	 */
+	$.AnimationFrame = function (numbers, Atimes, callFunc){
+		if(!$.AnimationFrameCache) {
+			$.AnimationFrameCache = {_index: 0};
+		}
+		if(!numbers){
+			return;
+		}
+		Atimes = parseInt(Atimes || 0) || 2000;
+		var id = $.AnimationFrameCache._index++;
+		var start;
+		var aObj = $.AnimationFrameCache[id] = {};
+		var _Atime = 0;//每帧间隔时间
+		var _Aindex = 0; //帧顺序
+		var numbersIsArr = $.isArray(numbers);
+		//计算步进值 = 总值 / 每帧时间间隔 * 当前帧值
+		function _stepVal(val, time){
+			time = parseFloat(time).toFixed(0);
+			var rate = Math.min((time / Atimes).toFixed(2), 1);
+			//debug('完成度：'+(rate *100)+'%');
+			return parseInt(val * rate);
+		}
+
+		var lastTime;  //最后一次触发时间
+		function _thisRun(timestamp) {
+			if(!aObj.start){
+				aObj.start = timestamp;
+			}
+			start = aObj.start;
+			//距离第一次的时间间隔
+			var progress = timestamp - start;
+			//记录与上一次动画的间隔时间
+			if(!_Atime){
+				_Atime = timestamp - lastTime;
+			}
+			var callResult;
+			if(_Atime >0 && progress <= Atimes){
+				_Aindex ++;
+				if(numbersIsArr){
+					var callNumber = [];
+					$.loop(numbersIsArr, function(value){
+						callNumber.push(_stepVal(value, progress));
+					});
+				}else{
+					callNumber = _stepVal(numbers, progress);
+				}
+				callResult = callFunc.call('', callNumber, _Aindex, _Atime);
+			}
+			//如果回调函数执行结果为false 或 执行时间超过限定时 终止动画
+			if(callResult === false || progress >= Atimes){
+				window.cancelAnimationFrame(aObj.AnimationID);
+				delete $.AnimationFrameCache[id];
+			}else{
+				window.cancelAnimationFrame(aObj.AnimationID);
+				aObj.AnimationID = window.requestAnimationFrame(_thisRun);
+			}
+			lastTime = timestamp;//记录最后一次触发时间
+		}
+		aObj.AnimationID = window.requestAnimationFrame(_thisRun);
+		return aObj;
+	}
+
+
+	K.scrollTop = function(val, isAnimation){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollTop : 0;
 		}else{
 			this.map(function(e){
-				e.scrollTop = parseFloat(val);
+				var top = e.scrollTop;
+				var distance = val - top; //需要滚动的距离
+				//5px内不需要动画
+				if(isAnimation && distance >= -5 && distance <=5){
+					isAnimation = false;
+				}
+				if(isAnimation){
+					$.AnimationFrame(distance, 500, function(callVal){
+						if(Math.abs(callVal) > Math.abs(distance)){
+							return false;
+						}
+
+						e.scrollTop = top + callVal;
+					});
+				}else{
+					e.scrollTop = top + distance;
+				}
 			});
 			return this;
 		}
 	}
 
-	K.scrollLeft = function(val){
+	K.scrollLeft = function(val, isAnimation){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollLeft : 0;
 		}else{
 			this.map(function(e){
 				e.scrollLeft = parseFloat(val);
+
+				var left = e.scrollLeft;
+				var distance = val - left; //需要滚动的距离
+				//5px内不需要动画
+				if(isAnimation && distance >= -5 && distance <=5){
+					isAnimation = false;
+				}
+				if(isAnimation){
+					$.AnimationFrame(distance, 500, function(callVal){
+						if(Math.abs(callVal) > Math.abs(distance)){
+							return false;
+						}
+						e.scrollLeft = left + callVal;
+					});
+				}else{
+					e.scrollLeft = left + distance;
+				}
+
 			});
 			return this;
 		}
