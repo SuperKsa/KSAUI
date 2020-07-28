@@ -780,6 +780,8 @@ function debugTime(key){
 		return this;
 	}
 
+	K.animation
+
 	K.scrollTop = function(val){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollTop : 0;
@@ -805,7 +807,7 @@ function debugTime(key){
 	K.css = function(key, value){
 		var cssNumber = [
 			'animationIterationCount','columnCount','fillOpacity','flexGrow','flexShrink','fontWeight','gridArea','gridColumn','gridColumnEnd','gridColumnStart','gridRow','gridRowEnd','gridRowStart','lineHeight','opacity','order','orphans','widows','zIndex','zoom'];
-
+		value = value ==='' ? null : value;
 		var sets, gets={}, keyIsObj = $.isObject(key), isValue = $.isset(value);
 		if(key) {
 			if (!isValue && keyIsObj) {
@@ -832,16 +834,17 @@ function debugTime(key){
 				});
 				return this;
 			}else{
-				var getkeys = $.explode(' ', key,  '');
-				this.map(function (e) {
+				if(this[0]) {
+					var getkeys = $.explode(' ', key, '');
+					var sty = window.getComputedStyle(this[0], null);
 					$.loop(getkeys, function (val) {
-						gets[val] = e.style[val];
+						gets[val] = sty[val];
 					});
-				});
-				if(getkeys.length === 1){
-					return Object.values(gets)[0];
-				}else{
-					return gets;
+					if (getkeys.length === 1) {
+						return Object.values(gets)[0];
+					} else {
+						return gets;
+					}
 				}
 			}
 		}
@@ -989,15 +992,14 @@ function debugTime(key){
 
 	K.index = function(){
 		var ele = this[0];
-		if(!ele){
-			return;
+		var index = -1;
+		if(ele) {
+			$(ele).parent().children().each(function (i, e) {
+				if (e == ele) {
+					index = i;
+				}
+			});
 		}
-		var index;
-		$(ele).parent().children().each(function(i, e){
-			if(e == ele){
-				index = i;
-			}
-		});
 		return index;
 	}
 
