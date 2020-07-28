@@ -1,14 +1,22 @@
 /**
- * KSA核心JS
- * Author : cr180.com
+ * KSA前端底层驱动 V1.0
+ *
+ * 目前版本还处于开发中，请勿保存并用于生产环境！
+ *
+ * ---------------------------------------
+ * 待正式发布版本后，源代码将会公开开源
+ *
+ * Author : ksaos.com && cr180.com(Mr Wu -  ChenJun)
+ * Update : 2020年7月29日
  */
 function debug(data){
 	if(typeof data ==='object'){
 		console.dir(data);//debug
 	}else{
-		console.log('%cKSAUI-Debug','background:#00c; color:#fff',data);//debug
+		console.log('%cKsaOS.com Debug','background:#00c; color:#fff',data);//debug
 	}
 }
+
 var consoleGroupN = {};
 function debugTime(key){
 	consoleGroupN[key] = consoleGroupN[key] >=0 ? consoleGroupN[key] +1 : 0;
@@ -334,9 +342,9 @@ function debugTime(key){
 				}
 				//写入data属性
 				if(setDt >0){
-					if (!ele._KSA_ELE_DATA) {ele._KSA_ELE_DATA = {};}
+					if (!ele._KSAOS_COM_ELE_DATA) {ele._KSAOS_COM_ELE_DATA = {};}
 					$.loop(setDt, function( v, k){
-						ele._KSA_ELE_DATA[k.substr(5)] = v;
+						ele._KSAOS_COM_ELE_DATA[k.substr(5)] = v;
 					});
 				}
 			}
@@ -383,19 +391,19 @@ function debugTime(key){
 		}
 		var getdt = [];
 		this.map(function (ele) {
-			if(!ele._KSA_ELE_DATA){
-				ele._KSA_ELE_DATA = {};
+			if(!ele._KSAOS_COM_ELE_DATA){
+				ele._KSAOS_COM_ELE_DATA = {};
 			}
 			if(setData){
 				$.loop(setData, function( v, k){
 					if(!$.isObject(v) && ele.attributes['data-'+k]){
 						ele.setAttribute('data-'+k, v);
 					}
-					ele._KSA_ELE_DATA[k] = v;
+					ele._KSAOS_COM_ELE_DATA[k] = v;
 				});
 			}else if(getKey.length){
 				$.loop(getKey, function( k, _){
-					var v = ele._KSA_ELE_DATA[k] || (ele.getAttribute('data-'+k) || undefined);
+					var v = ele._KSAOS_COM_ELE_DATA[k] || (ele.getAttribute('data-'+k) || undefined);
 					if($.isset(v)) {
 						getdt[k] = v;
 					}
@@ -403,7 +411,7 @@ function debugTime(key){
 
 
 			}else if(!key && !isvalue){
-				getdt = ele._KSA_ELE_DATA;
+				getdt = ele._KSAOS_COM_ELE_DATA;
 				var a = ele.attributes;
 				for(var i=a.length-1; i>=0; i--) {
 					if(a[i].name.indexOf('data-') ===0){
@@ -413,7 +421,7 @@ function debugTime(key){
 
 			}else if(isdel){
 				$.loop(key, function( k, _){
-					delete ele._KSA_ELE_DATA[k];
+					delete ele._KSAOS_COM_ELE_DATA[k];
 				});
 			}
 		});
@@ -713,13 +721,22 @@ function debugTime(key){
 	}
 // ====================== 尺寸 、位置 ====================== //
 
-	K.height = function(val){
+	K.height = function(val, isMargin){
 		if(!$.isset(val) || val === true){
 			var dom = this[0];
 			if(dom === window || dom === document){
 				return document.documentElement.clientHeight || document.body.clientHeight;
 			}else{
-				return dom ? (val === true ? dom.offsetHeight : dom.clientHeight) : 0;
+				var size = dom.offsetHeight;
+				var css =  $.intval(this.css('paddingBottom paddingTop borderBottomWidth borderTopWidth marginBottom marginTop'));
+				//真实尺寸
+				if(val !== true){
+					size -= (css.paddingBottom + css.paddingTop + css.borderBottomWidth + css.borderTopWidth);
+				}
+				if(isMargin === true){
+					size += (css.marginBottom + css.marginTop);
+				}
+				return size;
 			}
 		}else{
 			this.map(function(e){
@@ -728,13 +745,22 @@ function debugTime(key){
 		}
 	}
 
-	K.width = function(val){
+	K.width = function(val, isMargin){
 		if(!$.isset(val) || val === true){
 			var dom = this[0];
 			if(dom === window || dom === document){
 				return document.documentElement.clientWidth || document.body.clientWidth;
 			}else{
-				return dom ? (val === true ? dom.offsetWidth : dom.clientWidth) : 0;
+				var size = dom.offsetWidth;
+				var css =  $.intval(this.css('paddingLeft paddingRight borderLeftWidth borderRightWidth marginLeft marginRight'));
+				//真实尺寸
+				if(val !== true){
+					size -= (css.paddingLeft + css.paddingRight + css.borderLeftWidth + css.borderRightWidth);
+				}
+				if(isMargin === true){
+					size += (css.marginLeft + css.marginRight);
+				}
+				return size;
 			}
 
 		}else{
@@ -1486,7 +1512,7 @@ function debugTime(key){
 				}
 				e.stopPropagation();
 				S = setTimeout(function () {
-					fun(e.delegateTarget);
+					fun.call(e.target, e);
 				}, 400);
 			}else if($.inArray(e.type,['touchmove','mouseleave'])){
 				var x1 = (e.changedTouches ? e.changedTouches[0].pageX : e.pageX) || 0;
@@ -3085,6 +3111,17 @@ function debugTime(key){
 			str = str.trim();
 		}
 		return str;
+	}
+
+	K.intval = function(value){
+		if($.isObject(value) || $.isArray(value)){
+			$.loop(value, function(v, k){
+				value[k] = $.intval(v);
+			});
+		}else{
+			value = parseFloat(value) || 0;
+		}
+		return value;
 	}
 
 	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
