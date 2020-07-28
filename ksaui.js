@@ -1,3 +1,15 @@
+/**
+ * KSAUI 前端UI组件库 V1.0
+ *
+ * 目前版本还处于开发中，请勿保存并用于生产环境！
+ *
+ * ---------------------------------------
+ * 待正式发布版本后，源代码将会公开开源
+ *
+ * Author : ksaos.com && cr180.com(Mr Wu -  ChenJun)
+ * Update : 2020年7月29日
+ */
+
 $.plugin.ZINDEX = 999;
 $.plugin.WINID = 1; //弹窗层初始ID
 $.plugin.W = 0; //当前窗口宽度
@@ -6,6 +18,7 @@ $.plugin.mouseX = 0;
 $.plugin.mouseY = 0;
 $.plugin.device = 'PC'; //设备类型 PC MOBILE
 $.plugin.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
+
 
 (function(){
 	$.W = window.innerWidth;
