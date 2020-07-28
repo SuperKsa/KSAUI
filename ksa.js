@@ -855,7 +855,7 @@ function debugTime(key){
 	}
 
 
-	K.scrollTop = function(val, isAnimation){
+	K.scrollTop = function(val, AnimationTime){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollTop : 0;
 		}else{
@@ -863,11 +863,12 @@ function debugTime(key){
 				var top = e.scrollTop;
 				var distance = val - top; //需要滚动的距离
 				//5px内不需要动画
-				if(isAnimation && distance >= -5 && distance <=5){
-					isAnimation = false;
+				if(AnimationTime && distance >= -5 && distance <=5){
+					AnimationTime = false;
 				}
-				if(isAnimation){
-					$.AnimationFrame(distance, 500, function(callVal){
+				if(AnimationTime){
+					AnimationTime = AnimationTime === true ? 500 : AnimationTime;
+					$.AnimationFrame(distance, AnimationTime, function(callVal){
 						if(Math.abs(callVal) > Math.abs(distance)){
 							return false;
 						}
@@ -882,7 +883,7 @@ function debugTime(key){
 		}
 	}
 
-	K.scrollLeft = function(val, isAnimation){
+	K.scrollLeft = function(val, AnimationTime){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollLeft : 0;
 		}else{
@@ -892,11 +893,12 @@ function debugTime(key){
 				var left = e.scrollLeft;
 				var distance = val - left; //需要滚动的距离
 				//5px内不需要动画
-				if(isAnimation && distance >= -5 && distance <=5){
-					isAnimation = false;
+				if(AnimationTime && distance >= -5 && distance <=5){
+					AnimationTime = false;
 				}
-				if(isAnimation){
-					$.AnimationFrame(distance, 500, function(callVal){
+				if(AnimationTime){
+					AnimationTime = AnimationTime === true ? 500 : AnimationTime;
+					$.AnimationFrame(distance, AnimationTime, function(callVal){
 						if(Math.abs(callVal) > Math.abs(distance)){
 							return false;
 						}
