@@ -259,109 +259,110 @@ function debugTime(key){
 	 * @returns {K|[]}
 	 */
 	K.attr = function (key, value) {
+		value = value ==='' ? null : value;
+		var valueIsNull = value === null;
 		var isKey = $.isset(key);
 		var keyIsobj = $.isObject(key);
 		var isvalue = $.isset(value);
-		var md = 'get';
-		if(keyIsobj || (key && value !== undefined && value !== '' && value !== null)){
+		var md = '';
+		if(keyIsobj || (isKey && isvalue && !valueIsNull)){
 			md = 'set';
-		}else if(isKey && (value === '' || value === null)){
+		}else if(isKey && valueIsNull){
 			md = 'del';
+		}else if((!isKey || !keyIsobj) && !isvalue){
+			md = 'get';
 		}
 
-		var sets;
-		if(keyIsobj){
-			sets = key;
-		}else{
+		if(!keyIsobj){
 			key = $.explode(' ', key, ' ');
 		}
-		if(isKey && !keyIsobj && value !== undefined && value !== '' && value !== null) {
-			sets = {};
-			$.loop(key, function(val){
-				sets[val] = value;
-			});
-		}
-
-		var attrs = {};
-		value = value === '' ? null : value;
 		var BooleanArr = ['checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
-		this.map(function (ele) {
-			//读取所有属性
+		var dataAttr = {};//需要变更的-data属性
+		if(md =='get'){
+			var ele = this[0];
+			if(!ele){
+				return;
+			}
+			var attrs = {};
+			//读取所有标签属性
 			if(!isvalue && !isKey){
-				var a = ele.attributes;
-				for(var i=a.length-1; i>=0; i--) {
-					var k = a[i].name;
-					attrs[k] = a[i].value;
-				}
+				$.loop(ele.attributes, function(val){
+					attrs[val.name] = val.value;
+				});
+
 			}else{
-				var setDt;
-				//写入模式
-				if(md =='set' && sets){
-					$.loop(sets, function(val, k){
-						var isBoolean = $.inArray(k, BooleanArr);
+
+				$.loop(key, function(k) {
+					if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
+						attrs[k] = ele[k];
+					}else{
+						var attrV = ele.getAttribute(k);
+						//标签属性值不存在时 从元素dom属性取值
+						if ($.isNull(attrV) && $.isset(ele[k])) {
+							attrs[k] = attrV;
+						}
+					}
+				});
+			}
+			if(key.length === 1){
+				return attrs[key[0]];
+			}else if(!$.isEmpty(attrs)){
+				return attrs;
+			}
+		//写入模式
+		}else if(md =='set') {
+
+			var sets;
+			if (keyIsobj) {
+				sets = key;
+			} else {
+				sets = {};
+				$.loop(key, function (k) {
+					sets[k] = value;
+				});
+			}
+			if (sets) {
+				this.map(function (ele) {
+					$.loop(sets, function (val, k) {
 						//元素属性支持布尔值
-						if($.isset(ele[k]) && isBoolean){
+						if ($.isset(ele[k]) && $.inArray(k, BooleanArr)) {
 							ele[k] = val;
-						}
-						if(isBoolean){
-							val = val ? k : undefined;
-						}
-						if(val === undefined || val === '' || val === null) {
-							ele.removeAttribute(k);
 						}else{
-							ele.setAttribute(k, val);
-						}
-
-						if (k.indexOf('data-') === 0) {
-							setDt = setDt ? setDt : {};
-							setDt[k]  = val;
-						}
-
-					});
-					//删除模式
-				}else if(md =='del'){
-					$.loop(key, function(k){
-						if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
-							ele[k] = false;
-						}
-						ele.removeAttribute(k);
-					});
-					//读取模式
-				}else if(md =='get'){
-					$.loop(key, function(k) {
-						var isBoolean = $.inArray(k, BooleanArr);
-						if ($.isset(ele[k]) && isBoolean) {
-							attrs[k] = ele[k];
-						} else {
-							var attrV = ele.getAttribute(k);
-							if (!$.isNull(attrV)) {
-								attrs[k] = attrV;
+							if (val === '' || val === null) {
+								ele.removeAttribute(k);
+							} else {
+								ele.setAttribute(k, val);
+							}
+							if (k.indexOf('data-') === 0) {
+								dataAttr[k.substr(5)] = val;
 							}
 						}
-					});
-				}
-				//写入data属性
-				if(setDt >0){
-					if (!ele._KSAOS_COM_ELE_DATA) {ele._KSAOS_COM_ELE_DATA = {};}
-					$.loop(setDt, function( v, k){
-						ele._KSAOS_COM_ELE_DATA[k.substr(5)] = v;
-					});
-				}
-			}
-		});
-		if(md =='get' && !isvalue){
-			if(isKey){
-				var values = Object.values(attrs);
-				if(!values.length){
-					attrs = undefined;
-				}else if(values.length == 1){
-					attrs = values[0];
-				}
-			}
 
-			return attrs;
+					});
+				});
+			}
+			if(!$.isEmpty(dataAttr)){
+				this.data(dataAttr);
+			}
+			return this;
+
+		}else if(md == 'del'){
+
+			this.map(function (ele) {
+				$.loop(key, function(k){
+					if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
+						ele[k] = false;
+					}else if (k.indexOf('data-') === 0) {
+						dataAttr[k.substr(5)] = null;
+					}
+					ele.removeAttribute(k);
+				});
+			});
+			if(!$.isEmpty(dataAttr)){
+				this.data(dataAttr);
+			}
+			return this;
 		}
-		return this;
 	}
 
 	K.removeAttr = function (key) {
@@ -372,71 +373,99 @@ function debugTime(key){
 	}
 
 	K.data = function(key, value){
-		var keyisobj = $.isObject(key),
-			isvalue = $.isset(value),
-			isdel = key && value ==='';
-
-		var setData = keyisobj ? key : (isvalue ? {} : null);
-		var getKey = [];
-
-		if(!keyisobj && key){
-			key = $.explode(' ', key, '');
-			$.each(key, function(k, v){
-				if(isvalue){
-					setData[v] = value;
-				}else{
-					getKey.push(v);
-				}
-			});
+		value = value ==='' ? null : value;
+		var valueIsNull = value === null;
+		var isKey = $.isset(key);
+		var keyIsobj = $.isObject(key);
+		var isvalue = $.isset(value);
+		var md = '';
+		if(keyIsobj || (isKey && isvalue && !valueIsNull)){
+			md = 'set';
+		}else if(isKey && valueIsNull){
+			md = 'del';
+		}else if((!isKey || !keyIsobj) && !isvalue){
+			md = 'get';
 		}
-		var getdt = [];
-		this.map(function (ele) {
-			if(!ele._KSAOS_COM_ELE_DATA){
-				ele._KSAOS_COM_ELE_DATA = {};
-			}
-			if(setData){
-				$.loop(setData, function( v, k){
-					if(!$.isObject(v) && ele.attributes['data-'+k]){
-						ele.setAttribute('data-'+k, v);
+
+		key = key && !keyIsobj ? $.explode(' ', key, ' ') : key;
+
+		if(md =='set'){
+			this.map(function(ele){
+				if(!ele._KSAOS_COM_ELE_DATA){
+					ele._KSAOS_COM_ELE_DATA = {};
+				}
+				var _Attrs = ele._KSAOS_COM_ELE_DATA;
+				var setData = {};
+				if(keyIsobj) {
+					setData = key;
+				}else{
+					$.loop(key, function(k){
+						setData[k] = value;
+					});
+				}
+				$.loop(setData, function(v, k){
+					var sk = 'data-'+k;
+					if(!$.isObject(v)){
+						if(v ==='' || v === null){
+							ele.removeAttribute(sk);
+							$.isset(_Attrs[k]) && delete _Attrs[k];
+						}else{
+							ele.setAttribute(sk, v);
+							_Attrs[k] = v;
+						}
+					}else{
+						_Attrs[k] = v;
 					}
-					ele._KSAOS_COM_ELE_DATA[k] = v;
 				});
-			}else if(getKey.length){
-				$.loop(getKey, function( k, _){
-					var v = ele._KSAOS_COM_ELE_DATA[k] || (ele.getAttribute('data-'+k) || undefined);
+			});
+			return this;
+
+		}else if(md == 'get'){
+			var ele = this[0];
+			if(!ele){
+				return;
+			}
+			if(key){
+				var getdt = {};
+
+				$.loop(key, function(k){
+					var v = ele._KSAOS_COM_ELE_DATA[k];
+					if($.isNull(v)){
+						v = ele.getAttribute('data-'+k);
+					}
 					if($.isset(v)) {
 						getdt[k] = v;
 					}
 				});
-
-
-			}else if(!key && !isvalue){
-				getdt = ele._KSAOS_COM_ELE_DATA;
-				var a = ele.attributes;
-				for(var i=a.length-1; i>=0; i--) {
-					if(a[i].name.indexOf('data-') ===0){
-						getdt[a[i].name.substr(5)] = a[i].value;
-					}
+				if(key.length === 1){
+					return getdt[key[0]];
+				}else{
+					return getdt;
 				}
-
-			}else if(isdel){
-				$.loop(key, function( k, _){
-					delete ele._KSAOS_COM_ELE_DATA[k];
+			}else{
+				var getdt = ele._KSAOS_COM_ELE_DATA || {};
+				$.loop(this.attr(), function(val, k){
+					if(k.indexOf('data-') === 0){
+						getdt[k.substr(5)] = val;
+					}
 				});
+				if(!$.isEmpty(getdt)){
+					return getdt;
+				}
 			}
-		});
-
-		if(!keyisobj && !isvalue){
-			var keys = Object.keys(getdt);
-			if(!keys.length){
-				getdt = undefined;
-			}else if(key && keys.length == 1){
-				getdt = getdt[key];
-			}
-			return getdt;
+		}else if(md ==='del'){
+			this.map(function (ele) {
+				var _Attrs = ele._KSAOS_COM_ELE_DATA;
+				if(_Attrs){
+					$.loop(key, function(k){
+						delete _Attrs[k];
+						ele.removeAttribute('data-'+k);
+					});
+				}
+			});
+			return this;
 		}
 
-		return this;
 	}
 	K.removeData = function(key){
 		if(key) {
