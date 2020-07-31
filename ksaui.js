@@ -2240,7 +2240,7 @@ $.plugin.render = function(){
 				return;
 			}
 			ele = $(ele);
-			func(ele, ele.attr());
+			func(ele, ele.attr()||{});
 			ele[0]._KSA_RENDER = 1;
 		});
 	});
