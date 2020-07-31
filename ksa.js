@@ -999,7 +999,7 @@ function debugTime(key){
 				return this;
 			}else{
 				if(this[0]) {
-					var getkeys = $.explode(' ', key, '');
+					var getkeys = $.explode(' ', key, ' ');
 					var sty = window.getComputedStyle(this[0], null);
 					$.loop(getkeys, function (val) {
 						gets[val] = sty[val];
@@ -2225,7 +2225,7 @@ function debugTime(key){
 			 */
 			getloop : function(ele){
 				if(ele && ele.tagName ==='KSATPL' && ele.getAttribute('ksaaction') ==='loop'){
-					var farr = $.explode(' ', ele.getAttribute('ksafactor'), '');
+					var farr = $.explode(' ', ele.getAttribute('ksafactor'), ' ');
 					farr[1] = farr[1] || '__value';
 					return [farr[0], farr[2] ? farr[1] : '__', farr[2] ? farr[2] : farr[1]];
 				}
@@ -3115,7 +3115,7 @@ function debugTime(key){
 	K.unset = function(dt,keys){
 		var at = $.isObject(dt) ? 'object' : ($.isArray(dt) ? 'array' : null);
 		if(at){
-			keys = $.explode(' ', keys);
+			keys = $.explode(' ', keys, ' ');
 
 			$.loop(dt,function(v, k){
 				if($.inArray(k,keys)){
