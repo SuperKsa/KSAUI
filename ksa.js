@@ -158,7 +158,8 @@ function debugTime(key){
 	}
 // ====================== 创建虚拟DOM ====================== //
 	K.dom = function(code){
-		return createDom(code);
+		var dom = createDom(code);
+		return dom.length === 1 ? dom[0] : dom;
 	}
 // ====================== 文档操作 ====================== //
 
@@ -169,7 +170,7 @@ function debugTime(key){
 		function _clsrun() {
 			var className = ele.getAttribute('class') || '';
 			var newClass = {};
-			$.loop($.explode(' ', (className + ' ' + inClass), ' '), function (val) {
+			$.loop($.explode(' ', (className + ' ' + inClass), ''), function (val) {
 				val = val.trim();
 				if (val) {
 					newClass[val] = 1;
@@ -177,7 +178,7 @@ function debugTime(key){
 			});
 
 			if (isDel) {
-				inClass = $.explode(' ', inClass, ' ');
+				inClass = $.explode(' ', inClass, '');
 				$.loop(newClass, function (val, key) {
 					if ($.inArray(key, inClass)) {
 						delete newClass[key];
@@ -241,7 +242,7 @@ function debugTime(key){
 		while ((ele = this[i++])) {
 			if (ele.nodeType === 1){
 				var cl = ele.getAttribute('class');
-				if(cl && cl.length && $.inArray(cls, $.explode(' ',cl,' '))){
+				if(cl && cl.length && $.inArray(cls, $.explode(' ',cl,''))){
 					return true;
 				}
 			}
@@ -274,7 +275,7 @@ function debugTime(key){
 		}
 
 		if(!keyIsobj){
-			key = $.explode(' ', key, ' ');
+			key = $.explode(' ', key, '');
 		}
 		var BooleanArr = ['checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
 		var dataAttr = {};//需要变更的-data属性
@@ -297,9 +298,11 @@ function debugTime(key){
 						attrs[k] = ele[k];
 					}else{
 						var attrV = ele.getAttribute(k);
-						//标签属性值不存在时 从元素dom属性取值
-						if ($.isNull(attrV) && $.isset(ele[k])) {
+						if(!$.isNull(attrV)){
 							attrs[k] = attrV;
+						//标签属性值不存在时 从元素dom属性取值
+						}else if ($.isNull(attrV) && $.isset(ele[k])) {
+							attrs[k] = ele[k];
 						}
 					}
 				});
@@ -387,7 +390,7 @@ function debugTime(key){
 			md = 'get';
 		}
 
-		key = key && !keyIsobj ? $.explode(' ', key, ' ') : key;
+		key = key && !keyIsobj ? $.explode(' ', key, '') : key;
 
 		if(md =='set'){
 			this.map(function(ele){
@@ -489,29 +492,39 @@ function debugTime(key){
 	 * @param value
 	 * @returns {K|[]}
 	 */
-	K.val = function(value, isTxt){
+	K.val = function(value){
 		if($.isset(value) && value !== null){
 
-			this.map(function(ele){
-				if (ele.nodeType === 1) {
-					var tg = ele.tagName;
+			this.map(function(ele, index){
+				if($.inArray(ele.tagName, ['INPUT','SELECT','TEXTAREA'])) {
+					if($.isFunction(value)) {
+						var oldvalue = ele.value;
+						if(ele.tagName == 'SELECT' && ele.multiple){
+							oldvalue = [];
+							$.loop(ele.options, function (e) {
+								e.selected && oldvalue.push(e.value);
+							});
+						}
+						value = value.call(ele, index, oldvalue);
+					}
 					switch (tg) {
 						case 'INPUT':
-							ele.value = value; break;
+							ele.value = value;
+							break;
 						case 'SELECT':
 							value = $.isArray(value) ? value : [value];
-							var options = ele.options;
-							if(options) {
-								$.loop(options, function (e) {
+							if (ele.options) {
+								$.loop(ele.options, function (e) {
 									var r = $.inArray(e.value, value);
-									if(r != e.selected) {
+									if (r != e.selected) {
 										e.selected = r
 									}
 								});
 							}
 							break;
 						case 'TEXTAREA':
-							ele.value = value; break;
+							ele.value = value;
+							break;
 						default:
 					}
 				}
@@ -520,34 +533,33 @@ function debugTime(key){
 			//获取值，如果有多个对象，则按数组顺序返回对应值
 		}else {
 			var t = [];
-			this.map(function (ele, i) {
-				var tg = ele.tagName;
-				switch (tg) {
-					case 'INPUT':
-						t.push(ele.value);
-						break;
-					case 'SELECT':
-						var options = ele.selectedOptions;
-						if(options) {
-							$.loop(options, function (e) {
-								if (isTxt) {
-									t.push(e.text);
-								} else {
-									t.push(e.value);
-								}
-							});
-						}
-						break;
-					case 'TEXTAREA':
-						t.push(ele.value);
-						break;
-					default:
-				}
-			});
-			if(t.length == 1){
-				t = t[0];
+			var ele = this[0];
+			if(!ele){
+				return;
 			}
-			return t;
+			var tg = ele.tagName;
+			switch (tg) {
+				case 'INPUT':
+					t.push(ele.value);
+					break;
+				case 'SELECT':
+					var options = ele.selectedOptions;
+					if(options) {
+						$.loop(options, function (e) {
+							t.push(e.value);
+						});
+					}
+					break;
+				case 'TEXTAREA':
+					t.push(ele.value);
+					break;
+				default:
+			}
+			if(t.length === 1){
+				return t[0];
+			}else{
+				return t.join(',');
+			}
 		}
 	}
 
@@ -558,43 +570,33 @@ function debugTime(key){
 	 */
 	K.text = function(value){
 		if($.isset(value)){
-			this.map(function(ele){
+			this.map(function(ele, index){
 				if (ele.nodeType === 1 || ele.nodeType === 11 || ele.nodeType === 9) {
-					ele.textContent = value;
+					ele.textContent = $.isFunction(value) ? value.call(ele, index, ele.textContent) : value;
 				}
 			});
 			return this;
 		}else {
 			var t = [];
 			this.map(function (ele) {
-				t.push(ele.innerText);
+				t.push(ele.textContent);
 			});
 			return t.join("\n");
 		}
 	};
 
 	/**
-	 * 读写文本节点
-	 * @param value
+	 * 遍历文本节点
 	 * @returns {string|K}
 	 */
-	K.nodeValue = function(value){
-
-		if($.isset(value)){
-			value = $.isArray(value) ? value[0].nodeValue : value;
-			this.map(function(ele){
-				if (ele.nodeType === 3) {
-					ele.nodeValue = value;
-				}
+	K.contents = function(){
+		var newObj = $();
+		this.map(function(ele){
+			$.loop(ele.childNodes, function(e){
+				newObj.push(e);
 			});
-			return this;
-		}else {
-			var t = [];
-			this.map(function (value) {
-				value.nodeType == 3 && t.push(value.nodeValue);
-			});
-			return t.join("\n");
-		}
+		});
+		return newObj;
 	};
 
 	/**
@@ -741,11 +743,28 @@ function debugTime(key){
 
 	K.wrap = function(html){
 		this.map(function(e){
-			var dom = $.dom(html)[0];
+			var dom = $.dom(html);
 			e.after(dom);
 			$(dom).html(e);
 		});
 
+		return this;
+	}
+
+	K.wrapAll = function(html){
+		var dom = $(html);
+		$(this[0]).before(dom);
+		dom.html(this);
+		return this;
+	}
+
+	K.wrapInner = function(html){
+		this.map(function(e){
+			e = $(e);
+			var dom = $(html);
+			dom.html(e.contents());
+			e.html(dom);
+		});
 		return this;
 	}
 // ====================== 尺寸 、位置 ====================== //
@@ -999,7 +1018,7 @@ function debugTime(key){
 				return this;
 			}else{
 				if(this[0]) {
-					var getkeys = $.explode(' ', key, ' ');
+					var getkeys = $.explode(' ', key, '');
 					var sty = window.getComputedStyle(this[0], null);
 					$.loop(getkeys, function (val) {
 						gets[val] = sty[val];
@@ -1123,6 +1142,11 @@ function debugTime(key){
 		var length = ths.length ? ths.length : 0;
 		if(ele instanceof $){
 			ele.each(function(_, e){
+				ths[length] = e;
+				length ++;
+			});
+		}else if($.isArray(ele)){
+			$.loop(ele, function(e){
 				ths[length] = e;
 				length ++;
 			});
@@ -1847,7 +1871,7 @@ function debugTime(key){
 				}else{
 					$.isFunction(option.success) && option.success.call(this, result);
 				}
-				option.complete && option.complete.call(this, result, A.status); //请求完成执行回调
+				option.complete && option.complete.call(this, result); //请求完成执行回调
 			});
 			document.head.appendChild(script);
 			copyCallback = responseData = null;
@@ -2080,7 +2104,7 @@ function debugTime(key){
 		var argsNames = Args.callee.toString().match(/^function(\s[^(]+)?\(([^\)]+)?\)\{/);
 		if(argsNames && argsNames[2]) {
 			var dt = {};
-			argsNames = $.explode(',', argsNames[2], ' ');
+			argsNames = $.explode(',', argsNames[2], '');
 			$.loop(argsNames, function (v, k) {
 				v = v.trim();
 				dt[v] = Args[k];
@@ -2131,7 +2155,7 @@ function debugTime(key){
 	 */
 	var objectIDIndex = 1;
 	K.objectID = function (obj) {
-		if($.isIndom(obj)){
+		if(obj instanceof HTMLElement){
 			if(!obj.__$_objectID_$__) {
 				obj.__$_objectID_$__ = objectIDIndex++;
 			}
@@ -2225,7 +2249,7 @@ function debugTime(key){
 			 */
 			getloop : function(ele){
 				if(ele && ele.tagName ==='KSATPL' && ele.getAttribute('ksaaction') ==='loop'){
-					var farr = $.explode(' ', ele.getAttribute('ksafactor'), ' ');
+					var farr = $.explode(' ', ele.getAttribute('ksafactor'), '');
 					farr[1] = farr[1] || '__value';
 					return [farr[0], farr[2] ? farr[1] : '__', farr[2] ? farr[2] : farr[1]];
 				}
@@ -2400,7 +2424,7 @@ function debugTime(key){
 					return;
 				}
 				if(setObj && $.isObject(setObj) && setFunc) {
-					setKey = $.explode(',', setKey,' ');
+					setKey = $.explode(',', setKey,'');
 					var addKey = null;
 					$.loop(SetEvent, function (obj, k) {
 						if (obj.object === setObj) {
@@ -3044,7 +3068,7 @@ function debugTime(key){
 	 * @returns {*|boolean}
 	 */
 	K.isIndom = function(e){
-		return e && !$.isObjectPlain(e) && !$.inArray(document.compareDocumentPosition(e), [35, 37]);
+		return e && e instanceof HTMLElement && !$.inArray(document.compareDocumentPosition(e), [35, 37]);
 	}
 
 	K.isNull = function(v){
@@ -3115,7 +3139,7 @@ function debugTime(key){
 	K.unset = function(dt,keys){
 		var at = $.isObject(dt) ? 'object' : ($.isArray(dt) ? 'array' : null);
 		if(at){
-			keys = $.explode(' ', keys, ' ');
+			keys = $.explode(' ', keys, '');
 
 			$.loop(dt,function(v, k){
 				if($.inArray(k,keys)){

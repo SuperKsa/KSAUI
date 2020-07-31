@@ -122,27 +122,30 @@
     <input type="radio" name="a" value="值2" v-updateText="updateValue">选项2</input>
     <div>双向绑定值：${updateValue}</div>
 
-    <div>
+    <table>
         {loop list key  value}
-        {eval}
-        var evaladd = {a:('123'+key)};
-        {/eval}
+        <tr><td>
+            {eval}
+            var evaladd = {a:('123'+key)};
+            {/eval}
 
-        {if value.name != '张二娃' && value.name !='张三10'}
-        <div class="class-${value.name} sdjj">${key} : ${value.name} ${value.sex} / ${name} / ${evaladd.a}
-        </div>
-        {elseif value.name =='张三10'}
-        <div>【elseif】 ${value.name}</div>
-        {else}
-        <div>【else】</div>
-        {/if}
-        {if key =='data'}
-        {loop value.list k v}
-        <p>${v}</p>
+            {if value.name != '张二娃' && value.name !='张三10'}
+            <div class="class-${value.name} sdjj">${key} : ${value.name} ${value.sex} / ${name} / ${evaladd.a}
+            </div>
+            {elseif value.name =='张三10'}
+            <div>【elseif】 ${value.name}</div>
+            {else}
+            <div>【else】</div>
+            {/if}
+            {if key =='data'}
+            {loop value.list k v}
+            <p>${v}</p>
+            {/loop}
+            {/if}
+        </td>
+        </tr>
         {/loop}
-        {/if}
-        {/loop}
-    </div>
+    </table>
 </template>
 
 <div id="mvvm" class="a b c d"></div>
