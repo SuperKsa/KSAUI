@@ -1230,7 +1230,7 @@ function debugTime(key){
 	 * @param selector 选择器
 	 * @returns {boolean|number|*}
 	 */
-	var isSelectDom = function(ele, selector) {
+	function isSelectDom(ele, selector) {
 		if (!selector || !ele || ele.nodeType !== 1){
 			return false
 		}
@@ -1249,20 +1249,17 @@ function debugTime(key){
 	 * @param selector 选择器
 	 * @returns {[]}
 	 */
-	var dir = function (element, key, selector, isAll) {
+	function dir(element, key, selector) {
 		var rdom = [];
 		$.loop(element,function(el){
-			if(isAll){
-				rdom.push(el);
-			}else{
-				while ((el = el[key]) && el.nodeType !== 9) {
-					el.nodeType === 1 && (!selector || isSelectDom(el, selector)) && rdom.push(el);
+			while ((el = el[key])) {
+				if(!selector || isSelectDom(el, selector)){
+					rdom.push(el);
 				}
 			}
-
 		});
 		return rdom;
-	};
+	}
 
 	/**
 	 * 子孙遍历
@@ -1397,9 +1394,9 @@ function debugTime(key){
 	 * @param selector
 	 * @returns {*}
 	 */
-	K.prevAll = function(selector){
+	K.prevAll = function(selector, isAll){
 		var rdom = $(), ri=0;
-		$.loop(dir(this, 'previousElementSibling', selector), function(el){
+		$.loop(dir(this, (isAll ? 'previousSibling' : 'previousElementSibling'), selector), function(el){
 			rdom[ri] = el;
 			ri ++;
 		});
@@ -1432,7 +1429,7 @@ function debugTime(key){
 	 */
 	K.nextAll = function(selector, isAll){
 		var rdom = $(), ri=0;
-		this.map(dir(this, 'nextElementSibling', selector),function(ele){
+		this.map(dir(this, (isAll ? 'nextSibling' : 'nextElementSibling'), selector),function(ele){
 			rdom[ri] = ele;
 			ri ++;
 		}, isAll);
@@ -1982,6 +1979,7 @@ function debugTime(key){
 		updMap : {},
 		DelEvent : {},
 		AddEvent : {},
+		Event : {}, //监听链
 		/**
 		 * 全局更新函数
 		 * @param inobj this指向
@@ -1994,30 +1992,75 @@ function debugTime(key){
 			}
 		},
 		/**
-		 * 变量监听 虚拟dom引擎TPC2使用
+		 * 创建监听事件
+		 * @param ac 需要监听的动作 set=值改变 get=值读取 add=值添加 delete=值删除
+		 * @param obj 需要监听的对象
+		 * @param keyName 需要监听的键名 多个以空格分开
+		 * @param Fun 事件触发时的回调函数 参数1=最新的值
+		 */
+		createEvent : function(ac, obj, keyName, Fun){
+			var ths = this;
+
+			if(!$.isObject(obj) || !keyName || !$.isFunction(Fun)){
+				return;
+			}
+			var FunID = $.objectID(Fun);
+			var objID = $.objectID(obj);
+			$.loop($.explode(' ', keyName,''),  function(val){
+				if(!ths.Event[objID]){
+					ths.Event[objID] = {object:obj, key:{}};
+				}
+				if(!ths.Event[objID].key[val]){
+					ths.Event[objID].key[val] = {
+						isPush : false,
+						run : function(ac, newV, oldV){
+							if(this[ac]) {
+								$.loop(this[ac], function (f) {
+									f(newV, oldV, obj, keyName);
+								});
+							}
+						},
+						set : {}, //写值监听列表
+						get : {}, //读取监听列表
+						delete : {}, //删除监听列表
+						add : {} //新增监听列表
+					};
+				}
+				if(!ths.Event[objID].key[val][ac][FunID]){
+					ths.Event[objID].key[val][ac][FunID] = Fun;
+				}
+				ths.monitor(obj, val);//刷新监听队列
+			});
+
+		},
+		/**
+		 * 创建监听队列
 		 * @param obj
 		 * @param keyName
-		 * @param setFun
-		 * @param getFun
-		 * @private
 		 */
-		set : function(obj, keyName, setFun, getFun){
+		monitor : function(obj, keyName){
+			if(!$.isObject(obj) || !keyName){
+				return;
+			}
 			var ths = this;
-			if(!$.isObject(obj) || !keyName || !setFun){
+			var objID = $.objectID(obj);
+
+			var eventDt = ths.Event[objID] && ths.Event[objID].key[keyName] ? ths.Event[objID].key[keyName] : null;
+
+			//如果变量已经在监听队列 则不重复监听
+			if(!eventDt || eventDt.isPush){
 				return;
 			}
 
 			try {
 
 				var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
-				setTer = setTer ? setTer.set : setTer;
-				var setFunction = function(v){
+				setTer = setTer ? setTer.set : null;
+				var defSet = function(v){
 					setTer && setTer(v);
-					setFun(v);
 				};
 
 				var _Svalue = obj[keyName];
-
 				Object.defineProperty(obj, keyName, {
 					enumerable: true,
 					configurable: true,
@@ -2028,45 +2071,65 @@ function debugTime(key){
 						}
 						var oldValue = _Svalue;
 						_Svalue = v;
-						$.loop(ths.updMap, function( fun, _){
-							if(fun(v, oldValue) !== true){
-								delete ths.updMap[_];
-								//debug('删除当前监听回调')
-							}
-						});
-						setFunction(v, keyName, obj);
+
+						defSet(v); //默认事件回调
+						eventDt && eventDt.run('set', v, oldValue);
 
 					},
 					get : function(v){
+						eventDt && eventDt.run('get', v);
 						return _Svalue;
 					}
 				});
-			}catch (e) {
-				//console.error(new Error('window变量【'+keyName+'】无法监听，请去掉变量前面的var试试'));
-			}
 
+				eventDt.isPush = true; //打上监听成功标记
+			}catch (e) {
+
+			}
 		},
-		del : function(obj, key, func, tothis){
+		/**
+		 * 新增或改变对象的值
+		 * @param obj
+		 * @param keyName
+		 * @param dt
+		 */
+		set : function(obj, keyName, dt){
+			if(!$.isObject(obj) || !keyName){
+				return;
+			}
+			var value = obj[keyName];
 			var objID = $.objectID(obj);
-			if(!this.DelEvent[objID]){
-				this.DelEvent[objID] = {object:obj, func:{}};
-			}
-			if(!this.DelEvent[objID].func[key]){
-				this.DelEvent[objID].func[key] = [];
-			}
-			this.DelEvent[objID].func[key].push(function(){
-				func.apply(tothis, arguments);
-			});
+			var eventDt = this.Event[objID] && this.Event[objID].key[keyName] ? this.Event[objID].key[keyName] : null;
+			eventDt.run('add', dt, obj, keyName);
+			eventDt && eventDt.run('set', dt, dt);
+			obj[keyName] = dt;
 		},
-		add : function(obj, func, tothis){
-			var objID = $.objectID(obj);
-			if(!this.AddEvent[objID]){
-				this.AddEvent[objID] = {object:obj, func:[]};
+
+		/**
+		 * 删除对象某个键名
+		 * @param obj 需要删除的对象
+		 * @param keyName 需要删除的键名 多个以空格分开
+		 * @param isAbs 是否绝对删除（包含监听事件全部移除）
+		 */
+		delete : function(obj, keyName, isAbs){
+			if(!$.isObject(obj) || !keyName){
+				return;
 			}
-			this.AddEvent[objID].func.push(function(){
-				func.apply(tothis, arguments);
+			var ths = this;
+			keyName = keyName.toString();
+			$.loop($.explode(' ', keyName, ''), function(key){
+				obj[key] = '';
+				var value = obj[key];
+				var objID = $.objectID(obj);
+				var eventDt = ths.Event[objID] && ths.Event[objID].key[key] ? ths.Event[objID].key[key] : null;
+				eventDt.run('delete', value, obj, key);
+				delete obj[key];
+				if(isAbs && ths.Event[objID].key[key].set){
+					delete ths.Event[objID].key[key].set;
+				}
 			});
-		},
+
+		}
 	}
 	/*
         K.objectDel = function(obj, key){
@@ -2153,18 +2216,24 @@ function debugTime(key){
 	 * @param obj
 	 * @returns {number}
 	 */
-	var objectIDIndex = 1;
+	var _KSAobjectIDIndex = 1;
 	K.objectID = function (obj) {
-		if(obj instanceof HTMLElement){
+		if($.isObject(obj) || obj instanceof HTMLElement){
 			if(!obj.__$_objectID_$__) {
-				obj.__$_objectID_$__ = objectIDIndex++;
+				obj.__$_objectID_$__ = _KSAobjectIDIndex++;
 			}
-		}else if($.isObject(obj) || $.isFunction(obj) || $.isArray(obj)){
+			return obj.__$_objectID_$__;
+		}else if($.isFunction(obj)){
+			if(!obj.prototype.__$_objectID_$__) {
+				obj.prototype.__$_objectID_$__ = _KSAobjectIDIndex++;
+			}
+			return obj.prototype.__$_objectID_$__;
+		}else if($.isArray(obj)){
 			if(!obj.__proto__.__$_objectID_$__) {
-				obj.__proto__.__$_objectID_$__ = objectIDIndex++;
+				obj.__proto__.__$_objectID_$__ = _KSAobjectIDIndex++;
 			}
+			return obj.__proto__.__$_objectID_$__;
 		}
-		return obj.__$_objectID_$__;
 	}
 // ====================== TPL模板语法 ====================== //
 	K.tpl = function(_DATA){
@@ -2172,7 +2241,7 @@ function debugTime(key){
 		var $this = this;
 
 		//匹配模板变量正则 {xxx}
-		var variableReg = /\$\{((?:.|\r?\n)+?)\}/g;
+		var variableReg = /\{\{((?:.|\r?\n)+?)\}\}/g;
 		//匹配js变量名正则
 		var varsNameRegx = /(([\u4e00-\u9fa5_a-zA-Z$]+([\u4e00-\u9fa5_a-zA-Z0-9$]+)?)(((\[[0-9]+\])+|(\.[\u4e00-\u9fa5_a-zA-Z$][\u4e00-\u9fa5_a-zA-Z$0-9]+))+)?)(\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)\(.*?\))?/g;
 
@@ -2188,13 +2257,53 @@ function debugTime(key){
 			def : $this.def,
 			init : function(ele){
 				this.E = ele;
-				this.replace();
-				this.ECODE = this.createVDOM(this.Dom.childNodes);
+				this.formatHTML();
+				this.ECODE = this.vdom(this.Dom.childNodes);
 				delete this.Dom;
 				this.parseVDOMcode(this.ECODE);
 				delete this.ECODE;
 				//监听列表统一更新
 				this.monitor();
+			},
+			formatHTML : function () {
+				var ths = this;
+				var code = this.E.innerHTML;
+				//规整语法 去掉{{}}里面的空白字符
+				code = code.replace(/\{\{(.*?)\}\}/g, function(){
+					return '{{'+arguments[1].trim()+'}}';
+				});
+
+				var zIndex = 0; //标记累加记号
+				var indexMap = {
+					loop : [],
+					if : []
+				};
+				code = code.replace(/\{\{(((if|loop)(\s+.*?))|(\/(if|loop)))\}\}/g, function(){
+					var arg = arguments;
+					if(arg[1].substr(0,1) === '/'){
+						return '<!--'+arg[1]+'-'+indexMap[arg[6]].pop()+'-->';
+					}else{
+						zIndex ++;
+						if(!indexMap[arg[3]]){
+							indexMap[arg[3]] = [];
+						}
+						indexMap[arg[3]].push(zIndex);
+						return '<!--'+arg[3]+'-'+zIndex+''+arg[4]+'-->';
+					}
+				});
+				code = code.replace(/\{\{(else|elseif\s.*?)\}\}/g, function(){
+					return '<!--'+arguments[1]+'-->';
+				});
+				code = code.replace(/\{\{eval\s+(.*?)\}\}/g, function(){
+					return '<!--eval '+arguments[1]+'-->';
+				});
+				code = code.replace(/\{\{eval\}\}([\s\S]*?)\{\{\/eval\}\}/g, function(){
+					return '<!--eval '+arguments[1].trim()+'-->';
+				});
+				$.loop($.dom(code), function(e){
+					ths.Dom.appendChild(e);
+				});
+				return this;
 			},
 			//模板语法格式化为符合内部要求的语法
 			replace : function(){
@@ -2247,30 +2356,231 @@ function debugTime(key){
 			 * @param ele
 			 * @returns {[list, key, value]} undefined=非loop节点
 			 */
-			getloop : function(ele){
-				if(ele && ele.tagName ==='KSATPL' && ele.getAttribute('ksaaction') ==='loop'){
-					var farr = $.explode(' ', ele.getAttribute('ksafactor'), '');
-					farr[1] = farr[1] || '__value';
-					return [farr[0], farr[2] ? farr[1] : '__', farr[2] ? farr[2] : farr[1]];
+			vdom_loop : function(ele){
+				if(ele.nodeType === 8 && ele.nodeValue.indexOf('loop-') ===0){
+					ele.isKsaNode = 1;
+					var farr = $.explode(' ', ele.nodeValue, '');
+					farr[2] = farr[2] || '__value';
+					var loopExp = [farr[0], farr[1], farr[3] ? farr[2] : '__', farr[3] ? farr[3] : farr[2]];
+					var rcode = '_$T._LOOP(' + loopExp[1] + ', function(' + loopExp[2] + ', ' + loopExp[3] + '){ return ';
+					var scop = [], scopEnd = 0;
+					$(ele).nextAll('', true).each(function (i, e) {
+						if (!scopEnd) {
+							if (e.nodeType === 8 && e.nodeValue.indexOf('/' + loopExp[0]) === 0) {
+								scopEnd = 1;
+							} else {
+								scop.push(e);
+							}
+						}
+					});
+					rcode += this.vdom(scop);
+					rcode += '})';
+					return rcode;
+				}
+				return '';
+			},
+			vdom_if : function(ele){
+				var ths = this;
+				if(ele.nodeType === 8 && ele.nodeValue.indexOf('if-') ===0){
+					ele.isKsaNode = 1;
+					var scop = {}, scopEnd = 0;
+					var ifName = ele.nodeValue.substr(0, ele.nodeValue.indexOf(' '));
+					var scopIndex = 0;
+					var factor = ele.nodeValue.substr(ifName.length);
+					var nodeName = 'if';
+					$(ele).nextAll('', true).each(function (i, e) {
+						var nodeVal = e.nodeValue;
+
+						if (!scopEnd) {
+							if (e.nodeType === 8 && nodeVal.indexOf('/' + ifName) === 0) {
+								scopEnd = 1;
+							} else {
+
+								if(e.nodeType === 8 && (nodeVal.indexOf('elseif ') ===0 || nodeVal === 'else')){
+									scopIndex ++;
+									if(nodeVal === 'else'){
+										factor = '';
+										nodeName = 'else';
+									}else{
+										factor = nodeVal.substr(7);
+										nodeName = 'elseif';
+									}
+									e.isKsaNode = 1;
+								}
+								if(!scop[scopIndex]){
+									scop[scopIndex] = {name:nodeName, dom:[], factor: factor};
+								}
+								scop[scopIndex].dom.push(e);
+							}
+						}
+					});
+
+					var rcode = [];
+					$.loop(scop, function(value){
+						var exp = ths.parseText('{{'+value.factor+'}}');
+						var factor = [];
+						$.loop(exp[1], function(v, k){
+							if($.isObject(v)){
+								factor.push('['+k+', ["'+Object.keys(v).join('","')+'"]]');
+							}
+						});
+						if(factor.length){
+							factor = '['+factor.join(',')+']';
+						}else{
+							factor = '""';
+						}
+						var code = '';
+						if(value.name ==='else'){
+							code = '["else","", function(){return';
+						}else{
+							code = '[function(){ return '+value.factor+'}, '+factor+', function(){return ';
+						}
+						code += ths.vdom(value.dom);
+						code += '}]';
+						rcode.push(code);
+					});
+					if(rcode.length){
+						return '_$T._if('+rcode.join(', ')+')';
+					}
+					return '';
 				}
 			},
-			getif : function(ele){
-				if(ele && ele.tagName ==='KSATPL'){
-					var ac = ele.getAttribute('ksaaction');
-					if($.inArray(ac, ['if','elseif','else'])){
-						return [ac, ele.getAttribute('ksafactor')];
+			vdomAttr : function(ele){
+				var ths = this;
+				var attrs;
+				//遍历属性名
+				if (ele.nodeType === 1 && ele.attributes && ele.attributes.length) {
+					attrs = [];
+					var attrsIsP = [];
+					$.loop(ele.attributes, function (v) {
+						var value = v.value, key = v.name;
+						var ep = ths.parseText(value);
+						value = ep[0];
+						if($.isObject(ep[1])){
+							$.loop(ep[1], function(kv, kn){
+								attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
+							});
+						}
+						if(key ==='v-update' || key ==='v-updatetext'){
+							var upbj = $.keyName(v.value);
+							if(upbj[0]){
+								if(!upbj[1]){
+									upbj[1] = upbj[0];
+									upbj[0] = '_$data_';
+								}
+								attrs.push('"v-update":[(typeof('+upbj[0]+'.'+(upbj[1])+') !=="undefined" ? '+upbj[0]+' : ""), "'+upbj[1]+'", '+(key ==='v-updatetext')+']');
+							}
+
+						}else{
+							attrs.push('"'+key+'":'+(value || '""')+'');
+						}
+					});
+
+					if(attrs.length>0){
+						attrs = '{'+attrs.join(',')+'}';
+						//如果attr有待监控变量时 以数组方式传递
+						if(attrsIsP.length){
+							attrs = '[function(){return '+attrs+'}, ['+attrsIsP.join(',')+']]';
+						}
+					}else{
+						attrs = '';
 					}
 				}
+				return attrs;
+			},
+			vdomEval : function(ele){
+				if(ele.nodeType === 8 && ele.nodeValue.indexOf('eval') === 0){
+					return ele.nodeValue.substr(4);
+				}
+			},
+			vdom : function(eleList, isScore){
+				var ths = this;
+				var Enode = [];
+				$.loop(eleList, function(ele){
+					var nodeType = ele.nodeType;
+					if(ele._vdomBreak || (nodeType === 8 && (ele.nodeValue.indexOf('/if') ===0 || ele.nodeValue.indexOf('/loop') ===0))){
+						return;
+					}
+					ele._vdomBreak = true;
+					var tag = ele.tagName ? ele.tagName : ''; //标签名小写 文本节点为空
+
+					var rcode = '', monitor = '';
+					var EvalCode = ths.vdomEval(ele);
+					if(EvalCode){
+						rcode += '_$T._F(function(){'+EvalCode+" \n\nreturn _$T._Dom(";
+						rcode += ths.vdom($(ele).nextAll('', true) );
+						rcode += ');})';
+						nodeType = 1;
+					}else {
+						var attrs = ths.vdomAttr(ele);
+						if ($.inArray(nodeType, [3, 8])) {
+							if(nodeType === 8){
+								var tmprcode = ths.vdom_loop(ele);
+								if(!tmprcode){
+									tmprcode = ths.vdom_if(ele);
+								}
+								if(tmprcode){
+									rcode += tmprcode;
+									tmprcode = null;
+									nodeType = 1;
+								}
+							}
+							if(!ele.isKsaNode){
+								var exp = ths.parseText(ele.nodeValue, ele);
+								if (exp && exp[0]) {
+									rcode += exp[0];
+									if (exp[1]) {
+										//添加监听
+										$.loop(exp[1], function (skv, vname) {
+											if ($.isObject(skv)) {
+												monitor += "_$T._M(arguments[0], " + vname + ", '" + Object.keys(skv).join(' ') + "');\n";
+											} else if (typeof (ths.data[vname]) !== "undefined") {
+												monitor += "_$T._M(arguments[0], _$data_, '" + vname + "');\n";
+											} else if (typeof (window[vname]) !== "undefined") {
+												monitor += "_$T._M(arguments[0], window, '" + vname + "');\n";
+											}
+										});
+									}
+								}
+								exp = null;
+							}
+						}
+
+
+						//遍历子节点
+						if (ele.childNodes && ele.childNodes.length) {
+							rcode += ths.vdom(ele.childNodes);
+						}
+					}
+					monitor = monitor ? (', function(){' + monitor) + '}' : '';
+					rcode = rcode ? rcode : '""';
+					rcode = '_$T._F(function(){return _$T._C((arguments[0]||"' + tag + '"), ' + nodeType + ', ' + (attrs || '""') + ', ' + rcode + ')}' + monitor + ')';
+					Enode.push(rcode);
+
+				});
+				var length = Enode.length;
+				if(length === 1){
+					Enode = Enode[0];
+				}else if(isScore){
+					Enode = Enode.join('');
+				}else if(!isScore && length >1){
+					Enode = '['+Enode.join(', ')+']';
+				}else{
+					Enode = '';
+				}
+				return Enode;
 			},
 			createVDOM : function(eleList, isScore){
 				var ths = this;
 				var Enode = [];
 				$.loop(eleList, function(ele){
-
+					if(ele._KSAVDOMSTATUS){
+						return;
+					}
+					ele._KSAVDOMSTATUS = true;
 					var tag = ele.tagName ? ele.tagName : ''; //标签名小写 文本节点为空
 					var nodeType = ele.nodeType;
 					var attrs = null;
-					var nodeValue = '';
 					var isEvalTag = tag ==='KSATPL' && ele.getAttribute('ksaaction') ==='eval';
 					var rcode = '', monitor = '';
 
@@ -2319,31 +2629,46 @@ function debugTime(key){
 
 					if(isEvalTag){
 						rcode += '_$T._F(function(){'+ele.factor+" \n\nreturn ";
-
 					}
+
 					if($.inArray(nodeType, [3,8])){
-						var exp = ths.parseText(ele.nodeValue, ele);
-						if(exp) {
-							rcode = exp[0];
-							if (exp[1]) {
-								//添加监听
-								$.loop(exp[1], function (skv, vname) {
-									if ($.isObject(skv)) {
-										monitor += "_$T._M(arguments[0], " + vname + ", '" + Object.keys(skv).join(',') + "');\n";
-									} else if (typeof (ths.data[vname]) !== "undefined") {
-										monitor += "_$T._M(arguments[0], _$data_, '" + vname + "');\n";
-									} else if (typeof (window[vname]) !== "undefined") {
-										monitor += "_$T._M(arguments[0], window, '" + vname + "');\n";
+						if(nodeType === 8){
+							var loopExp = ths.getloop(ele);
+							if(loopExp){
+								rcode += '_$T._LOOP('+loopExp[1]+', function('+loopExp[2]+', '+loopExp[3]+'){ return ';
+								var loopScop = [], loopScopEnd = 0;
+								$(ele).nextAll('',true).each(function(i, e){
+									if(!loopScopEnd){
+										if(e.nodeType ===8 && e.nodeValue.indexOf('/'+loopExp[0]) === 0){
+											loopScopEnd = 1;
+										}else{
+											loopScop.push(e);
+										}
 									}
 								});
+								rcode += ths.createVDOM(loopScop,1);
+								rcode += '})';
+							}
+						}else {
+							var exp = ths.parseText(ele.nodeValue, ele);
+							if (exp) {
+								rcode += exp[0];
+								if (exp[1]) {
+									//添加监听
+									$.loop(exp[1], function (skv, vname) {
+										if ($.isObject(skv)) {
+											monitor += "_$T._M(arguments[0], " + vname + ", '" + Object.keys(skv).join(',') + "');\n";
+										} else if (typeof (ths.data[vname]) !== "undefined") {
+											monitor += "_$T._M(arguments[0], _$data_, '" + vname + "');\n";
+										} else if (typeof (window[vname]) !== "undefined") {
+											monitor += "_$T._M(arguments[0], window, '" + vname + "');\n";
+										}
+									});
+								}
 							}
 						}
 					}else{
 
-						var loopExp = ths.getloop(ele);
-						if(loopExp){
-							rcode += '_$T._LOOP('+loopExp[0]+', function('+loopExp[1]+', '+loopExp[2]+'){ return ';
-						}
 						if(tag ==='IFSCOPE'){
 							rcode += '_$T._if(';
 						}
@@ -2416,6 +2741,10 @@ function debugTime(key){
 			},
 			//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
 			monitorGather : function(setObj, setKey, setFunc){
+
+				$this.def.createEvent('set', setObj, setKey, setFunc);
+
+				return;
 				if(!this.cache.monitorMap){
 					this.cache.monitorMap = [];
 				}
@@ -2460,7 +2789,7 @@ function debugTime(key){
 					$.loop(sdt.keys, function(funs, key){
 						$.loop(funs, function(f){
 							if(!f.isPush) {
-								ths.def.set(sdt.object, key, f.function);
+								ths.def.createEvent('set', sdt.object, key, f.function);
 								f.isPush = true;
 							}
 						});
@@ -2475,25 +2804,28 @@ function debugTime(key){
 				var ths = this;
 				var R, Rcheck, monObj = {};
 				var ifKey = $.autoID('ktpl-parseIF');
-				$.loop(arguments, function(value, inkey){
-					if(!Rcheck && (value[0] ==='else' || value[0]())){
-						R = value[2]();
-						Rcheck = true;
-						return true;
-					}
+
+				$.loop(arguments, function(value){
+					//监听if条件中的变量
 					if(value[1]) {
-						$.loop(value[1], function (mv) {
-							var mvID = $.objectID(mv[0]);
-							if(monObj[mvID]){
-								$.loop(mv[1], function (k) {
-									if(!$.inArray(k, monObj[mvID][1])){
-										monObj[mvID][1].push(k);
+						$.loop(value[1], function (val) {
+							var valID = $.objectID(val[0]);
+							if(monObj[valID]){
+								$.loop(val[1], function (k) {
+									if(!$.inArray(k, monObj[valID][1])){
+										monObj[valID][1].push(k);
 									}
 								});
 							}else{
-								monObj[mvID] = mv;
+								monObj[valID] = val;
 							}
 						});
+					}
+					//如果是else 或者条件结果为真 则跳出循环 不再执行下一个if条件
+					if(!Rcheck && (value[0] ==='else' || value[0]())){
+						R = value[2]();
+						Rcheck = true;
+						return true; //跳出loop循环
 					}
 				});
 				if(!ths.cache.ifscope){
@@ -2502,7 +2834,6 @@ function debugTime(key){
 				if(R){
 					ths.cache.ifscope[ifKey] = R;
 				}
-
 				return [ifKey, R , monObj];
 			},
 
@@ -2555,7 +2886,8 @@ function debugTime(key){
 				});
 				invars = invars.join("\n");
 				ginvars = ginvars.join("\n");
-				_EvalCodes = invars+"\n"+ginvars+" \n _$T._Push("+_EvalCodes+")";
+				_EvalCodes = invars+"\n"+ginvars+" \n return _$T._Dom("+_EvalCodes+")";
+				//_EvalCodes = "console.error(new Error('Evalcode回调'));"+_EvalCodes;
 				var Es = new Function('_$data_', 'var _$T = this; '+_EvalCodes+'');
 
 				/**
@@ -2610,7 +2942,7 @@ function debugTime(key){
 								ele = document.createComment(nodeValue);
 								break;
 							default:
-								if(tag === 'KSATPL'){
+								if(!tag){
 									ele = document.createDocumentFragment();
 								}else{
 									ele = document.createElement(tag);
@@ -2701,7 +3033,7 @@ function debugTime(key){
 				}
 
 				//将DOM写到页面中
-				Es.prototype._Push = function (element){
+				Es.prototype._Dom = function (element){
 					var dom = document.createDocumentFragment();
 					if($.isArray(element)){
 						$.loop(element, function(e){
@@ -2718,8 +3050,7 @@ function debugTime(key){
 					}else{
 						dom.appendChild(element);
 					}
-					$(ths.E).empty();
-					ths.E.appendChild(dom);
+
 					return dom;
 				}
 
@@ -2734,6 +3065,9 @@ function debugTime(key){
 
 				//循环回调
 				Es.prototype._LOOP = function (dt, func){
+					if(!dt){
+						return;
+					}
 					var _ts = this;
 					if(!ths.cache.loopscope){
 						ths.cache.loopscope = {};
@@ -2756,7 +3090,7 @@ function debugTime(key){
 						}
 
 						//loop删除数据监听
-						ths.def.del(dt, key, function(){
+						ths.def.createEvent('delete', dt, key, function(){
 							//删除缓存中对应节点
 							var newCache = [];
 							$.loop(loopCache, function(v){
@@ -2808,9 +3142,8 @@ function debugTime(key){
 							loopCache.push(v);
 						});
 					});
-
 					//loop添加数据监听
-					ths.def.add(dt, function(key, value){
+					ths.def.createEvent('add', dt, function(key, value){
 						var node = pushNode(value, key);
 
 						var markDom;
@@ -2844,11 +3177,13 @@ function debugTime(key){
 				 */
 				Es.prototype._if = function (){
 					var Args = arguments;
+
 					var ifdt = ths.parseIF.apply(ths, Args);
 					var cachekey = ifdt[0];
-
 					if(ifdt[2]){
+
 						$.loop(ifdt[2], function (mv) {
+
 							ths.monitorGather(mv[0], mv[1], function(){
 								var cache = ths.cache.ifscope[cachekey];
 								if(cache){
@@ -2873,9 +3208,13 @@ function debugTime(key){
 					return ifdt[1];
 				}
 
-
-
-				new Es(ths.data);
+				var newDom = new Es(ths.data);
+				if(ths.E.tagName ==='SCRIPT'){
+					$(ths.E).after(newDom);
+				}else{
+					$(ths.E).empty();
+					ths.E.appendChild(newDom);
+				}
 
 				//_EvalCodes = "function Es(_$data_){\n"+invars+"\n"+ginvars+" \n "+_EvalCodes+"}";
 				//_EvalCodes += "\n\nconsole.error(new Error('测试错误 爆源码'))";
@@ -3003,21 +3342,23 @@ function debugTime(key){
 	}
 	K.isArrayLike = function(obj) {
 
-		// Support: real iOS 8.2 only (not reproducible in simulator)
-		// `in` check used to prevent JIT error (gh-2145)
-		// hasOwn isn't used here due to false negatives
-		// regarding Nodelist length in IE
 		if ($.isFunction(obj) || $.isWindow(obj) || $.isString(obj) || $.isNumber(obj)) {
 			return false;
 		}
 
 		var length = !!obj && "length" in obj && obj.length, type = typeof(obj);
-
-		return type === "array" || length === 0 ||
-			typeof length === "number" && length > 0 && (length - 1) in obj;
+		return type === "array" || length === 0 || (typeof length === "number" && length > 0 && (length - 1) in obj);
 	};
+
+	K.isLoop = function(obj) {
+		var length = !!obj && "length" in obj && obj.length, type = typeof(obj);
+		debug($.isNumber(obj));
+		return type === "array" || length === 0 || (typeof length === "number" && length > 0 && (length - 1) in obj);
+	};
+
 	K.isNumber = function(v){
-		return v && /^[0-9\.]+$/.test(v.toString());
+		var tp = typeof(v);
+		return (tp ==='string' || tp ==='number') && !isNaN(v);
 	}
 
 	K.isBool = function(v){

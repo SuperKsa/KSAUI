@@ -98,85 +98,132 @@
 
 </script>
 
-<template id="template">
-
+<script type="text/html" id="template">
     <table class="as">
-        <tr><th>姓名</th><td>${name}</td></tr>
-        <tr><th>性别</th><td>${sex}</td></tr>
-        <tr><th>学校</th><td>${school}</td></tr>
-        <tr><th>电话</th><td>${tel}</td></tr>
+        <tr><th>姓名</th><td>{{name}}</td></tr>
+        <tr><th>性别</th><td>{{sex}}</td></tr>
+        <tr><th>学校</th><td>{{school}}</td></tr>
+        <tr><th>电话</th><td>{{tel}}</td></tr>
     </table>
-    <!-- ${name} -->
-    ${name =='1' ? 'name1' : (name === 3 ? 3 : sdt.sex)}
-    <div>双向绑定：</div>
-    <input type="text" value="" placeholder="请输入" v-updateText="updateValue">
-    <textarea value="" placeholder="请输入" v-updateText="updateValue"></textarea>
-    <select v-updateText="updateValue" multiple="multiple">
-        <option value="值1">选项1</option>
-        <option value="值2">选项2</option>
-    </select>
+    <!-- {{name}} -->
+    {{name =='1' ? 'name1' : (name === 3 ? 3 : sdt.sex)}}
+    <div>
+        <p>双向绑定：</p>
+        <input type="text" value="" placeholder="请输入" v-updateText="updateValue">
+        <textarea value="" placeholder="请输入" v-updateText="updateValue"></textarea>
+        <select v-updateText="updateValue" multiple="multiple">
+            <option value="值1">选项1</option>
+            <option value="值2">选项2</option>
+        </select>
 
-    <input type="checkbox" value="值1" v-updateText="updateValue">选项1</input>
-    <input type="checkbox" value="值2" v-updateText="updateValue">选项2</input>
-    <input type="radio" name="a" value="值1" v-updateText="updateValue">选项1</input>
-    <input type="radio" name="a" value="值2" v-updateText="updateValue">选项2</input>
-    <div>双向绑定值：${updateValue}</div>
-
+        <input type="checkbox" value="值1" v-updateText="updateValue">选项1</input>
+        <input type="checkbox" value="值2" v-updateText="updateValue">选项2</input>
+        <input type="radio" name="a" value="值1" v-updateText="updateValue">选项1</input>
+        <input type="radio" name="a" value="值2" v-updateText="updateValue">选项2</input>
+        <div>双向绑定值：{{updateValue}}</div>
+    </div>
     <table>
-        {loop list key  value}
-        <tr><td>
-            {eval}
-            var evaladd = {a:('123'+key)};
-            {/eval}
+        {{loop list key  value}}
+        <tbody>
+        <tr>
+            <td>
+                {{eval}}
+                var evaladd = {a:('123'+key)};
+                {{/eval}}
 
-            {if value.name != '张二娃' && value.name !='张三10'}
-            <div class="class-${value.name} sdjj">${key} : ${value.name} ${value.sex} / ${name} / ${evaladd.a}
-            </div>
-            {elseif value.name =='张三10'}
-            <div>【elseif】 ${value.name}</div>
-            {else}
-            <div>【else】</div>
-            {/if}
-            {if key =='data'}
-            {loop value.list k v}
-            <p>${v}</p>
-            {/loop}
-            {/if}
-        </td>
+                {{if value.name}}
+                <div class="class-{{value.name}} sdjj">{{key}} : {{value.name}} {{value.sex}} / {{name}} / {{evaladd.a}}
+                </div>
+                {{elseif value.name ===''}}
+                <div>【elseif】 {{value.name}} 空白</div>
+                {{else}}
+                <div>【else】</div>
+                {{/if}}
+                {{if key =='data'}}
+                {{loop value.list k v}}
+                <p>{{v}}</p>
+                {{/loop}}
+
+                {{/if}}
+            </td>
         </tr>
-        {/loop}
-    </table>
-</template>
+        </tbody>
 
-<div id="mvvm" class="a b c d"></div>
-<div class="a" cid="v" data-da="1"></div>
-<div class="a" cid="v" data-da="2"></div>
-<textarea>
-    ${value . name ? value[1].name.toString('(1.)\'value.ame测试12+23') : (value.sex ? '一' : (value.n[10] +1))}
-    ${key} : ${value.name} ${value.sex} ${name}
-    ${list[1].name.toString()}
-    ${window.location.href}
-    ${list[1][2].name[1].name }
-    ${a}
-    ${list.name[0].name32[120]}
-</textarea>
+        {{/loop}}
+
+
+    </table>
+</script>
+<div id="mvvm"></div>
 <script>
+    /*
+    (function(template){
+        var tpl = {
+            code : template,
+            Dom : document.createDocumentFragment(), //虚拟节点
+            init : function(){
+              this.formatHTML();
+            },
+            formatHTML : function () {
+                var ths = this;
+                //规整语法 去掉{{}}里面的空白字符
+                template = template.replace(/\{\{(.*?)\}\}/g, function(){
+                    return '{{'+arguments[1].trim()+'}}';
+                });
+
+                var zIndex = 0; //标记累加记号
+                var indexMap = {
+                    loop : [],
+                    if : []
+                };
+                template = template.replace(/\{\{(((if|loop)(\s+.*?))|(\/(if|loop)))\}\}/g, function(){
+                    var arg = arguments;
+                    if(arg[1].substr(0,1) === '/'){
+                        return '<!--'+arg[1]+'-'+indexMap[arg[6]].pop()+'-->';
+                    }else{
+                        zIndex ++;
+                        if(!indexMap[arg[3]]){
+                            indexMap[arg[3]] = [];
+                        }
+                        indexMap[arg[3]].push(zIndex);
+                        return '<!--'+arg[3]+'-'+zIndex+''+arg[4]+'-->';
+                    }
+                });
+                template = template.replace(/\{\{(else|elseif\s.*?)\}\}/g, function(){
+                    return '<!--'+arguments[1]+'-->';
+                });
+                template = template.replace(/\{\{eval\s+(.*?)\}\}/g, function(){
+                    return '<!--eval '+arguments[1]+'-->';
+                });
+                template = template.replace(/\{\{eval\}\}([\s\S]*?)\{\{\/eval\}\}/g, function(){
+                    return '<!--eval '+arguments[1].trim()+'-->';
+                });
+                $.loop($.dom(template), function(e){
+
+                    ths.Dom.appendChild(e);
+                });
+                debug(ths.Dom);
+                return this;
+            }
+        }
+
+        tpl.init();
+        //$('#template').after(template).remove();
+
+    })($('#template').html());
+    */
     var KTPL;
     (function(){
         var template = $('#template').html();
-        var pushDOM = $('#mvvm');
-
+        var code = '';
         for(var i =0; i<LOOPMAX; i++){
-            (function(){
-                var dom = $.dom(template);
-                pushDOM.append(dom);
-            })();
+            code += template;
         }
+        $('#template').html(code);
         console.time('KSA');
-        KTPL = pushDOM.tpl(sdt);
+        KTPL = $('#template').tpl(sdt);
         console.timeEnd('KSA');
     })();
-    debug(KTPL);
 
 
 /*
