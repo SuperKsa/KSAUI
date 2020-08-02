@@ -61,8 +61,6 @@ function debugTime(key){
 		return [].slice.call(dom.childNodes);
 	}
 
-
-
 	/**
 	 * 创建临时dom并回调
 	 * @param {html|Node} code html或节点
@@ -174,6 +172,9 @@ function debugTime(key){
 			}else if($.isString(selector)) {
 				selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
 				selector = [].slice.call(document.querySelectorAll(selectorStr(selector)));
+			}else if($.isFunction(selector)){
+				$.ready(selector);
+				return;
 			}
 			var length = selector.length;
 			var obj = {};
@@ -195,6 +196,13 @@ function debugTime(key){
 
 	K_S_A.prototype =  $.prototype = $.__proto__ = K = {};
 
+
+	/**
+	 * 文档加载完成后执行代码
+	 * 与jQuery用法相同
+	 * @param callback
+	 * @returns {*}
+	 */
 	K.ready = function(callback) {
 		if (/complete|loaded|interactive/.test(document.readyState)) {
 			callback($);
@@ -206,15 +214,22 @@ function debugTime(key){
 		return this;
 	}
 
-	K.clone = function(){
+	/**
+	 * 克隆一个元素
+	 * 与jQuery用法相同
+	 * @param {boolean} withs 是否需要克隆子元素
+	 * @param {boolean} deepWith 是否需要克隆事件
+	 * @returns {*|jQuery|HTMLElement}
+	 */
+	K.clone = function(withs, deepWith){
 		var newObj = $();
 		this.each(function(index, ele){
 			var eleID = $.objectID(ele);
 			var events = bindEventData[eleID];
-			var newEle = ele.cloneNode(arguments[0]);
+			var newEle = ele.cloneNode(withs);
 			$.objectID(newEle,true);
 			//复制事件
-			if(arguments[1] && events){
+			if(deepWith && events){
 				var $newEle = $(newEle);
 				$.loop(events, function(evn, evnName){
 					$.loop(evn, function(ev){
@@ -235,6 +250,13 @@ function debugTime(key){
 	}
 // ====================== 文档操作 ====================== //
 
+	/**
+	 * 更新元素的class值
+	 * @param ele 元素对象
+	 * @param inClass 需要处理的class 多个以空格分割
+	 * @param isDel 是否为删除
+	 * @param ms 是否需要延迟 毫秒
+	 */
 	function eleUpdateClass(ele, inClass, isDel, ms){
 		if(!inClass){
 			return ;
@@ -275,6 +297,7 @@ function debugTime(key){
 	/**
 	 * 添加class
 	 * 最后更新 : 2020年6月19日 20:01:50
+	 * 与jQuery用法相同
 	 * @param name 需要添加的class值，多个以空格分割
 	 * @param ms 延迟多少毫秒后添加
 	 * @returns {$}
@@ -293,6 +316,7 @@ function debugTime(key){
 	/**
 	 * 删除class
 	 * 最后更新 : 2020年6月19日 20:01:50
+	 * 与jQuery用法相同
 	 * @param name 需要删除的class值，多个以空格分割
 	 * @param ms 多少毫秒后删除
 	 * @returns {$}
@@ -308,8 +332,13 @@ function debugTime(key){
 		return this;
 	}
 
+	/**
+	 * 检查被选元素集合中是否存在指定class
+	 * 与jQuery用法相同
+	 * @param cls
+	 * @returns {boolean}
+	 */
 	K.hasClass = function(cls){
-
 		var ele, i = 0;
 		while ((ele = this[i++])) {
 			if (ele.nodeType === 1){
@@ -325,6 +354,7 @@ function debugTime(key){
 
 	/**
 	 * attr操作
+	 * 与jQuery用法相同
 	 * key与value都不传值时表示读取所有属性 以object方式返回
 	 * 如选择器有多个节点，则根据节点序号以数组方式返回
 	 * @param {string|object} key 属性名支持单个值、多个值(空格分开)、对象（写入模式，键名=属性名 键值=属性值）
@@ -440,6 +470,12 @@ function debugTime(key){
 		}
 	}
 
+	/**
+	 * 移除元素属性
+	 * 与jQuery用法相同
+	 * @param key
+	 * @returns {*}
+	 */
 	K.removeAttr = function (key) {
 		if(key) {
 			this.attr(key, null);
@@ -447,6 +483,13 @@ function debugTime(key){
 		return this;
 	}
 
+	/**
+	 * 设置或返回元素data-属性值
+	 * 与jQuery用法相同
+	 * @param key
+	 * @param value
+	 * @returns {{}|*}
+	 */
 	K.data = function(key, value){
 		value = value ==='' ? null : value;
 		var valueIsNull = value === null;
@@ -542,6 +585,13 @@ function debugTime(key){
 		}
 
 	}
+
+	/**
+	 * 移除data-属性
+	 * 与jQuery用法相同
+	 * @param key
+	 * @returns {*}
+	 */
 	K.removeData = function(key){
 		if(key) {
 			this.data(key, null);
@@ -551,6 +601,7 @@ function debugTime(key){
 
 	/**
 	 * 清空节点
+	 * 与jQuery用法相同
 	 */
 	K.empty = function(){
 		this.map(function(ele){
@@ -561,6 +612,7 @@ function debugTime(key){
 
 	/**
 	 * 表单值的读写
+	 * 与jQuery用法相同
 	 * @param value
 	 * @returns {K|[]}
 	 */
@@ -637,6 +689,7 @@ function debugTime(key){
 
 	/**
 	 * 写入或读取文本
+	 * 与jQuery用法相同
 	 * @param {html|Node} value 传值表示写入
 	 * @returns {string|$}
 	 */
@@ -659,6 +712,7 @@ function debugTime(key){
 
 	/**
 	 * 遍历文本节点
+	 * 与jQuery用法相同
 	 * @returns {string|K}
 	 */
 	K.contents = function(){
@@ -673,17 +727,14 @@ function debugTime(key){
 
 	/**
 	 * 写入或读取HTML源码
+	 * 与jQuery用法相同
 	 * @param {html|Node} value 传值表示写入
 	 * @returns {string|$}
 	 */
 	K.html = function(value){
 		if($.isset(value)){
-			this.map(function(ele){
-				if($.isObject(value)){
-					$(ele).empty().append(value);
-				}else{
-					ele.innerHTML = value;
-				}
+			this.map(function(ele, index){
+				$(ele).empty().append($.isFunction(value) ? value.call(ele, index, ele.innerHTML) : value);
 			});
 			return this;
 		}else{
@@ -746,6 +797,11 @@ function debugTime(key){
 		return formData;
 	}
 
+	/**
+	 * 获得一个form的表单数据
+	 * 与jQuery用法相同
+	 * @returns {*}
+	 */
 	K.serialize = function(){
 		var dt = this.formData();
 		return $.urlsParam(dt);
@@ -754,6 +810,7 @@ function debugTime(key){
 
 	/**
 	 * 移除节点
+	 * 与jQuery用法相同
 	 * @returns {$}
 	 */
 	K.remove = function(){
@@ -765,6 +822,7 @@ function debugTime(key){
 
 	/**
 	 * 在节点之后添加
+	 * 与jQuery用法相同
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
@@ -776,6 +834,7 @@ function debugTime(key){
 
 	/**
 	 * 在节点之前添加
+	 * 与jQuery用法相同
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
@@ -787,11 +846,11 @@ function debugTime(key){
 
 	/**
 	 * 在节点内部最后添加
+	 * 与jQuery用法相同
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
 	K.append = function (html) {
-
 		return tempDom.call(this, html, function(ele, node){
 			if(!node){
 				return;
@@ -802,6 +861,7 @@ function debugTime(key){
 
 	/**
 	 * 在节点内部最前面添加
+	 * 与jQuery用法相同
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
@@ -811,9 +871,16 @@ function debugTime(key){
 		}, true);
 	}
 
+	/**
+	 * 用指定dom包裹集合中的每个元素
+	 * 与jQuery用法相同
+	 * @param html
+	 * @returns {*}
+	 */
 	K.wrap = function(html){
-		this.map(function(e){
-			var dom = $.dom(html);
+		this.map(function(e, index){
+
+			var dom = $.dom($.isFunction(html) ? html.call(e, index) : html);
 			e.after(dom);
 			$(dom).html(e);
 		});
@@ -821,17 +888,29 @@ function debugTime(key){
 		return this;
 	}
 
+	/**
+	 * 将集合中所有元素包裹在一个节点中（第一个顺序位置）
+	 * 与jQuery用法相同
+	 * @param html
+	 * @returns {*}
+	 */
 	K.wrapAll = function(html){
-		var dom = $(html);
+		var dom = $($.isFunction(html) ? html.call(e, index) : html);
 		$(this[0]).before(dom);
 		dom.html(this);
 		return this;
 	}
 
+	/**
+	 * 将集合元素内部用指定节点包裹
+	 * 与jQuery用法相同
+	 * @param html
+	 * @returns {*}
+	 */
 	K.wrapInner = function(html){
 		this.map(function(e){
 			e = $(e);
-			var dom = $(html);
+			var dom = $($.isFunction(html) ? html.call(e, index) : html);
 			dom.html(e.contents());
 			e.html(dom);
 		});
@@ -839,6 +918,12 @@ function debugTime(key){
 	}
 // ====================== 尺寸 、位置 ====================== //
 
+	/**
+	 * 设置返回元素高度
+	 * @param {boolean/number} val true=返回包含padding+border
+	 * @param isMargin true = 返回包含margin
+	 * @returns {number}
+	 */
 	K.height = function(val, isMargin){
 		if(!$.isset(val) || val === true){
 			var dom = this[0];
@@ -863,6 +948,12 @@ function debugTime(key){
 		}
 	}
 
+	/**
+	 * 设置返回元素宽度
+	 * @param {boolean/number} val true=返回包含padding+border
+	 * @param isMargin true = 返回包含margin
+	 * @returns {number}
+	 */
 	K.width = function(val, isMargin){
 		if(!$.isset(val) || val === true){
 			var dom = this[0];
@@ -889,6 +980,11 @@ function debugTime(key){
 		}
 	}
 
+	/**
+	 * 返回元素坐标
+	 * 用法与jQuery相同
+	 * @returns {{top: number, left: number}}
+	 */
 	K.offset = function(){
 		var elem = this[0];
 		if (!elem) {
@@ -910,6 +1006,11 @@ function debugTime(key){
 		};
 	}
 
+	/**
+	 * 显示一个元素
+	 * 不支持任何参数
+	 * @returns {*}
+	 */
 	K.show = function(){
 		this.map(function(e){
 			e.style.display = "block";
@@ -917,6 +1018,11 @@ function debugTime(key){
 		return this;
 	}
 
+	/**
+	 * 隐藏一个元素
+	 * 不支持任何参数
+	 * @returns {*}
+	 */
 	K.hide = function(){
 		this.map(function(e){
 			e.style.display = "none";
@@ -999,6 +1105,12 @@ function debugTime(key){
 	}
 
 
+	/**
+	 * 设定被选元素滚动条垂直坐标
+	 * @param val 需要设置的坐标值
+	 * @param AnimationTime 动画时间（毫秒）
+	 * @returns {*}
+	 */
 	K.scrollTop = function(val, AnimationTime){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollTop : 0;
@@ -1027,6 +1139,12 @@ function debugTime(key){
 		}
 	}
 
+	/**
+	 * 设定被选元素滚动条纵向坐标
+	 * @param val 需要设置的坐标值
+	 * @param AnimationTime 动画时间（毫秒）
+	 * @returns {*}
+	 */
 	K.scrollLeft = function(val, AnimationTime){
 		if(!$.isset(val)){
 			return this[0] ? this[0].scrollLeft : 0;
@@ -1057,6 +1175,13 @@ function debugTime(key){
 		}
 	}
 
+	/**
+	 * 设置或返回一个元素的css样式
+	 * 用法与jQuery相同
+	 * @param key css名称
+	 * @param value css值
+	 * @returns {{}|unknown}
+	 */
 	K.css = function(key, value){
 		var cssNumber = [
 			'animationIterationCount','columnCount','fillOpacity','flexGrow','flexShrink','fontWeight','gridArea','gridColumn','gridColumnEnd','gridColumnStart','gridRow','gridRowEnd','gridRowStart','lineHeight','opacity','order','orphans','widows','zIndex','zoom'];
@@ -1102,7 +1227,6 @@ function debugTime(key){
 			}
 		}
 	}
-
 
 // ====================== 遍历 ====================== //
 
@@ -1165,7 +1289,6 @@ function debugTime(key){
 		return obj;
 	}
 
-
 	/**
 	 * 数组map方法实现
 	 * @param elements
@@ -1209,7 +1332,7 @@ function debugTime(key){
 
 	/**
 	 * 在当前选择器集合中添加一个新的
-	 * @param e
+	 * @param ele
 	 */
 	K.push = function(ele){
 		var ths = this;
@@ -1237,6 +1360,7 @@ function debugTime(key){
 	/**
 	 * 取匹配集合 顺序为n的节点
 	 * 支持以数字数组方式取
+	 * 与jquery用法相同
 	 * @param {number/array} n
 	 * @returns {*}
 	 */
@@ -1252,6 +1376,11 @@ function debugTime(key){
 		return obj;
 	}
 
+	/**
+	 * 获取指定元素在父级下的索引顺序值
+	 * 该方法不接受任何参数
+	 * @returns {number}
+	 */
 	K.index = function(){
 		var ele = this[0];
 		var index = -1;
@@ -1267,6 +1396,7 @@ function debugTime(key){
 
 	/**
 	 * 取匹配集合第一个
+	 * 与jquery用法相同
 	 * @returns {any}
 	 */
 	K.first = function(){
@@ -1275,6 +1405,7 @@ function debugTime(key){
 
 	/**
 	 * 取匹配集合最后一个
+	 * 与jquery用法相同
 	 * @returns {any}
 	 */
 	K.last = function(){
@@ -1284,6 +1415,7 @@ function debugTime(key){
 
 	/**
 	 * 检查集合中是否存在选择器范围
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {boolean} 返回 false | true
 	 */
@@ -1300,6 +1432,7 @@ function debugTime(key){
 
 	/**
 	 * 子孙遍历
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns
 	 */
@@ -1321,6 +1454,7 @@ function debugTime(key){
 
 	/**
 	 * 直接子级遍历
+	 * 与jquery用法相同
 	 * @param selector
 	 */
 	K.children = function(selector){
@@ -1355,6 +1489,7 @@ function debugTime(key){
 
 	/**
 	 * 所有同辈
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1376,6 +1511,7 @@ function debugTime(key){
 
 	/**
 	 * 父级
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1395,6 +1531,7 @@ function debugTime(key){
 
 	/**
 	 * 祖先(直到匹配选择器)
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1410,6 +1547,7 @@ function debugTime(key){
 
 	/**
 	 * 前一个元素
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1428,6 +1566,7 @@ function debugTime(key){
 
 	/**
 	 * 往前所有元素
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1443,6 +1582,7 @@ function debugTime(key){
 
 	/**
 	 * 下一个元素
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1461,6 +1601,7 @@ function debugTime(key){
 
 	/**
 	 * 之后所有元素
+	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
