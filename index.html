@@ -12,6 +12,7 @@
 <style>
     div { background: rgba(0,0,0,.2); padding: 20px; color: #fff; margin: 5px;}
 </style>
+<a>link</a>
 <template id="vue-template">
     <table>
         <tr><th>姓名</th><td>{{name}}</td></tr>
@@ -74,6 +75,9 @@
             }
         }
     };
+    $('a').click(function(){
+        debug([this]);
+    });
 </script>
 <script>
 

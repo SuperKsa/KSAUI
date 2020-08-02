@@ -29,10 +29,8 @@ function debugTime(key){
 
 (function(document, undefined, K) {
 	"use strict";
-
-	function newFragment(){
-		return document.createDocumentFragment();
-	}
+	//on绑定事件时的索引
+	var bindEventData = {};
 
 	/**
 	 * 给事件对象统一加上阻止冒泡事件
@@ -63,6 +61,8 @@ function debugTime(key){
 		return [].slice.call(dom.childNodes);
 	}
 
+
+
 	/**
 	 * 创建临时dom并回调
 	 * @param {html|Node} code html或节点
@@ -72,6 +72,7 @@ function debugTime(key){
 	 */
 	function tempDom(code, callback, reOrder){
 		var dom;
+		var isFunc = $.isFunction(code);
 		if(code instanceof $){
 			dom = code;
 		}else if($.isDomAll(code)) {
@@ -79,20 +80,33 @@ function debugTime(key){
 		}else if($.isArray(code)){
 			dom = code;
 			//创建一个虚拟dom
-		}else{
+		}else if($.isString(code)){
 			dom = createDom(code);
 		}
-
 		//将传入的html或dom对象添加到虚拟dom中
-		$.loop(this, function (ele) {
+		var length = this.length;
+		$.loop(this, function (ele, index) {
+			var isClone = index !== length-1;
+			if(isFunc){
+				dom = code.call(ele, index, ele.innerHTML);
+				if($.isString(dom)){
+					dom = createDom(dom);
+					isClone = 0;
+				}
+				if(dom instanceof $){
+					dom = [dom[0]];
+					isClone = 0;
+				}else if(dom instanceof HTMLElement || dom instanceof Node){
+					isClone = 0;
+				}
+				dom = $.toArray(dom);
+			}
 			var n = !reOrder ? dom.length : 0;
 			var i = reOrder ? dom.length -1 : 0;
 			while (reOrder ? i >=0 : i < n){
-				var node = dom[i];
-				//callback.call(ele, ele, node.cloneNode(true), node);
-				if(node) {
-					callback.call(ele, ele, node);
-				}
+				var eles = dom[i];
+				eles = !isClone ? eles : $(eles).clone(true, true)[0];
+				callback.call(ele, ele, eles);
 				reOrder ? i -- : i++;
 			}
 		});
@@ -181,8 +195,6 @@ function debugTime(key){
 
 	K_S_A.prototype =  $.prototype = $.__proto__ = K = {};
 
-
-
 	K.ready = function(callback) {
 		if (/complete|loaded|interactive/.test(document.readyState)) {
 			callback($);
@@ -193,6 +205,29 @@ function debugTime(key){
 		}
 		return this;
 	}
+
+	K.clone = function(){
+		var newObj = $();
+		this.each(function(index, ele){
+			var eleID = $.objectID(ele);
+			var events = bindEventData[eleID];
+			var newEle = ele.cloneNode(arguments[0]);
+			$.objectID(newEle,true);
+			//复制事件
+			if(arguments[1] && events){
+				var $newEle = $(newEle);
+				$.loop(events, function(evn, evnName){
+					$.loop(evn, function(ev){
+						$newEle.on(evnName, ev.selector, ev.callback);
+					})
+				});
+			}
+			newObj.push(newEle);
+		});
+		return newObj;
+	}
+
+
 // ====================== 创建虚拟DOM ====================== //
 	K.dom = function(code){
 		var dom = createDom(code);
@@ -676,7 +711,7 @@ function debugTime(key){
 			var val = el.val();
 			var type = el.attr('type');
 			if(name){
-				if(type =='file'){
+				if(type ==='file'){
 					formData[name] = el[0].files.length ? el[0].files[0] : '';
 				}else if($.isArray(type,['radio','checkbox'])){
 					if(el.attr('checked')){
@@ -755,15 +790,13 @@ function debugTime(key){
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
-	K.append = function (html, callback) {
+	K.append = function (html) {
 
 		return tempDom.call(this, html, function(ele, node){
 			if(!node){
 				return;
 			}
-
-			var el = ele.appendChild(node);
-			callback && callback.call(ele, el);
+			ele.appendChild(node);
 		});
 	}
 
@@ -772,7 +805,7 @@ function debugTime(key){
 	 * @param {html|Node} html
 	 * @returns {this}
 	 */
-	K.prepend = function (html, callback) {
+	K.prepend = function (html) {
 		return tempDom.call(this, html, function(ele, node){
 			ele.insertBefore(node, ele.firstChild);
 		}, true);
@@ -1167,7 +1200,11 @@ function debugTime(key){
 	 * @returns {*[]}
 	 */
 	K.slice = function(){
-		return [].slice.apply(this, arguments);
+		var arr = $();
+		$.loop([].slice.apply(this, arguments), function(e){
+			arr.push(e);
+		});
+		return arr;
 	}
 
 	/**
@@ -1440,10 +1477,7 @@ function debugTime(key){
 
 
 // ====================== 事件处理 ====================== //
-	var bindEventData = {}, __kid__ = 1;
-	function KID(el){
-		return el._ksaID || (el._ksaID = __kid__++);
-	}
+
 	/**
 	 * 绑定事件
 	 * @param event 事件名称, 每个事件以空格分开，每个事件支持命名空间click.xx
@@ -1459,7 +1493,7 @@ function debugTime(key){
 		callback = callback ? callback : function(){return false};
 		event = event.split(/\s/);
 		this.each(function (_, ele) {
-			var kid = KID(ele);
+			var kid = $.objectID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
 			$.loop(event, function (evn) {
 				if (evn == 'ready'){
@@ -1511,7 +1545,7 @@ function debugTime(key){
 		var self = this, isCall = callback ? 1 : 0;
 		callback = callback ? callback : function(){return false};
 		return self.each(function (_, ele) {
-			var kid = KID(ele);
+			var kid = $.objectID(ele);
 			$.loop(event.split(/\s/), function (evn) {
 				var evnDt = bindEventData[kid] && bindEventData[kid][evn] ? bindEventData[kid][evn] : null;
 
@@ -1827,7 +1861,7 @@ function debugTime(key){
 // ====================== AJAX ====================== //
 	var jsonpID = 1;
 	/**
-	 * ajax方法与jQuery基本一致
+		 * ajax方法与jQuery基本一致
 	 * 注：data值不再做任何二次处理，直接放入FormData提交，所以POST时支持文件与参数同时传递，无需其他设置
 	 * @param option
 	 */
@@ -2166,22 +2200,36 @@ function debugTime(key){
 	 * @returns {number}
 	 */
 	var _KSAobjectIDIndex = 1;
-	K.objectID = function (obj) {
+	K.objectID = function (obj, isdel) {
+		var k = '__$_objectID_$__';
 		if($.isObject(obj) || obj instanceof HTMLElement){
-			if(!obj.__$_objectID_$__) {
-				obj.__$_objectID_$__ = _KSAobjectIDIndex++;
+			if(isdel){
+				$.isset(obj[k]) && delete obj[k];
+			}else{
+				if(!obj[k]) {
+					obj[k] = _KSAobjectIDIndex++;
+				}
+				return obj[k];
 			}
-			return obj.__$_objectID_$__;
 		}else if($.isFunction(obj)){
-			if(!obj.prototype.__$_objectID_$__) {
-				obj.prototype.__$_objectID_$__ = _KSAobjectIDIndex++;
+			if(isdel){
+				$.isset(obj.prototype[k]) && delete obj.prototype[k];
+			}else{
+				if(!obj.prototype[k]) {
+					obj.prototype[k] = _KSAobjectIDIndex++;
+				}
+				return obj.prototype[k];
 			}
-			return obj.prototype.__$_objectID_$__;
+
 		}else if($.isArray(obj)){
-			if(!obj.__proto__.__$_objectID_$__) {
-				obj.__proto__.__$_objectID_$__ = _KSAobjectIDIndex++;
+			if(isdel){
+				$.isset(obj.__proto__[k]) && delete obj.__proto__[k];
+			}else{
+				if(!obj.__proto__[k]) {
+					obj.__proto__[k] = _KSAobjectIDIndex++;
+				}
+				return obj.__proto__[k];
 			}
-			return obj.__proto__.__$_objectID_$__;
 		}
 	}
 // ====================== TPL模板语法 ====================== //
@@ -3139,6 +3187,31 @@ function debugTime(key){
 			}
 		});
 		return arr;
+	}
+
+	/**
+	 * 将任何数据转为数组
+	 * @param dt
+	 */
+	K.toArray = function(dt){
+		var tp = typeof(dt);
+		if($.isArray(dt)){
+			return dt;
+		}else if(tp ==='object'){
+			if(dt instanceof HTMLElement || dt instanceof Node){
+				return [dt];
+			}else if(dt instanceof  NodeList){
+				return [].slice.call(dt);
+			}else if(dt instanceof  $){
+				var newdt = [];
+				dt.each(function(_, e){
+					newdt.push(e);
+				});
+				return newdt;
+			}
+		}else{
+			return [dt];
+		}
 	}
 
 	/**

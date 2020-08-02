@@ -578,7 +578,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 	}
 	var R = __run();
 	if(option.ajaxUrl){
-		$this.ajax(option.ajaxUrl,option.ajaxPost,function(d){
+		$this.AJR(option.ajaxUrl,option.ajaxPost,function(d){
 			R.Q.children('.ks-layer-content').html(d);
 		});
 	}
@@ -790,7 +790,7 @@ $.plugin.week = function(y,m,d){
  * @param {type} isBflow 是否为数据流（上传文件）
  * @returns {Boolean}
  */
-$.plugin.ajax = function(url,postdata, fun, errfun, datatype,isBflow){
+$.plugin.AJR = function(url, postdata, fun, errfun, datatype,isBflow){
 	var $this = this;
 	datatype = datatype ? datatype : 'json';
 	url += (url.indexOf('?') == -1 ? '?' : '&') +'ajax=1';
@@ -849,7 +849,7 @@ $.plugin.ajax = function(url,postdata, fun, errfun, datatype,isBflow){
  */
 $.plugin.ajaxWin = function(tit, url){
 	var $this = this;
-	return $this.ajax(url,'', function(data){
+	return $this.AJR(url,'', function(data){
 		$this.layer({
 			title : tit,
 			content : data,
@@ -864,7 +864,7 @@ $.plugin.ajaxWin = function(tit, url){
  * @param {type} callFun 回调函数
  * @returns {Boolean}
  */
-$.plugin.ajaxSubmit = function(obj,callFun){
+$.plugin.AJRS = function(obj,callFun){
 	var $this = this;
 	obj = $(obj);
 	var btn = obj.find('button[type=submit]');
@@ -900,7 +900,7 @@ $.plugin.ajaxSubmit = function(obj,callFun){
 	var url = obj.attr('action');
 	url += url.indexOf('?') !== -1 ? '&' : '?';
 	url += 'formsubmit=true';
-	$this.ajax(url, formData, function(dt){
+	$this.AJR(url, formData, function(dt){
 		if(typeof callFun == 'function'){
 			callFun(dt);
 		}
@@ -938,7 +938,7 @@ $.plugin.upload = function(name, files, url, callFun){
 			formData.append(name, val);
 		}
 	});
-	this.ajax(url,formData, function(data){
+	this.AJR(url,formData, function(data){
 		callFun(data);
 	}, null, 'json', 1);
 }
@@ -1625,7 +1625,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 	//从API获取数据
 	function g(upID, currID){
 		upID = upID ? upID : '';
-		$this.ajax(_APIurl,{id:upID, level:level},function(data){
+		$this.AJR(_APIurl,{id:upID, level:level},function(data){
 			var H = '';
 			$.loop(data,function (val) {
 				H += $this.tag('li',{
