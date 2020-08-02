@@ -99,6 +99,43 @@ function debugTime(key){
 		return this;
 	}
 
+	/**
+	 * 检查指定元素是否被选择器选择
+	 * @param ele 需要检查的元素
+	 * @param selector 选择器
+	 * @returns {boolean|number|*}
+	 */
+	function isSelectDom(ele, selector) {
+		if (!selector || !ele || ele.nodeType !== 1){
+			return false
+		}
+		var matchesSelector = ele.matches || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.oMatchesSelector || ele.matchesSelector;
+		try {
+			return matchesSelector.call(ele, selectorStr(selector));
+		}catch (e) {
+			console.error(new Error('isSelectDom执行错误，浏览器不支持matches'));
+		}
+	}
+
+	/**
+	 * 递归遍历DOM节点
+	 * @param element 需遍历的dom
+	 * @param key 需遍历的节点
+	 * @param selector 选择器
+	 * @returns {[]}
+	 */
+	function dir(element, key, selector) {
+		var rdom = [];
+		$.loop(element,function(el){
+			while ((el = el[key])) {
+				if(!selector || isSelectDom(el, selector)){
+					rdom.push(el);
+				}
+			}
+		});
+		return rdom;
+	}
+
 	function selectorStr(selector){
 		if(selector){
 			selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
@@ -1225,43 +1262,6 @@ function debugTime(key){
 	}
 
 	/**
-	 * 检查指定元素是否被选择器选择
-	 * @param ele 需要检查的元素
-	 * @param selector 选择器
-	 * @returns {boolean|number|*}
-	 */
-	function isSelectDom(ele, selector) {
-		if (!selector || !ele || ele.nodeType !== 1){
-			return false
-		}
-		var matchesSelector = ele.matches || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.oMatchesSelector || ele.matchesSelector;
-		try {
-			return matchesSelector.call(ele, selectorStr(selector));
-		}catch (e) {
-			console.error(new Error('isSelectDom执行错误，浏览器不支持matches'));
-		}
-	}
-
-	/**
-	 * 递归遍历DOM节点
-	 * @param element 需遍历的dom
-	 * @param key 需遍历的节点
-	 * @param selector 选择器
-	 * @returns {[]}
-	 */
-	function dir(element, key, selector) {
-		var rdom = [];
-		$.loop(element,function(el){
-			while ((el = el[key])) {
-				if(!selector || isSelectDom(el, selector)){
-					rdom.push(el);
-				}
-			}
-		});
-		return rdom;
-	}
-
-	/**
 	 * 子孙遍历
 	 * @param selector
 	 * @returns
@@ -1288,7 +1288,7 @@ function debugTime(key){
 	 */
 	K.children = function(selector){
 		selector = selector || '*';
-		var self = this, rdom = $(), ri =0;
+		var rdom = $(), ri =0;
 		this.map(function(ele){
 			$.loop(ele.childNodes, function(el){
 				if (isSelectDom(el, selector)) {
@@ -1305,7 +1305,7 @@ function debugTime(key){
 	 * 遍历所有子级（包括文本节点）
 	 */
 	K.childAll = function(){
-		var self = this, rdom = $(), ri =0;
+		var rdom = $(), ri =0;
 		this.map(function(ele){
 			$.loop(ele.childNodes, function(el){
 				rdom[ri] = el;
@@ -1902,14 +1902,14 @@ function debugTime(key){
 			A.send(_data);
 
 			A.onreadystatechange = function(){
-				if(A.readyState == 4) {
+				if(A.readyState === 4) {
 					var result = A.responseText;
-					if (A.status == 200) {
-						if (dataType == 'script') {
+					if (A.status === 200) {
+						if (dataType === 'script') {
 							(1, eval)(result);
-						} else if (dataType == 'xml') {
+						} else if (dataType === 'xml') {
 							result = A.responseXML;
-						} else if (dataType == 'json') {
+						} else if (dataType === 'json') {
 							result = /^\s*$/.test(result) ? null : JSON.parse(result);
 						}
 						$.isFunction(option.success) && option.success.call(this, result);
@@ -1950,13 +1950,6 @@ function debugTime(key){
 		var kmapI = kname+'{'+isOne+'}';
 		if(!this.keyNameMap[kmapI]) {
 			var keys = '', p = kname;
-			/*
-			kname.replace(/^([\w\d\$]+)((\[\d+\])+|((\.([\w\d\$]+))+))$/i, function () {
-				debug(arguments);
-				keys = arguments[4] || arguments[3];
-				p = arguments[1];
-			});
-			 */
 			var dn = !isOne ? kname.lastIndexOf('.') : kname.indexOf('.'), qn =0;
 			if(dn === -1){
 				qn = !isOne ? kname.lastIndexOf('[') : kname.indexOf('[');
@@ -1975,22 +1968,7 @@ function debugTime(key){
 	 * 变量监听函数
 	 */
 	K.def = {
-		updIndex : 0,
-		updMap : {},
-		DelEvent : {},
-		AddEvent : {},
 		Event : {}, //监听链
-		/**
-		 * 全局更新函数
-		 * @param inobj this指向
-		 * @param func
-		 */
-		upd : function(inobj, func){
-			var i = this.updIndex ++;
-			this.updMap[i] = function(){
-				return func.apply(inobj, arguments);
-			}
-		},
 		/**
 		 * 创建监听事件
 		 * @param ac 需要监听的动作 set=值改变 get=值读取 add=值添加 delete=值删除
@@ -2034,7 +2012,7 @@ function debugTime(key){
 
 		},
 		/**
-		 * 创建监听队列
+		 * 刷新或创建监听队列
 		 * @param obj
 		 * @param keyName
 		 */
@@ -2053,7 +2031,6 @@ function debugTime(key){
 			}
 
 			try {
-
 				var setTer = Object.getOwnPropertyDescriptor(obj, keyName);
 				setTer = setTer ? setTer.set : null;
 				var defSet = function(v){
@@ -2131,34 +2108,6 @@ function debugTime(key){
 
 		}
 	}
-	/*
-        K.objectDel = function(obj, key){
-            if(typeof(obj[key]) !=="undefined"){
-                var objID = $.objectID(obj);
-                if(this.def.DelEvent[objID] && this.def.DelEvent[objID].func[key]){
-                    $.loop(this.def.DelEvent[objID].func[key], function(f){
-                        f.call('', key);
-                    });
-                    delete this.def.DelEvent[objID].func[key];
-                }
-            }
-            delete obj[key];
-        };
-
-        K.objectAdd = function(obj, key, data){
-            obj[key] = data;
-
-            if(typeof(obj[key]) !=="undefined"){
-                var objID = $.objectID(obj);
-                if(this.def.AddEvent[objID]){
-
-                    $.loop(this.def.AddEvent[objID].func, function(f){
-                        f.call('', key, data);
-                    });
-                }
-            }
-        };
-    */
 	/**
 	 * 获取调用此函数的参数名与参数值
 	 * @param Args
@@ -2262,8 +2211,6 @@ function debugTime(key){
 				delete this.Dom;
 				this.parseVDOMcode(this.ECODE);
 				delete this.ECODE;
-				//监听列表统一更新
-				this.monitor();
 			},
 			formatHTML : function () {
 				var ths = this;
@@ -2302,30 +2249,6 @@ function debugTime(key){
 				});
 				$.loop($.dom(code), function(e){
 					ths.Dom.appendChild(e);
-				});
-				return this;
-			},
-			//模板语法格式化为符合内部要求的语法
-			replace : function(){
-				var code = this.E.innerHTML;
-				code = code.replace(/\{loop ([^\\]+?)\}/ig, '<ksatpl ksaaction="loop" ksafactor="$1">');
-				code = code.replace(/\{if ([^\\]+?)\}/ig, '<ifscope><ksatpl ksaaction="if" ksafactor="$1">');
-				code = code.replace(/\{elseif ([^\\]+?)\}/ig, '</ksatpl><ksatpl ksaaction="elseif" ksafactor="$1">');
-				code = code.replace(/\{else\}/ig, '</ksatpl><ksatpl ksaaction="else">');
-
-				code = code.replace(/\{\/if\}/ig, '</ksatpl></ifscope>');
-				code = code.replace(/\{\/loop\}/ig, '</ksatpl>');
-
-				code = code.replace(/\{eval\}/ig, '<ksatpl ksaaction="eval">');
-				code = code.replace(/\{\/eval\}/ig, '</ksatpl>');
-				code = code.replace(/\{eval ([\s\S]*?)\}/ig, '<ksatpl ksaaction="eval">$1</ksatpl>');
-				this.code = code;
-				var dom = $(this.Dom);
-				dom.html($.dom(code));
-				dom.find('[ksaaction="eval"]').each(function(i, ele){
-					ele.factor = ele.innerHTML;
-					ele = $(ele);
-					ele.html(ele.nextAll('',true));
 				});
 				return this;
 			},
@@ -2570,232 +2493,6 @@ function debugTime(key){
 				}
 				return Enode;
 			},
-			createVDOM : function(eleList, isScore){
-				var ths = this;
-				var Enode = [];
-				$.loop(eleList, function(ele){
-					if(ele._KSAVDOMSTATUS){
-						return;
-					}
-					ele._KSAVDOMSTATUS = true;
-					var tag = ele.tagName ? ele.tagName : ''; //标签名小写 文本节点为空
-					var nodeType = ele.nodeType;
-					var attrs = null;
-					var isEvalTag = tag ==='KSATPL' && ele.getAttribute('ksaaction') ==='eval';
-					var rcode = '', monitor = '';
-
-					//遍历属性名
-					if (ele.attributes && ele.attributes.length) {
-						attrs = [];
-						var attrsIsP = [];
-						$.loop(ele.attributes, function (v) {
-							var value = v.value, key = v.name;
-							if(!$.inArray(key, ['ksafactor','ksaaction'])) {
-								var ep = ths.parseText(value);
-								value = ep[0];
-								if($.isObject(ep[1])){
-									$.loop(ep[1], function(kv, kn){
-										attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
-									});
-								}
-								if(key ==='v-update' || key ==='v-updatetext'){
-									var upbj = $.keyName(v.value);
-									if(upbj[0]){
-										if(!upbj[1]){
-											upbj[1] = upbj[0];
-											upbj[0] = '_$data_';
-										}
-										attrs.push('"v-update":[(typeof('+upbj[0]+'.'+(upbj[1])+') !=="undefined" ? '+upbj[0]+' : ""), "'+upbj[1]+'", '+(key ==='v-updatetext')+']');
-									}
-
-								}else{
-									attrs.push('"'+key+'":'+(value || '""')+'');
-								}
-							}
-						});
-
-						if(attrs.length>0){
-							attrs = '{'+attrs.join(',')+'}';
-							//如果attr有待监控变量时 以数组方式传递
-							if(attrsIsP.length){
-								attrs = '[function(){return '+attrs+'}, ['+attrsIsP.join(',')+']]';
-							}
-						}else{
-							attrs = '';
-						}
-
-					}
-
-
-					if(isEvalTag){
-						rcode += '_$T._F(function(){'+ele.factor+" \n\nreturn ";
-					}
-
-					if($.inArray(nodeType, [3,8])){
-						if(nodeType === 8){
-							var loopExp = ths.getloop(ele);
-							if(loopExp){
-								rcode += '_$T._LOOP('+loopExp[1]+', function('+loopExp[2]+', '+loopExp[3]+'){ return ';
-								var loopScop = [], loopScopEnd = 0;
-								$(ele).nextAll('',true).each(function(i, e){
-									if(!loopScopEnd){
-										if(e.nodeType ===8 && e.nodeValue.indexOf('/'+loopExp[0]) === 0){
-											loopScopEnd = 1;
-										}else{
-											loopScop.push(e);
-										}
-									}
-								});
-								rcode += ths.createVDOM(loopScop,1);
-								rcode += '})';
-							}
-						}else {
-							var exp = ths.parseText(ele.nodeValue, ele);
-							if (exp) {
-								rcode += exp[0];
-								if (exp[1]) {
-									//添加监听
-									$.loop(exp[1], function (skv, vname) {
-										if ($.isObject(skv)) {
-											monitor += "_$T._M(arguments[0], " + vname + ", '" + Object.keys(skv).join(',') + "');\n";
-										} else if (typeof (ths.data[vname]) !== "undefined") {
-											monitor += "_$T._M(arguments[0], _$data_, '" + vname + "');\n";
-										} else if (typeof (window[vname]) !== "undefined") {
-											monitor += "_$T._M(arguments[0], window, '" + vname + "');\n";
-										}
-									});
-								}
-							}
-						}
-					}else{
-
-						if(tag ==='IFSCOPE'){
-							rcode += '_$T._if(';
-						}
-						var ifExp = ths.getif(ele);
-						if(ifExp){
-							var exp = ths.parseText('${'+ifExp[1]+'}');
-							var factor = [];
-							$.loop(exp[1], function(v, k){
-								if($.isObject(v)){
-									factor.push('['+k+', ["'+Object.keys(v).join('","')+'"]]');
-								}
-							});
-							if(factor.length){
-								factor = '['+factor.join(',')+']';
-							}else{
-								factor = '""';
-							}
-							if(ifExp[0] ==='if'){
-								//rcode += 'if('+ifExp[1]+'){ return ';
-								rcode += '[function(){return '+ifExp[1]+'}, '+factor+', function(){return ';
-							}else if(ifExp[0] ==='elseif'){
-								//rcode += 'else if('+ifExp[1]+'){ return ';
-								rcode += ',[function(){return '+ifExp[1]+'}, '+factor+', function(){return ';
-							}else if(ifExp[0] ==='else'){
-								//rcode += 'else{ return ';
-								rcode += ',["else","", function(){return';
-							}
-						}
-						//遍历子节点
-						if(ele.childNodes && ele.childNodes.length){
-							rcode += ths.createVDOM(ele.childNodes, tag ==='IFSCOPE');
-						}
-
-						if(ifExp){
-							rcode += '}]';
-							//rcode += '}';
-						}
-
-						if(tag ==='IFSCOPE'){
-							rcode += ')';
-						}
-
-						if(loopExp){
-							rcode += '})'
-						}
-
-					}
-					if(tag ==='IFSCOPE' || ifExp || isEvalTag){
-					}else{
-						monitor = monitor ? (', function(){'+monitor)+'}' : '';
-						rcode = '_$T._F(function(){return _$T._C((arguments[0]||"'+tag+'"), '+nodeType+', '+(attrs || '""')+', '+(rcode || '""')+')}'+monitor+')';
-					}
-
-					if(isEvalTag){
-						rcode += '})';
-					}
-					Enode.push(rcode);
-				});
-				var length = Enode.length;
-				if(length === 1){
-					Enode = Enode[0];
-				}else if(isScore){
-					Enode = Enode.join('');
-				}else if(!isScore && length >1){
-					Enode = '['+Enode.join(', ')+']';
-				}else{
-					Enode = '';
-				}
-				return Enode;
-			},
-			//收集监听列表索引 一组一个对象， 每组下{obj:监听对象, keys:{监听键名:[setFunction1, setFunction2, setFunction3, ...]}}
-			monitorGather : function(setObj, setKey, setFunc){
-
-				$this.def.createEvent('set', setObj, setKey, setFunc);
-
-				return;
-				if(!this.cache.monitorMap){
-					this.cache.monitorMap = [];
-				}
-				var SetEvent = this.cache.monitorMap;
-				if($.isArray(setFunc) && !setFunc.length){
-					return;
-				}
-				if(setObj && $.isObject(setObj) && setFunc) {
-					setKey = $.explode(',', setKey,'');
-					var addKey = null;
-					$.loop(SetEvent, function (obj, k) {
-						if (obj.object === setObj) {
-							addKey = k;
-						}
-					});
-					//如果监听对象不在列表则添加一个
-					if(addKey === null){
-						addKey = SetEvent.push({object: setObj, keys: {}});
-						addKey --;
-					}
-					var setEvn = SetEvent[addKey];
-					$.loop(setKey, function (vk) {
-						setEvn.keys[vk] = setEvn.keys[vk] ? setEvn.keys[vk] : [];
-						if($.isArray(setFunc)){
-							$.loop(setFunc, function(f){
-								if(!$.inArray(f, setEvn.keys[vk])){
-									setEvn.keys[vk].push({function : f, isPush:false});
-								}
-							});
-						}else if($.isFunction(setFunc) && !$.inArray(setFunc, setEvn.keys[vk])){
-							setEvn.keys[vk].push({function : setFunc, isPush:false});
-						}
-					});
-				}
-			},
-			monitor : function(){
-				var ths = this;
-				if(!this.cache.monitorMap){
-					this.cache.monitorMap = [];
-				}
-				$.loop(this.cache.monitorMap, function(sdt){
-					$.loop(sdt.keys, function(funs, key){
-						$.loop(funs, function(f){
-							if(!f.isPush) {
-								ths.def.createEvent('set', sdt.object, key, f.function);
-								f.isPush = true;
-							}
-						});
-					});
-				});
-			},
 			/**
 			 * 解析创建函数 IF区域中的数据
 			 * @returns {[number, *, {}]}
@@ -2965,7 +2662,7 @@ function debugTime(key){
 								insetattr = attrs[0]();
 								if(attrs[1]) {
 									$.loop(attrs[1], function (v) {
-										ths.monitorGather(v[0], v[1], function () {
+										$this.def.createEvent('set', v[0], v[1], function () {
 											var e = $(ele);
 											var newats = attrs[0]();
 											var oldats = $(ele).attr();
@@ -3027,7 +2724,7 @@ function debugTime(key){
 					if(!func){
 						return;
 					}
-					ths.monitorGather(obj, objKey, function(){
+					$this.def.createEvent('set', obj, objKey, function(){
 						func(ele)
 					});
 				}
@@ -3057,7 +2754,7 @@ function debugTime(key){
 				//收集监控变量
 				Es.prototype._G = function (obj, objKey, func){
 					if(func) {
-						ths.monitorGather(obj, objKey, function (v) {
+						$this.def.createEvent('set', obj, objKey, function (v) {
 							func(v);
 						});
 					}
@@ -3184,7 +2881,7 @@ function debugTime(key){
 
 						$.loop(ifdt[2], function (mv) {
 
-							ths.monitorGather(mv[0], mv[1], function(){
+							$this.def.createEvent('set', mv[0], mv[1], function(){
 								var cache = ths.cache.ifscope[cachekey];
 								if(cache){
 									var newdom = ths.parseIF.apply(ths, Args);
@@ -3305,9 +3002,6 @@ function debugTime(key){
 	}
 
 // ====================== 判断与重写函数类 ====================== //
-	K.instanceof = function(a, b){
-		return a instanceof b;
-	}
 
 	K.isWindow = function isWindow(obj) {
 		return obj != null && obj === obj.window;
