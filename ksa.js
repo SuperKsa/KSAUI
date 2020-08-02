@@ -1251,10 +1251,9 @@ function debugTime(key){
 			}
 
 		}else if($.isNumber(dt)){
-			for (i = 0; i <= dt; i++) {
-				var val = i +1;
-				if ((actions && (actions === 'first' || (actions === 'last' && i === dt - 1))) || fun(i, val, i) === true) {
-					return val;
+			for (i = 1; i <= dt; i++) {
+				if ((actions && (actions === 'first' || (actions === 'last' && i === dt - 1))) || fun(i, i-1, i-1) === true) {
+					return i;
 				}
 			}
 		}else{
@@ -1275,18 +1274,11 @@ function debugTime(key){
 	 * @param callback
 	 * @returns {*}
 	 */
-	K.each = function(obj, callback) {
-		var objIsFunc = $.isFunction(obj);
-		var isThis;
-		if(objIsFunc && !callback){
-			callback = obj;
-			obj = this;
-			isThis = 1;
-		}
-		$.loop(obj, function(value, key, index){
-			return callback.call(value, key, value, index);
+	K.each = function(callback) {
+		$.loop(this, function(ele, index){
+			callback && callback.call(ele, index, ele);
 		});
-		return obj;
+		return this;
 	}
 
 	/**
@@ -1566,7 +1558,6 @@ function debugTime(key){
 
 	/**
 	 * 往前所有元素
-	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1601,7 +1592,6 @@ function debugTime(key){
 
 	/**
 	 * 之后所有元素
-	 * 与jquery用法相同
 	 * @param selector
 	 * @returns {*}
 	 */
@@ -1956,7 +1946,7 @@ function debugTime(key){
 			hash : url ? u[8] : location.hash
 		}
 		if(P.search) {
-			$.each(P.search.substr(1).split("&"),function(k,val){
+			$.loop(P.search.substr(1).split("&"),function(val){
 				val = val.split('=');
 				P.get[val['0']] = val['1'];
 			});
@@ -1966,7 +1956,7 @@ function debugTime(key){
 			//去掉前后/
 			pn = pn.replace(/^\/+/,'');
 			pn = pn.replace(/\/+$/,'');
-			$.each(pn.split("/"),function(k,val){
+			$.loop(pn.split("/"),function(val, k){
 				P.paths[k] = val;
 			});
 		}
@@ -1991,7 +1981,7 @@ function debugTime(key){
 	K.urlsParam = function(url){
 		if($.isObject(url) || $.isArray(url)){
 			var u = [];
-			$.each(url, function(key, value){
+			$.loop(url, function(value, key){
 				u.push(encodeURIComponent(key) + "=" + encodeURIComponent(value == null ? "" : value));
 			});
 			url = $.implode('&',u);
@@ -2070,7 +2060,7 @@ function debugTime(key){
 
 			A.open(getType, option.url,true);
 
-			$.each(headers, function(k, val){
+			$.loop(headers, function(val, k){
 				A.setRequestHeader(k,val);
 			});
 
@@ -3235,7 +3225,6 @@ function debugTime(key){
 
 	K.isLoop = function(obj) {
 		var length = !!obj && "length" in obj && obj.length, type = typeof(obj);
-		debug($.isNumber(obj));
 		return type === "array" || length === 0 || (typeof length === "number" && length > 0 && (length - 1) in obj);
 	};
 
