@@ -711,7 +711,7 @@ function debugTime(key){
 	};
 
 	/**
-	 * 遍历文本节点
+	 * 遍历所有直接子节点（包含文本节点）
 	 * 与jQuery用法相同
 	 * @returns {string|K}
 	 */
@@ -986,20 +986,19 @@ function debugTime(key){
 	 * @returns {{top: number, left: number}}
 	 */
 	K.offset = function(){
-		var elem = this[0];
-		if (!elem) {
+		var ele = this[0];
+		if (!ele) {
 			return;
 		}
-		if (!elem.getClientRects().length) {
+		if (!ele.getClientRects().length) {
 			return {
 				top: 0,
 				left: 0
 			};
 		}
 
-		var rect = elem.getBoundingClientRect();
-
-		var win = elem.ownerDocument.defaultView;
+		var rect = ele.getBoundingClientRect();
+		var win = ele.ownerDocument.defaultView;
 		return {
 			top: rect.top + win.pageYOffset,
 			left: rect.left + win.pageXOffset
@@ -1288,26 +1287,24 @@ function debugTime(key){
 	 * @returns {[]}
 	 */
 	K.map = function(elements, callback){
+		var isThis = false;
 		if(!callback && $.isFunction(elements)){
 			callback = elements;
 			elements = this;
+			isThis = true;
 		}
-		var i=0, isObj = $.isObject(elements);
-
+		var newArr = [], i =0;
 		$.loop(elements, function(val, k){
-			var r = callback(val, k);
-			if(r === null){
-				if(isObj){
-					delete elements[k];
-				}else{
-					elements.splice(k,1);
-				}
-			}else{
-				i ++;
+			var r = callback.call(isThis ? val : window, val, k, i);
+			if(r !== null && $.isset(r)){
+				newArr.push(r);
 			}
+			i ++;
 		});
-		elements.length = i;
-		return elements;
+		if(isThis){
+			newArr = $(newArr);
+		}
+		return newArr;
 	}
 
 	/**
