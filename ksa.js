@@ -415,7 +415,7 @@ function debugTime(key){
 						if(!$.isNull(attrV)){
 							attrs[k] = attrV;
 						//标签属性值不存在时 从元素dom属性取值
-						}else if ($.isNull(attrV) && $.isset(ele[k])) {
+						}else if (k !== 'style' && $.isNull(attrV) && $.isset(ele[k])) {
 							attrs[k] = ele[k];
 						}
 					}
@@ -555,6 +555,9 @@ function debugTime(key){
 			if(!ele){
 				return;
 			}
+			if(!ele._KSAOS_COM_ELE_DATA){
+				ele._KSAOS_COM_ELE_DATA = {};
+			}
 			if(key){
 				var getdt = {};
 
@@ -643,12 +646,13 @@ function debugTime(key){
 						}
 						value = value.call(ele, index, oldvalue);
 					}
-					switch (tg) {
+					switch (ele.tagName) {
 						case 'INPUT':
 							ele.value = value;
 							break;
 						case 'SELECT':
 							value = $.isArray(value) ? value : [value];
+
 							if (ele.options) {
 								$.loop(ele.options, function (e) {
 									var r = $.inArray(e.value, value);
@@ -939,6 +943,10 @@ function debugTime(key){
 	K.height = function(val, isMargin){
 		if(!$.isset(val) || val === true){
 			var dom = this[0];
+			if(!dom){
+				console.error(new Error());
+				return;
+			}
 			if(dom === window || dom === document){
 				return document.documentElement.clientHeight || document.body.clientHeight;
 			}else{
@@ -1646,7 +1654,8 @@ function debugTime(key){
 						//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
 						if(!selector || (selector && $.inArray(e.target, ele.querySelectorAll(selectorStr(selector))))){
 							//回调函数并获取返回值，若返回值为false则阻止冒泡
-							if(callback.apply(e.target, arguments) === false){
+							//this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
+							if(callback.apply((selector ? e.target : ele), arguments) === false){
 								e.preventDefault();
 								e.stopPropagation();
 							}
@@ -3439,6 +3448,10 @@ function debugTime(key){
 			value = parseFloat(value) || 0;
 		}
 		return value;
+	}
+
+	K.strlen = function(value){
+		return value.toString().length;
 	}
 
 	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {

@@ -203,7 +203,7 @@ $.plugin.layerHide = function(Id, Fun){
 	if(Id){
 		var pos = o.attr('pos');
 		o.addClass('_ksaui_layer_close_');
-		var h = o.find('.ks-layer-c').height(true);
+		var h = o.find('.ks-layer-content').height(true);
 		var css = {transition:'all 0.2s',opacity:0};
 		if($.inArray(pos,[1,2,3,5])){
 			css.margin = (0-h/3)+'px 0 0 0';
@@ -434,10 +434,10 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 		//内容区最大高度处理
 		var cententMaxH = $.H;
 		if (D.find('.ks-layer-title').length) {
-			cententMaxH -= D.find('.ks-layer-title').height(true);
+			cententMaxH -= D.find('.ks-layer-title').height(true, true);
 		}
 		if (D.find('.ks-layer-bottom').length) {
-			cententMaxH -= D.find('.ks-layer-bottom').height(true);
+			cententMaxH -= D.find('.ks-layer-bottom').height(true, true);
 		}
 		if (option.height) {
 			var oph = option.height;
@@ -471,7 +471,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 		function P() {
 
 			var pos = option.pos;
-			var w = D.width(), h = D.height();
+			var w = D.width(true), h = D.height(true);
 			if ($.inArray(pos, ['00',1, 2, 3, 4, 5, 6, 7, 8, 9])) {
 				if ($.inArray(pos, [1, 2, 3, 5, 8])) {
 					css.margin = (0 - h / 3) + 'px 0 0 0';
@@ -518,18 +518,18 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 				//如果定位不是既定位置 则认为是一个选择器 自适应定位
 			} else {
 				var to = $(pos);
-				var toh = to.height();
+				var toh = to.height(true);
 				css.left = to.offset().left;
 				css.top = to.offset().top + toh;
-				if (elSize.W > 0 && css.left > elSize.W - D.width()) {
-					css.left = css.left - D.width() + to.width();
+				if (elSize.W > 0 && css.left > elSize.W - D.width(true)) {
+					css.left = css.left - D.width(true) + to.width(true);
 				}
 
 				//如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
 				var sh = $(document).scrollTop();//卷去高度
-				if (elSize.H >0 && elSize.H - (css.top - sh) < D.height()) {
+				if (elSize.H >0 && elSize.H - (css.top - sh) < D.height(true)) {
 					css.margin = '-100px 0 0';
-					css.top = css.top - D.height() - toh;
+					css.top = css.top - D.height(true) - toh;
 				}
 			}
 			D.css(css);
@@ -738,7 +738,7 @@ $.plugin.close = function(closeFun){
  * @returns {object} {Y: number, m: number, d: number, H: number, i: number, s: number}
  */
 $.plugin.times = function(str,F){
-	if($.isNumber(str) && $.inArray(strlen(str),[10,13])){
+	if($.isNumber(str) && $.inArray($.strlen(str),[10,13])){
 		if(str.length == 10){
 			str = str * 1000;
 		}
@@ -1764,272 +1764,10 @@ $.plugin.showTip = function(obj, txt, click){
 
 
 /**
- * KSAUI全局渲染函数
- */
-$.plugin.render1 = function(){
-	var $this = this;
-	//渲染函数
-	function _each(selector, func){
-		//.not('[ks-render="no"]')
-		$(selector).each(function(i,el) {
-			if(el._KSAUI_render){
-				return;
-			}
-			el._KSAUI_render = true;
-			func($(el));
-		});
-	}
-
-	_each('.ks-slide', function(e){
-		e.slide(e.data());
-	});
-
-	var R = {
-		form : function() {
-			//遍历需要渲染的表单元素进行渲染
-			_each('select[type="ks-select"], input[type*="ks-"], textarea[type="ks-textarea"]', function (t) {
-				var tn = t[0].tagName; //标签名称
-				if (tn == 'INPUT') {
-					var tps = t.attr('type').substr(3);
-					if(tps =='checkbox-all'){
-						tps = 'checkbox';
-						t.addClass('ks-check-all');
-					}
-					t.attr('type', tps);
-
-					var f = t.parent();
-					//添加包裹元素
-					if ($.inArray(tps, ['checkbox', 'radio', 'swith']) && !f.hasClass('ks-'+tps)) {
-
-						t.wrap($this.tag('label', { class: 'ks-' + tps, 'style': t.attr('style'), 'color': t.attr('color'), 'icon': t.attr('icon'), 'title': t.attr('title') }));
-						f = t.parent();
-					}else if($.inArray(tps, ['number', 'date']) && !f.hasClass('ks-input')){
-						t.wrap($this.tag('span', { class: 'ks-input', 'style': t.attr('style'), 'color': t.attr('color'), 'icon': t.attr('icon'), 'title': t.attr('title') }));
-						f = t.parent();
-					}
-
-					if($.inArray(tps, ['text', 'password']) && !f.hasClass('ks-input')){
-						t.addClass('ks-input');
-					}else{
-						//移除自身属性
-						t.removeAttr('style color icon title').removeClass('ks-input ks-checkbox ks-radio ks-swith ks-date');
-					}
-
-					//========== 开始填充渲染 让元素符合渲染标准 =========
-
-					//数字表单 插入加减按钮
-					if(tps == 'number'){
-						!t.prev('[data-digit="down"]').length && !t.next('[data-digit="up"]').length && t.before('<span data-digit="down" icon="sub"></span>').after('<span data-digit="up" icon="add"></span>');
-						$(t).inputNumber();
-					}
-
-					//日期表单类型恢复为text type="date" to type="text"
-					if(tps == 'date') {
-						t.attr('type', 'text');
-						//增加事件
-						t.focus(function () {
-							$this.showDate(t, t.attr('format'));
-						});
-					}
-
-					//单选radio、复选checkbox、开关swith
-					if ($.inArray(tps, ['checkbox', 'radio', 'swith'])) {
-						var et = t.attr('text') || ''; //表单展示的文字 支持以|隔开的两组
-						if (et) {
-							t.removeAttr('text');
-							et = et.split('|');
-							et = ((et[1] ? '<em>'+et[1]+'</em>' : '') + '<em>' + et[0] + '</em>');
-						}
-						t.after('<i>'+et+'</i>');
-
-						et = null;
-						//开关使用checkbox模拟效果
-						if (tps == 'swith') {
-							//添加一个相同name值的表单 值无论是否存在都须传递所以增加一个隐藏表单
-							f.append('<input type="hidden" name="' + (t.attr('name') || '') + '" value="' + (t.attr('checked') ? t.attr('value') : '0') + '">');
-							//类型恢复为checkbox 并去掉name属性
-							t.attr('type', 'checkbox').removeAttr('name');
-							var onchangeEvent = t[0].onchange;
-							if(onchangeEvent) {
-							}
-						}
-						if (tps == 'checkbox' || tps == 'swith') {
-							//事件绑定
-							t.change(function () {
-								//域下相同类型的元素
-								var inputSelector = 'input[type="checkbox"][name="' + t.attr('name') + '"]';
-								var Scope = t[0].form ? $(t[0].form) : t.parent().parent();
-								var mx = parseInt(Scope.attr('max')) || 0;
-								//最大选择数量限制
-								if (mx > 0) {
-									if (Scope.find(inputSelector + ':checked').length == mx && t.attr('checked')) {
-										Scope.find(inputSelector + ':not(:checked)').attr('disabled', true);
-									} else {
-										Scope.find(inputSelector + ':not(:checked)').attr('disabled', false);
-									}
-								}
-
-								var checked = t.attr('checked');
-
-								//开关处理
-								if(tps == 'swith'){
-									f.find('input[type=hidden]').val(checked ? 1 : 0);
-								//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-								}else{
-									f.hasClass('ks-checkbox') && t.hasClass('ks-check-all') && t.attr('name') && Scope.find(inputSelector).attr('checked', checked);
-								}
-							});
-						}
-					}
-				//select表单
-				}else if (tn == 'SELECT') {
-					//如果在标签属性data-value给定选中值 则处理到内部
-					t.data('value') && t.val(t.data('value'));
-
-					t.attr('type','');
-
-					var opt = t.find('option:selected'),
-						tit = (t.attr('text') || '请选择');
-					if (opt.length) {
-						if (t.attr('multiple')) {
-							tit = opt.text();
-						} else {
-							tit = opt.attr('text') || opt.text();
-						}
-					}
-					var bt = $('<span class="ks-select-tit" icon="arrow_drop_down">' + tit + '</span>');
-
-					t.wrap($this.tag('div', {
-						class: 'ks-select',
-						id: t.attr('id'),
-						_name: t.attr('name'),
-						style: t.attr('style'),
-						disabled: t.attr('disabled'),
-						multiple: t.attr('multiple'),
-						title: t.attr('title'),
-						color: t.attr('color')
-					})).removeAttr('class id style title color');
-
-					t.after(bt);
-
-					t.parent().click(function(){
-						$(this).showSelect(t);
-					});
-				}else if(tn == 'TEXTAREA'){
-					t.wrap('<div class="ks-textarea"></div>');
-					t.attr('type','');
-					var maxlength = parseInt(t.attr('maxlength'));
-					if(maxlength){
-						t.after('<div class="ks-textarea-maxtit">字数限制 <span>'+t.val().length+'</span>/'+maxlength+'</div>');
-						t.keyup(function(){
-							var n = t.val().length;
-							if(n > maxlength){
-								t.val(t.val().substr(0,maxlength));
-							}
-							t.next('.ks-textarea-maxtit').children('span').text(t.val().length);
-						});
-					}
-				}
-			});
-			return this;
-		},
-		area : function(){
-			var Fd = ['province', 'city', 'area', 'town'];
-			//地区选择按钮
-
-			_each('.ks-area', function(t) {
-				var datas = t.data();
-				if(!t.find('span').length){
-					var h = '';
-					var name = datas['name'];
-					$.loop(Fd, function(val, k ){
-						var v = datas[val];
-						var vname = val+'Name';
-						var tname = val;
-						if(name){
-							tname = name+'['+val+']';
-							vname = name+'['+val+'Name]';
-						}
-						if(v) {
-							v = v.split(':');
-							h += '<span level="'+k+'" tit="'+v[1]+'">' +
-								'<input type="hidden" name="'+tname+'" value="'+v[0]+'">' +
-								'<input type="hidden" name="'+vname+'" value="'+v[1]+'">' +
-								v[1]+
-								'</span>';
-						}
-					});
-					h && t.html(h);
-				}
-				t.click(function(){
-					var obj = $(this);
-					var defDt = {};
-					var datas = t.data();
-					var maxlevel = t.data('maxlevel') || 4;
-					$.loop(Fd, function(val, k){
-						var v = datas[val];
-						if(v) {
-							v = v.split(':');
-							defDt[k] = {id: v[0], name: v[1], level:k, field:val};
-						}
-					});
-					$this.area(obj, obj.attr('title'), defDt, function (dt) {
-						if(!dt.isEnd){
-							return;
-						}
-						var h = '';
-						obj.removeData('province city area town');
-
-						$.loop(dt.data,function(val){
-							var name = val.field;
-							var vname = val.field+'Name';
-							if(datas['name']){
-								name = datas['name']+'['+val.field+']';
-								vname = datas['name']+'['+val.field+'Name]';
-							}
-							obj.data(val.field, val.id+':'+val.name);
-							h += '<span level="'+val.level+'" tit="'+val.name+'">' +
-								'<input type="hidden" name="'+name+'" value="'+val.id+'">' +
-								'<input type="hidden" name="'+vname+'" value="'+val.name+'">' +
-								val.name+
-								'</span>';
-						});
-						obj.html(h);
-					}, maxlevel);
-				});
-			});
-			return this;
-		},
-		render : function(){
-			R.form().area();
-			//title提示文字处理
-			_each('*[title]', function(t){
-				var tit = t.attr('title');
-				if(tit) {
-					t.hover(function(){
-						$.showTip(t);
-						t.attr('title','');
-					},function(){
-						t.attr('title',tit);
-					});
-				}
-			});
-		}
-	}
-
-	//监听dom结构变化 并且立即渲染 必须做延迟 让首次渲染无压力
-	setTimeout(function(){
-		R.render();
-		$(document).on('DOMNodeInserted',R.render);
-	},100);
-	R.render();
-}
-
-/**
  * 全选事件触发
  * @param t
  */
-$.plugin.checkAll = function(area){
+$.plugin.checkAll = function(selector){
 	var t = this;
 
 	var name = t.attr('name');
@@ -2038,7 +1776,7 @@ $.plugin.checkAll = function(area){
 		return this;
 	}
 
-	area = $(area || t.parent()[0].form || t.parent().parent());
+	selector = $(selector || t.parent()[0].form || t.parent().parent());
 	t.removeAttr('name');
 	//全选事件绑定
 	t.change(function () {
@@ -2046,10 +1784,10 @@ $.plugin.checkAll = function(area){
 		var inputs = 'input[type="checkbox"][name="' + name + '"]';
 		if (t.attr('checked')) {
 			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && area.find(inputs).attr('checked', true);
+			name && selector.find(inputs).attr('checked', true);
 		} else {
 			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && area.find(inputs).attr('checked', false);
+			name && selector.find(inputs).attr('checked', false);
 		}
 	});
 	return this;
@@ -2103,7 +1841,7 @@ $.plugin.render = function(){
 		'ks-checkbox-all' : function(t, at){
 			var f = R['ks-checkbox'];
 			f(t, at);
-			t.checkAll(t.attr('submit'));
+			t.checkAll(t.attr('selector'));
 		},
 		'ks-swith' : function(t, at){
 			var val = $.isset(at.checked) ? 1 : 0,
