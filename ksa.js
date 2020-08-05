@@ -203,16 +203,28 @@ function debugTime(key){
 	 * @param callback
 	 * @returns {*}
 	 */
+	K.DocumentReadyFunction = [];
 	K.ready = function(callback) {
-		if (/complete|loaded|interactive/.test(document.readyState)) {
-			callback($);
-		} else {
-			document.addEventListener('DOMContentLoaded', function() {
-				callback($);
-			}, false);
-		}
+		this.map(function(ele){
+			//如果是document与window的事件 则送到队列中 防止多次触发
+			if(ele === document || ele === window){
+				$.DocumentReadyFunction.push(function(){
+					callback.call(ele)
+				});
+			}else{
+				ele.addEventListener('DOMContentLoaded', function(){
+					callback.call(ele);
+				}, false);
+			}
+		});
 		return this;
 	}
+	window.addEventListener('DOMContentLoaded', function(){
+		$.loop($.DocumentReadyFunction, function(func){
+			func();
+		});
+		$.DocumentReadyFunction = [];
+	}, false);
 
 	/**
 	 * 克隆一个元素
@@ -1630,19 +1642,15 @@ function debugTime(key){
 				var useCapture = false;
 
 				var func = function(e){
-					//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
-					if(selector){
-						if(!$.inArray(e.target, ele.querySelectorAll(selectorStr(selector)))){
-							return;
+						eventAddstopPropagation(e);
+						//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
+						if(!selector || (selector && $.inArray(e.target, ele.querySelectorAll(selectorStr(selector))))){
+							//回调函数并获取返回值，若返回值为false则阻止冒泡
+							if(callback.apply(e.target, arguments) === false){
+								e.preventDefault();
+								e.stopPropagation();
+							}
 						}
-					}
-					//回调函数并获取返回值，若返回值为false则阻止冒泡
-					var r = callback.apply(e.target, arguments);
-					if(r === false){
-						e.preventDefault();
-						e.stopPropagation();
-					}
-					return this;
 				};
 				bindEventData[kid][evn] = bindEventData[kid][evn] || [];
 				bindEventData[kid][evn].push({callback:callback, selector:selector, useCapture:useCapture, addCallback:func});
@@ -1653,11 +1661,7 @@ function debugTime(key){
 				参数3 = true = 事件句柄在捕获阶段执行 false = 默认。事件句柄在冒泡阶段执行
 				 */
 				evn = evn.replace(/\..*/,'');
-
-				ele.addEventListener(evn, function(e){
-					eventAddstopPropagation(e);
-					func.call(ele, e);
-				}, useCapture);
+				ele.addEventListener(evn, func, useCapture);
 
 			})
 		});
@@ -1670,27 +1674,27 @@ function debugTime(key){
 	 * @returns {$}
 	 */
 	K.off = function(event, callback) {
-		var self = this, isCall = callback ? 1 : 0;
+		var isCall = callback ? 1 : 0;
 		callback = callback ? callback : function(){return false};
-		return self.each(function (_, ele) {
+		event = $.explode(' ', event, '');
+		this.map(function (ele) {
 			var kid = $.objectID(ele);
-			$.loop(event.split(/\s/), function (evn) {
+			$.loop(event, function (evn) {
 				var evnDt = bindEventData[kid] && bindEventData[kid][evn] ? bindEventData[kid][evn] : null;
-
 				evn = evn.replace(/\..*/,'');
 				if(evnDt) {
-					evnDt.map(function(val, i){
-						if(!isCall || val.callback == callback){
-							ele.removeEventListener(evn, val.addCallback, val.useCapture);
-							if(bindEventData[kid][evn] && bindEventData[kid][evn][i]){
-								delete bindEventData[kid][evn][i];
+					//如果没有指定 需删除的事件 则遍历删除所有
+					var delN = 0;
+						$.loop(evnDt, function(val, i){
+							if(val && (!isCall || val.callback === callback)){
+								ele.removeEventListener(evn, val.addCallback, val.useCapture);
+								evnDt[i] = null;
+								delN ++;
 							}
-
+						});
+						if(evnDt.length === delN){
+							delete bindEventData[kid][evn];
 						}
-					});
-
-					ele.removeEventListener(evn, callback, evnDt.useCapture);
-					$.isEmpty(bindEventData[kid][evn]) && delete bindEventData[kid][evn];
 				}else{
 					ele.removeEventListener(evn, callback, false);
 					ele.removeEventListener(evn, callback, true);
@@ -1699,6 +1703,7 @@ function debugTime(key){
 			$.isset(bindEventData[kid]) && $.isEmpty(bindEventData[kid]) && delete bindEventData[kid];
 
 		});
+		return this;
 	};
 	/**
 	 * hover事件
@@ -1709,6 +1714,30 @@ function debugTime(key){
 	K.hover = function(a, b){
 		return this.mouseenter(a).mouseleave(b || a);
 	}
+
+	/**
+	 * 文本框文字选中事件
+	 * @param func
+	 */
+	K.select = function(func){
+		if($.isset(func)){
+			if(!$.isFunction(func)){
+				return;
+			}
+			this.on('select', function(evn){
+
+				var txt = window.getSelection ? window.getSelection().toString() : document.selection.createRange().text;
+				func.call(this, evn, txt);
+			});
+		}else{
+			this.map(function(ele){
+				if($.isFunction(ele.select)){
+					ele.select();
+				}
+			});
+		}
+	}
+
 	/**
 	 * 长按事件（移动端）
 	 * Author: cr180.com <cr180@cr180.com>
@@ -3412,7 +3441,7 @@ function debugTime(key){
 		return value;
 	}
 
-	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change select keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
+	$.loop(('blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return this.on(name, null, func, fn);
 		};

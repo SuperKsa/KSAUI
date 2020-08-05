@@ -75,8 +75,11 @@
             }
         }
     };
-    $('a').click(function(){
-        debug([this]);
+    $(document).on('click' ,'a', function(){
+        debug('a');
+    });
+    $(document).on('click' ,'#vuedom', function(){
+        debug('vuedom');
     });
 </script>
 <script>
@@ -218,12 +221,6 @@
     */
     var KTPL;
     (function(){
-        var template = $('#template').html();
-        var code = '';
-        for(var i =0; i<LOOPMAX; i++){
-            code += template;
-        }
-        $('#template').html(code);
         console.time('KSA');
         KTPL = $('#template').tpl(sdt);
         console.timeEnd('KSA');
