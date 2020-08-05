@@ -233,14 +233,14 @@ page > *:last-child { border-radius: 0 .22em .22em 0;}
 .ks-slide-item:not(:first-child) {transform: translateX(200%) scale(1);}
 
 /*左右控制器*/
-.ks-slide-control-prev, .ks-slide-control-next { position: absolute; top: 50%; z-index: 99; cursor: pointer; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 100%; margin-top: -18px; background: rgba(0,0,0,.3);transition: all .3s ease-in-out; opacity: 0}
-.ks-slide-control-prev:before, .ks-slide-control-next:before { content: ''; display: inline-block; width: 6px; height: 6px; border-top: #fff 2px solid; border-right: #fff 2px solid; transform: rotate(45deg); transform-origin: 50% 50%;}
+.ks-slide-control-prev, .ks-slide-control-next { position: absolute; top: 50%; z-index: 99; cursor: pointer; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 100%; margin-top: -18px; background: #000; transition: all .3s ease-in-out; opacity: 0}
+.ks-slide-control-prev:before, .ks-slide-control-next:before { content: ''; display: inline-block; transform: rotate(45deg); transform-origin: 50% 50%; color: #fff;}
 .ks-slide-control-prev:before {transform: rotate(-135deg); margin-left: 3px;}
 .ks-slide-control-prev { left:0;}
 .ks-slide-control-next { right:0;}
 
-.ks-slide:hover .ks-slide-control-prev { opacity: 1; left: 15px;}
-.ks-slide:hover .ks-slide-control-next { opacity: 1; right: 15px;}
+.ks-slide:hover .ks-slide-control-prev { opacity: .3; left: 15px;}
+.ks-slide:hover .ks-slide-control-next { opacity: .3; right: 15px;}
 
 .ks-slide-item._moveon { z-index: 10;}
 

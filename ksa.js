@@ -563,7 +563,7 @@ function debugTime(key){
 
 				$.loop(key, function(k){
 					var v = ele._KSAOS_COM_ELE_DATA[k];
-					if($.isNull(v)){
+					if(!$.isset(v)){
 						v = ele.getAttribute('data-'+k);
 					}
 					if($.isset(v)) {

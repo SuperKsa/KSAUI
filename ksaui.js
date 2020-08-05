@@ -36,12 +36,8 @@ $.plugin.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
 			$.mouseY = e.y || e.layerY || 0;
 		});
 	}
-	var isReady = 0;
 	$(document).ready(function(){
-		if(!isReady){
-			$.render();
-			isReady = 1;
-		}
+		$.render();
 	});
 })();
 
@@ -970,12 +966,13 @@ $.plugin.tag = function(tp, dt, txt, ed){
  */
 $.plugin.inputNumber = function(callFun){
 	var $this = this;
-	!$this.val().length && !$this.attr('placeholder') && $this.val($this.attr('min') || 0);
+	var attrs = $this.attr();
+	!$this.val().length && !attrs.placeholder && $this.val(attrs.min || 0);
 	var ef = $this.parent();
 	!ef.hasClass('ks-input-arrow') && ef.addClass('ks-input-arrow');
-	var min = parseFloat($this.attr('min')) || 0, //input最小值
-		max = parseFloat($this.attr('max')) || 0, //input最大值
-		step = parseFloat($this.attr('step')) || 0, //input步进值
+	var min = parseFloat(attrs.min) || 0, //input最小值
+		max = parseFloat(attrs.max) || 0, //input最大值
+		step = parseFloat(attrs.step) || 0, //input步进值
 		n = step && step.toString().indexOf('.') != -1 ? step.toString().split('.')[1].length : 0; //step有多少小数位 踏马的js精度
 	//计算 并写input  x[0=+ 1=-]
 	function r(x){
@@ -1001,7 +998,7 @@ $.plugin.inputNumber = function(callFun){
 
 	//检查input标签是否存在回调函数属性 callfun="xxx"
 	if(!callFun) {
-		var cfun = $this.attr('callfun');
+		var cfun = attrs.callfun;
 		if (cfun) {
 			callFun = string2Function(cfun);
 		}
@@ -1011,6 +1008,7 @@ $.plugin.inputNumber = function(callFun){
 	//鼠标按下处理
 	var evn = $.device == 'MOBILE' ? 'touchstart touchend' : 'mousedown mouseup';
 	ef.find('*[data-digit]').on(evn,function(e){
+
 		var i = $(this).data('digit'); //取i标签当前索引
 		if($.inArray(e.type,['mousedown','touchstart'])){
 			r(i); //按下 计算一次
@@ -1869,7 +1867,7 @@ $.plugin.render = function(){
 			t.wrap(moveLabelAttr('label', t, 'ks-input ks-input-arrow'));
 
 			t.after('<span data-digit="down" icon="sub"></span><span data-digit="up" icon="add"></span>');
-			$(t).inputNumber();
+			t.inputNumber();
 		},
 		'ks-select' : function(t, at){
 			if(t[0].tagName != 'SELECT'){
@@ -1983,10 +1981,34 @@ $.plugin.render = function(){
 		});
 	});
 
-	$('.ks-tab:not(._ksauirender)').each(function(_, e){
-		$(e).addClass('_ksauirender').tab();
+	$('.ks-tab:not([_ksauirender_])').each(function(_, e){
+		$(e).attr('_ksauirender_',1).tab();
 	});
+	$('.ks-slide:not([_ksauirender_])').each(function(_, ele){
+		ele = $(ele);
+		var sdt = ele.data();
+		ele.attr('_ksauirender_',1).slide({
+			auto : sdt.auto,
+			card : sdt.card,
+			control : sdt.control,
+			status : sdt.status,
+		});
+	})
 
+	//title提示文字处理
+	$('*[title]:not([_ksauirender_title_])').each(function(t){
+		t = $(t);
+		t.attr('_ksauirender_title_',1);
+		var tit = t.attr('title');
+		if(tit) {
+			t.hover(function(){
+				$.showTip(t);
+				t.attr('title','');
+			},function(){
+				t.attr('title',tit);
+			});
+		}
+	});
 	return this;
 }
 
