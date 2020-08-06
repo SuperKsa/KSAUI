@@ -318,7 +318,7 @@ form-content { line-height: 40px}
 
 
 /*普通标题(非div标签) 默认左右结构*/
-.ks-form .ks-label, form-label { display: block; font-weight: 400; color: rgba(0,0,0,0.7); width: 100%; padding:10px 10px 10px 0; min-height: 40px; color: #7d7d7d}
+.ks-form .ks-label, form-label { display: block; font-weight: 400; color: rgba(0,0,0,0.7); width: 100%; padding:10px 10px 10px 0; min-height: 36px; color: #7d7d7d}
 .ks-form .ks-label > small, form-label > small {vertical-align: baseline; font-size: .86em; font-weight: normal; color: #999; margin-left: 5px;}
 
 form-label[left] { float: left; width: 100px;}
@@ -441,11 +441,11 @@ th.ks-label { width: 100px; padding: 10px;}
 
 
 /*============== 表单 按钮 ==============*/
-	.ks-btn {transition:all 0.1s ease-in-out;   cursor:pointer; display:inline-block;  text-align:center; vertical-align:middle; white-space:nowrap; margin:0; user-select: none; font-style: normal; height:40px; line-height:40px; font-size:1rem; background:#fff; color: #63666b; padding:0 20px; border-radius:3px; border: var(--bordercolor) 1px solid; opacity: .95}
+	.ks-btn {transition:all 0.1s ease-in-out;   cursor:pointer; display:inline-block;  text-align:center; vertical-align:middle; white-space:nowrap; margin:0; user-select: none; font-style: normal; height: 36px; line-height:34px; font-size:1rem; background:#fff; color: #63666b; padding:0 15px; border-radius:3px; border: var(--bordercolor) 1px solid; opacity: .95}
 	/*状态*/
 		/*获得焦点*/
 		.ks-btn:hover { opacity: .8}
-		.ks-btn:active { opacity: 1; transform: scaleY(1.05);}
+		.ks-btn:active { opacity: 1;}
 
 		/*被禁用*/
 		.ks-btn[disabled] { cursor: not-allowed; opacity: 0.5}
@@ -536,9 +536,8 @@ input[type='number']::-webkit-inner-spin-button {-webkit-appearance: none;appear
 	/*默认宽度100%*/
 	inputgroup,
 	.ks-input,
-	.ks-select,
-	.ks-date,
-	.ks-area { max-width: 100%; }
+	.ks-area,
+	.ks-textarea {width: 100%;}
 
 	inputgroup, inputgroup > *,
 	.ks-input,
@@ -546,13 +545,13 @@ input[type='number']::-webkit-inner-spin-button {-webkit-appearance: none;appear
 	.ks-input-arrow input,
 	.ks-select,
 	.ks-date,
-	.ks-area {height: 40px; line-height: 38px;}
+	.ks-area {height: 36px; line-height: 34px;}
 
 	/*日期输入框 单行内 输入框 底色 宽度 边框 圆角 内边距*/
 
 	.ks-date {align-items: center; padding: 0 40px 0 10px; width:190px; overflow: hidden; position: relative}
 		.ks-date:after { content: '\e64a'; color: #aaa; position: absolute; right: 0; width: 40px; text-align: center; top: 0	}
-		.ks-date input { border: none; border-radius: 0; background: none; width: 100%; height: 40px; padding:0; display: block}
+		.ks-date input { border: none; border-radius: 0; background: none; width: 100%; height: 36px; padding:0; display: block}
 
 	/*下拉选择框*/
 		.ks-select { display: inline-block; position:relative; background:#fff;  cursor: pointer; overflow: hidden;}
@@ -589,7 +588,7 @@ input[type='number']::-webkit-inner-spin-button {-webkit-appearance: none;appear
 input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-input:not(input):not(textarea) { padding: 0; position: relative; display: inline-block}
 .ks-input input {height: inherit; background: #fff; padding: 0 10px; float: left; width: 100%}
-.ks-input [icon] { width: 32px; height: 38px; line-height: 40px; text-align: center; position: absolute; top: 1px; z-index: 10}
+.ks-input [icon] { width: 32px; height: 34px; line-height: 34px; text-align: center; position: absolute; top: 1px; z-index: 10}
 .ks-input left[icon] { left: 1px}
 .ks-input left[icon] ~ input { padding-left: 32px;}
 
@@ -1278,7 +1277,7 @@ inputgroup { display: inline-table; width:auto; border-collapse:separate; vertic
 
 /*============== 地区选择 ==============*/
 /*按钮*/
-.ks-area {border: var(--bordercolor) 1px solid; cursor: pointer; padding: 0 5px; overflow: hidden; line-height: 40px; display: table}
+.ks-area {border: var(--bordercolor) 1px solid; cursor: pointer; padding: 0 5px; overflow: hidden; line-height: 36px; display: table}
 .ks-area span { float: left; padding: 0 3px; display: table-cell; max-width:25%; white-space: nowrap; table-layout:fixed; overflow: hidden;  text-overflow: ellipsis}
 .ks-area span:last-child { border-right: 0}
 .ks-area[maxlevel='1'] span { max-width: 100%;}

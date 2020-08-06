@@ -38,6 +38,12 @@ $.plugin.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
 	}
 	$(document).ready(function(){
 		$.render();
+		//DOM变化监听
+		window.setTimeout(function(){
+			document.addEventListener('DOMNodeInserted',function(){
+				$.render();
+			});
+		},60);
 	});
 })();
 
@@ -1984,6 +1990,7 @@ $.plugin.render = function(){
 	$('.ks-tab:not([_ksauirender_])').each(function(_, e){
 		$(e).attr('_ksauirender_',1).tab();
 	});
+
 	$('.ks-slide:not([_ksauirender_])').each(function(_, ele){
 		ele = $(ele);
 		var sdt = ele.data();
@@ -1993,19 +2000,19 @@ $.plugin.render = function(){
 			control : sdt.control,
 			status : sdt.status,
 		});
-	})
+	});
 
 	//title提示文字处理
-	$('*[title]:not([_ksauirender_title_])').each(function(t){
-		t = $(t);
-		t.attr('_ksauirender_title_',1);
-		var tit = t.attr('title');
+	$('*[title]:not([_ksauirender_title_])').each(function(_, ele){
+		ele = $(ele);
+		ele.attr('_ksauirender_title_',1);
+		var tit = ele.attr('title');
 		if(tit) {
-			t.hover(function(){
-				$.showTip(t);
-				t.attr('title','');
+			ele.hover(function(){
+				$.showTip(ele);
+				ele.attr('title','');
 			},function(){
-				t.attr('title',tit);
+				ele.attr('title',tit);
 			});
 		}
 	});
