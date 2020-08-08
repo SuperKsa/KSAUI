@@ -1036,35 +1036,37 @@ $.plugin.inputNumber = function(callFun){
 }
 
 /**
- * 手风琴
+ * 折叠面板
+ * 必须按照文档方式组成dom
  * @param isAc 是否自动关闭相邻列表 默认是
  */
-$.plugin.accordion = function(isAc){
-	isAc = $.isset(isAc) ? isAc : 1;
-	this.find('dl').each(function(){
-		var dl = $(this), dt = dl.children('dt'), dd = dl.children('dd');
-		var dtH = dt.height(true);
-		var ohd = dtH + dl.find('dd').height(true);
-		var ddH = dl.find('dd').height(true);
-		dd.attr('originalHeight',ddH);
-		if(!$.isset(dl.attr('open'))){
-			dd.height(0);
-		}else{
-			dd.height(ddH);
+$.plugin.collapse = function(){
+	this.children('.ks-collapse-item').map(function(ele){
+		ele = $(ele);
+		var Pt = ele.parent();
+		//渲染dom
+		var subject = ele.children('.ks-title');
+		ele.wrapInner('<div class="ks-block"></div>').wrapInner('<div class="ks-content"></div>');
+		ele.prepend(subject);
+		subject = null;
+
+		var content = ele.children('.ks-content');
+		//如果默认打开，必须赋予实际高度值以完成css3动画
+		if(ele.attr('open')){
+			content.height(content.children('.ks-block').height(true, true));
 		}
-
-		dt.click(function(e) {
-			if($.isset(dl.attr('open'))){
-				dl.attr('open','');
-				dd.height(0);
+		ele.children('.ks-title').click(function(){
+			var maxH = content.children('.ks-block').height(true, true);
+			if(ele.attr('open')){
+				content.height(0);
+				ele.attr('open','');
 			}else{
-				dl.attr('open','open');
-				dd.height(ddH);
-
-				if(isAc){
-					var siblingsDl = dl.siblings('dl');
-					siblingsDl.removeAttr('open');
-					siblingsDl.children('dd').height(0);
+				content.height(maxH);
+				ele.attr('open',1);
+				var acList = Pt.attr('accordion') ? ele.siblings('.ks-collapse-item') : !!0;//手风琴面板同辈
+				if(acList){
+					acList.attr('open','');
+					acList.children('.ks-content').height(0);
 				}
 			}
 		});
@@ -1080,13 +1082,14 @@ $.plugin.accordion = function(isAc){
 $.plugin.listSelect = function(callFun){
 	var $this = this;
 	var m = $.isset($this.attr('multiple'));
-	$this.find('li:not(._tit)').click(function(e) {
+	$this.find('li').click(function(e) {
 
 		var T = $(this);
 		//如果当前已选择或禁用状态则不做任何响应
-		if (T.hasClass('_tit') || (!m && $.isset(T.attr('selected'))) || $.isset(T.attr('disabled'))) {
+		if (T.hasClass('ks-select-optgroup-title') || (!m && T.attr('selected')) || T.attr('disabled')) {
 			return false;
 		}
+
 		//多选下拉菜单
 		if(m){
 			if(T.attr('selected')){
@@ -1132,6 +1135,73 @@ $.plugin.tab = function(callFun){
 }
 
 /**
+ * 将select元素 或者 selectJSON 转为渲染后的html
+ * @param element  select元素 或者 selectJSON
+ * @param multiple 是否多选
+ * @returns {[H|*|jQuery|HTMLElement, *, string]}
+ */
+$.plugin.selectToHtml = function(element, multiple){
+	var data, defvalue, select , Nums =0;
+	//如果传入的是json数据
+	if($.isObjectPlain(element)){
+		data = element;
+		defvalue = element.value;
+		multiple = $.isset(multiple) ? multiple : element.multiple;
+	}else{
+		select = $(element);
+		multiple = select.attr('multiple');
+		defvalue = select.data('value') || select.val();
+		defvalue = $.explode(' ', defvalue, '');
+		data = option2json(select);
+	}
+
+	//将select元素转为JSON数据
+	function option2json(o){
+		var n = 0, dt = [];
+		o.children().each(function(i,t){
+			t = $(t);
+			var attr = t.attr();
+			var v = {
+				value : attr.value || '',
+				title : attr.title || null,
+				text : t.text() || '',
+				showtitle : attr.showtitle || null,
+				selected : $.inArray(attr.value, defvalue) ? true : null,
+				disabled : t.attr('disabled') || null,
+				icon : attr.icon || null,
+				style : attr.style || null,
+				n : Nums
+			};
+
+			if(t[0].tagName =='OPTGROUP'){
+				v.text = attr.label || null;
+				v.data = option2json(t);
+			}else{
+				Nums ++;
+			}
+			dt[n] = v;
+			n ++;
+		});
+		return dt;
+	}
+	//将JSON数据转换为HTML菜单列表
+	function options(dt){
+		var h = '';
+		$.loop(dt,function(value, key){
+			if(value.data){
+				h += '<li class="ks-select-optgroup-title"><strong>'+(value.text)+'</strong><ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.data)+'</ul></li>';
+			}else{
+				if(!$.isObject(value) && !$.isArray(value)){
+					value = {value:key, text:value, selected: (($.isArray(defvalue) && $.inArray(key, defvalue)) || ($.isObjectPlain(defvalue) && $.isset(defvalue[key])) || key === value)}
+				}
+				h += $.tag('li', {selected:value.selected ? 'selected' : null ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
+			}
+		});
+		return h;
+	}
+	return [select, multiple, '<ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(data)+'</ul>'];
+}
+/**
  * select下拉菜单模拟
  * 触发函数
  * @param {selector} btn 触发元素dom
@@ -1176,14 +1246,22 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 		btn.removeData('layer-id').removeClass('a');
 		return;
 	}
+	var htmlObj = $.selectToHtml(data, multiple);
+	multiple = htmlObj[1];
+	var select = htmlObj[0];
+	/*
 	var select, Nums =0, defvalue = btn.data('value');
+
 	//如果不是数组、普通JSON参数（则认为是选择器、jq对象、dom对象）
 	if(data && !$.isObjectPlain(data) && !$.isArray(data)){
+		debug(selectToHtml(data));
 		select = $(data);
 		defvalue = select.data('value') || select.val();
 		data = option2json(data);
 		multiple = select.attr('multiple');
+
 	}
+
 	//将select元素转为JSON数据
 	function option2json(o){
 		var n = 0, dt = [];
@@ -1226,11 +1304,12 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 		});
 		return h;
 	}
+	*/
 	layerOption = layerOption || {};
 	layerOption = $.arrayMerge({
 		pos : btn,
 		cover : 0,
-		content : '<ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(data)+'</ul>',
+		content : htmlObj[2],
 		closeBtn : 0,
 		init : function(layer){
 			if(!layer.layerID){
@@ -1256,8 +1335,9 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 					});
 					txt = txt ? txt : '请选择';
 				}else{
-					select && select.val(val).trigger('change');
+					select && select.val(val);
 				}
+				select && select.trigger('change');
 				//选择后回调函数
 				if(typeof(callFun) =='function'){
 					var calltxt = callFun(val, txt, valdt);
@@ -1296,7 +1376,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 		}
 	}, layerOption, {class:'ks-layer-select'});
 
-
+	htmlObj = null;
 	return $this.layer(layerOption);
 }
 
@@ -1782,18 +1862,39 @@ $.plugin.checkAll = function(selector){
 
 	selector = $(selector || t.parent()[0].form || t.parent().parent());
 	t.removeAttr('name');
+	var tParent = t.parent();
+	var inputs = 'input[type="checkbox"][name="' + name + '"]';
+	var checkboxObj = selector.find(inputs),
+		checkboxNum = checkboxObj.length,
+		indeterName = 'ks-checkbox-indeter';
 	//全选事件绑定
 	t.change(function () {
 		//域下相同类型的元素
-		var inputs = 'input[type="checkbox"][name="' + name + '"]';
 		if (t.attr('checked')) {
 			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && selector.find(inputs).attr('checked', true);
+			name && checkboxObj.attr('checked', true);
 		} else {
 			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && selector.find(inputs).attr('checked', false);
+			name && checkboxObj.attr('checked', false);
 		}
+		tParent.removeClass(indeterName)
 	});
+
+	checkboxObj.change(function(){
+		var st = false;
+		var selectedNum = selector.find(inputs+':selected').length;
+		if(selectedNum >= checkboxNum){
+			st = true;
+			tParent.removeClass(indeterName);
+		}else if(selectedNum > 0){
+			st = false;
+			tParent.addClass(indeterName);
+		}else if(!selectedNum){
+			st = false;
+			tParent.removeClass(indeterName);
+		}
+		t.attr('checked', st);
+	})
 	return this;
 }
 
@@ -1879,24 +1980,38 @@ $.plugin.render = function(){
 			if(t[0].tagName != 'SELECT'){
 				return;
 			}
-			//如果在标签属性data-value给定选中值 则处理到内部
-			t.data('value') && t.val(t.data('value'));
-			t.removeAttr('type');
-			var opt = t.find('option:selected'),
-				tit = (at.text || '请选择');
-			if (opt.length) {
-				if ($.isset(at.multiple)) {
-					tit = opt.text();
-				} else {
-					tit = opt.attr('text') || opt.text();
-				}
-			}
-			t.wrap(moveLabelAttr('div', t, 'ks-select'));
-			t.after('<span class="ks-select-tit" icon="caret-down">' + tit + '</span>');
+			//如果控件为展开类型 元素存在open属性
+			if(at.open ===''){
+				var obj = $.selectToHtml(t);
+				var ele = $('<div class="ks-select-list">'+obj[2]+'</div>');
+				ele.children().listSelect(function(value){
+					$(t).val(value).trigger('change');
+				});
+				t.after(ele);
+				t.hide();
+				ele.prepend(t);
 
-			t.parent().click(function(){
-				$(this).showSelect(t);
-			});
+			}else{
+				//如果在标签属性data-value给定选中值 则处理到内部
+				t.data('value') && t.val(t.data('value'));
+				t.removeAttr('type');
+				var opt = t.find('option:selected'),
+					tit = (at.text || '请选择');
+				if (opt.length) {
+					if ($.isset(at.multiple)) {
+						tit = opt.text();
+					} else {
+						tit = opt.attr('text') || opt.text();
+					}
+				}
+				t.wrap(moveLabelAttr('div', t, 'ks-select'));
+				t.after('<span class="ks-select-tit" icon="caret-down">' + tit + '</span>');
+
+				t.parent().click(function(){
+					$(this).showSelect(t);
+				});
+			}
+
 		},
 		'ks-date' : function(t, at){
 			t.attr('type', 'text');
@@ -1982,6 +2097,12 @@ $.plugin.render = function(){
 		});
 	});
 
+	$('select.ks-select').each(function(_, e){
+		e = $(e);
+		e.removeClass('ks-select');
+		R['ks-select'](e , e.attr()||{});
+	});
+
 	$('.ks-tab:not([_ksauirender_])').each(function(_, e){
 		$(e).attr('_ksauirender_',1).tab();
 	});
@@ -2010,6 +2131,14 @@ $.plugin.render = function(){
 				ele.attr('title',tit);
 			});
 		}
+	});
+
+
+	//折叠面板
+	$('.ks-collapse:not([_ksauicollapse_])').each(function(_, ele){
+		ele = $(ele);
+		ele.attr('_ksauicollapse_',1);
+		ele.collapse();
 	});
 	return this;
 }

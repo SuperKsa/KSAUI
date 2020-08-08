@@ -413,6 +413,7 @@ function debugTime(key){
 					}else{
 						var attrV = ele.getAttribute(k);
 						if(!$.isNull(attrV)){
+							attrV = attrV === '' && $.inArray(k, BooleanArr) ? k : attrV; //如果属性值为空 则修改值为属性名
 							attrs[k] = attrV;
 						//标签属性值不存在时 从元素dom属性取值
 						}else if (k !== 'style' && $.isNull(attrV) && $.isset(ele[k])) {
@@ -444,7 +445,7 @@ function debugTime(key){
 						//元素属性支持布尔值
 						if ($.inArray(k, BooleanArr)) {
 							ele[k] = val;
-							val = val === true ? k : (val === false ? null : val);
+							val = val ? k : (!val ? null : val);
 						}
 						if (val === '' || val === null) {
 							ele.removeAttribute(k);
