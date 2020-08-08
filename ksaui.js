@@ -632,7 +632,7 @@ $.plugin.Dialog = function(type){
 			break;
 		/*表单弹窗 第三个参数：
             [
-                {name:'字段名', type:'展现类型select/radio/checkbox/swith/text', text:'表单标题名称', value:'默认值', option:[多个选项列表键名=值 键值=名称]},
+                {name:'字段名', type:'展现类型select/radio/checkbox/switch/text', text:'表单标题名称', value:'默认值', option:[多个选项列表键名=值 键值=名称]},
                 ...
             ]
         */
@@ -1847,7 +1847,7 @@ $.plugin.render = function(){
 			f(t, at);
 			t.checkAll(t.attr('selector'));
 		},
-		'ks-swith' : function(t, at){
+		'ks-switch' : function(t, at){
 			var val = $.isset(at.checked) ? 1 : 0,
 				txt = at.text || '',
 				name = at.name ? ' name="'+at.name+'"' : '';
@@ -1858,7 +1858,7 @@ $.plugin.render = function(){
 			}
 			t.attr('type','checkbox').removeAttr('name');
 
-			t.wrap(moveLabelAttr('label', t, 'ks-swith'));
+			t.wrap(moveLabelAttr('label', t, 'ks-switch'));
 			t.after('<i>'+txt+'</i><input type="hidden" '+name+' value="'+val+'">');
 
 			//事件绑定
@@ -1920,11 +1920,6 @@ $.plugin.render = function(){
 			if($.isset(at.clear)){
 				var clearbtn = $('<right class="ks-input-clear" icon="clear" style="z-index:99"></right>');
 				t.before(clearbtn);
-				t.parent().hover(function(){
-					t.val().length >0 && clearbtn.addClass('a');
-				},function(){
-					clearbtn.removeClass('a');
-				});
 				clearbtn.click(function(){
 					t.val('').focus();
 					clearbtn.removeClass('a');
@@ -2205,7 +2200,7 @@ $.plugin.slide = function(options){
  * 		//一组一个表单
  * 		{
  * 			name:'sex', //字段名
- * 			type:'select', //展现类型select/radio/checkbox/swith/text/date
+ * 			type:'select', //展现类型select/radio/checkbox/switch/text/date
  * 			text:'性别', //表单标题名称
  * 			value:'2',
  * 			option:{ //多个选项列表 键名=值 键值=名称
@@ -2263,10 +2258,10 @@ $.plugin.newForm = function(data){
 						class: 'ks-input'
 					}, value.value);
 					//开关
-				} else if (value.type == 'swith') {
+				} else if (value.type == 'switch') {
 					value.value = value.value ? value.value : '';
 					H += $this.tag('input', {
-						type: 'ks-swith',
+						type: 'ks-switch',
 						name: value.name,
 						value: value.value,
 						text: (value.text ? value.text : '是'),

@@ -442,19 +442,18 @@ function debugTime(key){
 				this.map(function (ele) {
 					$.loop(sets, function (val, k) {
 						//元素属性支持布尔值
-						if ($.isset(ele[k]) && $.inArray(k, BooleanArr)) {
+						if ($.inArray(k, BooleanArr)) {
 							ele[k] = val;
-						}else{
-							if (val === '' || val === null) {
-								ele.removeAttribute(k);
-							} else {
-								ele.setAttribute(k, val);
-							}
-							if (k.indexOf('data-') === 0) {
-								dataAttr[k.substr(5)] = val;
-							}
+							val = val === true ? k : (val === false ? null : val);
 						}
-
+						if (val === '' || val === null) {
+							ele.removeAttribute(k);
+						} else {
+							ele.setAttribute(k, val);
+						}
+						if (k.indexOf('data-') === 0) {
+							dataAttr[k.substr(5)] = val;
+						}
 					});
 				});
 			}
