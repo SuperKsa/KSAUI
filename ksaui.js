@@ -201,6 +201,9 @@ $.plugin.layerHide = function(Id, Fun){
 		Id = $this.layerID;
 	}
 	o = $('#ks-layer-'+Id);
+	if(!o.length){
+		return this;
+	}
 	var option = $.layerOption[Id] ? $.layerOption[Id] : {};
 	if(Id){
 		var pos = o.attr('pos');
@@ -240,7 +243,7 @@ $.plugin.layerHide = function(Id, Fun){
 			}
 		},90);
 	}
-
+	return this;
 }
 
 /**
@@ -281,7 +284,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 		pos : pos ? pos : 5, //弹窗位置 参考layer pos介绍
 		btn : null, //按钮名称 数组
 		btnFun : btnFun, //按钮点击后回调 参数[index=按钮序号, txt=按钮文字, btnobj=按钮dom对象, dom=整个KSAUI对象]
-		cover : 0, //是否遮罩层 0=否 1=是 2=是（带点击关闭窗口事件） 3=是（带双击关闭窗口事件） 坐标={top:0,right:0,bottom:0,left:0,event:click|dblclick}
+		cover : $.isset(cover) ? cover : 0, //是否遮罩层 0=否 1=是 2=是（带点击关闭窗口事件） 3=是（带双击关闭窗口事件） 坐标={top:0,right:0,bottom:0,left:0,event:click|dblclick}
 		outTime : 0,//自动关闭时间 秒
 		init : initFun, //初始化回调（还未添加到body中） 参数[layerDom]
 		show : showFun, //弹出后回调 参数[layerDom]
@@ -359,22 +362,23 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 			//按钮处理
 			if (option.btn) {
 				var s = '';
-				if(option.btn) {
-					if($.isString(option.btn)){
-						s += '<button type="button" class="ks-btn" size="small" data-btn-index="0">'+option.btn+'</button>';
-					}else{
-						$.loop(option.btn, function (val, k) {
-							val = val.split(':');
-							var attr = $.isset(val[1]) ? ' color="' + val[1] + '"' : '';
-							s += '<button type="button" class="ks-btn" size="small" class="_' + k + '" data-btn-index="' + k + '" ' + attr + '>' + val[0] + '</button>';
-						});
-					}
-
+				if($.isString(option.btn)){
+					s += '<button type="button" class="ks-btn" data-btn-index="0">'+option.btn+'</button>';
+				}else{
+					$.loop(option.btn, function (val, k) {
+						val = val.split(':');
+						var attr = $.isset(val[1]) ? ' color="' + val[1] + '"' : '';
+						s += '<button type="button" class="ks-btn" class="_' + k + '" data-btn-index="' + k + '" ' + attr + '>' + val[0] + '</button>';
+					});
 				}
 				H += s ? '<div class="ks-layer-bottom">' + s + '</div>' : '';
 			}
 			H += '</div>';
 			D = $(H);
+			//底部按钮最后一个增加主色
+			if (option.btn && !D.find('.ks-layer-bottom > .ks-btn:last-child').attr('color')) {
+				D.find('.ks-layer-bottom > .ks-btn:last-child').attr('color','primary');
+			}
 
 		}
 		D.show();
@@ -388,16 +392,16 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 			//关闭事件 右上角按钮
 			D.find('.ks-layer-close').click(function () {
 				clearTimeout(AutoEvn);
-				D.close();
+				D.layerHide();
 			});
 
 			//底部按钮处理
 			if (option.btn) {
 				D.find('.ks-layer-bottom .ks-btn').click(function () {
 					var t = $(this);
-					if (!t.attr('disabled') && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun(t.data('btn-index'), t, D) !== false))) {
+					if (!t.attr('disabled') && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), D) !== false))) {
 						clearTimeout(AutoEvn);
-						D.close();
+						D.layerHide();
 
 					}
 				});
@@ -417,7 +421,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 						if (!t.attr('disabled')) {
 							t.attr('disabled', 1);
 							clearTimeout(AutoEvn);
-							D.close();
+							D.layerHide();
 						}
 					});
 				}
@@ -561,7 +565,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 		//N秒自动关闭
 		if (option.outTime > 0) {
 			AutoEvn = setTimeout(function () {
-				D.close();
+				D.layerHide();
 			}, option.outTime * 1000 + 50);
 		}
 
@@ -581,7 +585,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 	var R = __run();
 	if(option.ajaxUrl){
 		$this.AJR(option.ajaxUrl,option.ajaxPost,function(d){
-			R.Q.children('.ks-layer-content').html(d);
+			R.children('.ks-layer-content').html(d);
 		});
 	}
 	return R;
@@ -604,10 +608,10 @@ $.plugin.Dialog = function(type){
 		case $.inArray(type,['success','error']):
 			op.content = p[1];
 			op.close = p[2];
-			op.btn = p[3];
+			op.btn = p[3] || {'cancel':'知道了:primary'};
 			op.class += '_'+type;
 			op.closeBtn = 0;
-			op.outTime = 3;
+			//op.outTime = 3;
 			op.cover = 2;
 			op.backEvent = false;
 			break;
@@ -615,16 +619,16 @@ $.plugin.Dialog = function(type){
 		//确认 参数： 2=标题 3=内容 4=确认回调函数 5=按钮文字
 		case type =='confirm':
 			var btn = p[4], callFun = p[3];
-			btn = btn && $.isString(btn) ? {'confirm':btn} : (btn || {'cancel':'取消','confirm':'确认'});
+			btn = btn && $.isString(btn) ? {'confirm':btn} : (btn || {'cancel':'取消','confirm':'确认:primary'});
 			op.title = p[1];
 			op.content = p[2];
 			op.close = null;
 			op.btn = btn;
 			op.outTime = 0;
 			op.cover = 1;
-			op.btnFun = function(a, b, c, d ){
+			op.btnFun = function(a){
 				if(a =='confirm' && typeof(callFun) =='function'){
-					return callFun(b, c, d);
+					return callFun.apply(this, arguments);
 				}
 			};
 			op.class += '_'+type;
@@ -646,9 +650,9 @@ $.plugin.Dialog = function(type){
 			op.btn = {'cancel':'取消', 'confirm':(p[4] ? p[4] :'确认')};
 			op.outTime = 0;
 			op.cover = 1;
-			op.btnFun = function(a, b, c, d ){
+			op.btnFun = function(a){
 				if(a =='confirm' && typeof(callFun) =='function'){
-					return callFun(b, c, d);
+					return callFun.apply(this, arguments);
 				}
 			};
 			op.class += '_'+type;
@@ -667,7 +671,7 @@ $.plugin.Dialog = function(type){
 			op.pos = 5;
 			break;
 	}
-	return this.layer(op);
+	return $this.layer(op);
 }
 
 /**
@@ -729,7 +733,6 @@ $.plugin.openWindow = function(option){
  * @param closeFun
  */
 $.plugin.close = function(closeFun){
-	var q = this.Q;
 	this.layerID && this.layerHide('', closeFun);
 }
 
@@ -1359,14 +1362,14 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				btn.attr('val',val).data('value',valdt);
 				//单选框选择后关闭pop层
 				if(!multiple){
-					layer.close();
+					layer.layerHide();
 				}
 			});
 
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-select', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0]])){
-					layer.close();
+					layer.layerHide();
 				}
 			});
 		},
@@ -1475,7 +1478,7 @@ $.plugin.showDate = function(input, format){
 
 		TimeHtml += '</div>';
 		if(isymd) {//只有存在年月日时才出现确认按钮
-			TimeHtml += '<button type="button" size="2" color="red">确认</button>';
+			TimeHtml += '<button type="button" class="ks-btn" size="small" color="primary">确认</button>';
 		}
 		TimeHtml += '</div>';
 	}
@@ -1526,7 +1529,7 @@ $.plugin.showDate = function(input, format){
 					sput();//写值
 					//如果没有时分秒操作栏 则直接关闭当前窗口
 					if(!dom.find('.'+cl.d).length){
-						layer.close();
+						layer.layerHide();
 					}
 					return false;
 				});
@@ -1564,7 +1567,7 @@ $.plugin.showDate = function(input, format){
 			//确认按钮
 			dom.find('button').click(function(){
 				sput();//写值
-				layer.close();
+				layer.layerHide();
 				return false;
 			});
 
@@ -1574,12 +1577,12 @@ $.plugin.showDate = function(input, format){
 				input.removeAttr('ks-date-show');
 			});
 			input.blur(function(){
-				!$(this).attr('ks-date-show') && layer.close();
+				!$(this).attr('ks-date-show') && layer.layerHide();
 			});
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-showdate', function(e){
 				if(!$.inArray(e.target,[input[0], layer[0]])){
-					layer.close();
+					layer.layerHide();
 				}
 			});
 		},
@@ -1622,7 +1625,7 @@ $.plugin.showMenu = function(obj, content, title){
 					s && clearTimeout(s);
 				},b=function(){
 					s = setTimeout(function(){
-						layer.close();
+						layer.layerHide();
 					},200);
 				};
 				obj.hover(a,b);
@@ -1635,7 +1638,7 @@ $.plugin.showMenu = function(obj, content, title){
 				//监听点击事件 自动关闭
 				$(document).on('click.KSAUI-showMenu'+layer.layerID, function(e){
 					if(!$.inArray(e.target,[obj[0], dom[0]])){
-						layer.close();
+						layer.layerHide();
 					}
 				});
 			}
@@ -1727,7 +1730,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 				Dom.find('.ks-area-layer-c').html(H);
 				//计算地区列表区域的高度 以适应滚动窗口
 				(function(){
-					var h = Dom.height();
+					var h = Dom.height(true);
 					var o = Dom.find('.ks-area-layer-c');
 					o.height(h-Dom.find('.ks-area-layer-btn').height(true));
 
@@ -1771,6 +1774,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 		content : '<div class="ks-area-layer-btn"><p><span class="ks-text-gray">'+Ts[0]+'</span></p><p></p><p></p><p></p></div><div class="ks-area-layer-c">请稍后...</div>',
 		closeBtn : false,
 		init : function(layer, id){
+			Dom = layer;
 			layerID = id;
 			btn.data('layer-id',id);
 
@@ -1806,8 +1810,8 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-area', function(e){
-				if(!$.inArray(e.target,[btn[0], layer[0], layer.Q.next('[data-layer-key="'+layer.layerID+'"]')[0]])){
-					layer.close();
+				if(!$.inArray(e.target,[btn[0], layer[0], layer.next('[data-layer-key="'+layer.layerID+'"]')[0]])){
+					layer.layerHide();
 					btn.removeData('layer-id');
 				}
 			});
@@ -1872,10 +1876,10 @@ $.plugin.checkAll = function(selector){
 		//域下相同类型的元素
 		if (t.attr('checked')) {
 			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && checkboxObj.attr('checked', true);
+			name && checkboxObj.attr('checked', true).trigger('change');
 		} else {
 			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && checkboxObj.attr('checked', false);
+			name && checkboxObj.attr('checked', false).trigger('change');
 		}
 		tParent.removeClass(indeterName)
 	});
@@ -1893,6 +1897,7 @@ $.plugin.checkAll = function(selector){
 			st = false;
 			tParent.removeClass(indeterName);
 		}
+
 		t.attr('checked', st);
 	})
 	return this;
@@ -2091,10 +2096,90 @@ $.plugin.render = function(){
 			if(ele._KSA_RENDER){
 				return;
 			}
+			ele._KSA_RENDER = 1;
 			ele = $(ele);
 			func(ele, ele.attr()||{});
-			ele[0]._KSA_RENDER = 1;
 		});
+	});
+	(function(){
+		var Fd = ['province', 'city', 'area', 'town'];
+		//地区选择按钮
+
+		$('.ks-area').each(function(_, t){
+			//防止重复渲染
+			if(t._KSA_RENDER){
+				return;
+			}
+			t._KSA_RENDER = 1;
+			t = $(t);
+			var datas = t.data();
+			if(!t.find('span').length){
+				var h = '';
+				var name = datas['name'];
+				$.loop(Fd, function(val, k){
+					var v = datas[val];
+					var vname = val+'Name';
+					var tname = val;
+					if(name){
+						tname = name+'['+val+']';
+						vname = name+'['+val+'Name]';
+					}
+					if(v) {
+						v = v.split(':');
+						h += '<span level="'+k+'" tit="'+v[1]+'">' +
+							'<input type="hidden" name="'+tname+'" value="'+v[0]+'">' +
+							'<input type="hidden" name="'+vname+'" value="'+v[1]+'">' +
+							v[1]+
+							'</span>';
+					}
+				});
+				h && t.html(h);
+			}
+			t.click(function(){
+				var obj = $(this);
+				var defDt = {};
+				var datas = obj.data();
+				var maxlevel = obj.data('maxlevel') || 4;
+				$.loop(Fd, function(val, k){
+					var v = datas[val];
+					if(v) {
+						v = v.split(':');
+						defDt[k] = {id: v[0], name: v[1], level:k, field:val};
+					}
+				});
+				$this.area(obj, obj.attr('title'), defDt, function (dt) {
+					if(!dt.isEnd){
+						return;
+					}
+					var h = '';
+					obj.removeData('province city area town');
+
+					$.loop(dt.data,function(val){
+						var name = val.field;
+						var vname = val.field+'Name';
+						if(datas['name']){
+							name = datas['name']+'['+val.field+']';
+							vname = datas['name']+'['+val.field+'Name]';
+						}
+						obj.data(val.field, val.id+':'+val.name);
+						h += '<span level="'+val.level+'" tit="'+val.name+'">' +
+							'<input type="hidden" name="'+name+'" value="'+val.id+'">' +
+							'<input type="hidden" name="'+vname+'" value="'+val.name+'">' +
+							val.name+
+							'</span>';
+					});
+					obj.html(h);
+				}, maxlevel);
+			});
+		});
+	})();
+	$('.ks-area').each(function(_, e){
+		//防止重复渲染
+		if(e._KSA_RENDER){
+			return;
+		}
+		e._KSA_RENDER = 1;
+		R['ks-area']($(e),$(e).attr());
 	});
 
 	$('select.ks-select').each(function(_, e){
@@ -2139,6 +2224,155 @@ $.plugin.render = function(){
 		ele = $(ele);
 		ele.attr('_ksauicollapse_',1);
 		ele.collapse();
+	});
+
+	//表格固定头部
+	$('.ks-table[fixed-height]').map(function(ele){
+		ele = $(ele);
+		var fixedHeight = parseInt(ele.attr('fixed-height')) || 0;
+		if(!fixedHeight){
+			return;
+		}
+		ele.attr('fixed-height','');
+		var tbody = ele.children('tbody');
+		var thead = ele.children('thead');
+		var allWidth = ele.width(true); //总宽度值
+		var dom = $('<div class="ks-table-fixed-header"><div class="ks-table-header"></div><div class="ks-table-body" style="overflow-y: scroll; max-height:'+fixedHeight+'px"></div></div>');
+		var colgroup = '<table class="ks-table"><colgroup>';
+		var rowCols = ele.children().eq(0).children().children();
+		var rowColsNum = rowCols.length -1;
+		rowCols.each(function(index, el){
+			if(index === rowColsNum){
+				return;
+			}
+			var w = $(el).width(true) / allWidth * 100;
+			colgroup += '<col style="width:'+w+'%; min-width: '+w+'%">';
+		});
+		colgroup += '</colgroup></table>';
+		dom.find('.ks-table-header').html(colgroup).find('table').append(thead);
+		dom.find('.ks-table-body').html(colgroup).find('table').append(tbody);
+		ele.after(dom);
+		var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度
+		var scrollTd = document.createElement('td');
+		scrollTd.style.width = scrollWidth+'px';
+		scrollTd.className = 'ks-td-scroll';
+		dom.find('.ks-table-header > table > thead > tr').append(scrollTd);
+	});
+	//带全选按钮表格 第一列必须是全选表单
+	$('.ks-table:not([_ksaui-table-checkall-render_])').map(function(ele){
+		ele = $(ele);
+		ele.attr('_ksaui-table-checkall-render_',1);
+		var tr = ele.find('tbody > tr');
+		var trFirst = tr.eq(0);
+		if(trFirst.children('td:first-child').find('.ks-checkbox').length){
+			tr.children('td:first-child').find('.ks-checkbox > input[type=checkbox]').change(function(){
+				var t = $(this);
+				var f = t.parents('tr');
+				if(t.attr('checked')){
+					f.addClass('ks-table-tr-checked');
+				}else{
+					f.removeClass('ks-table-tr-checked');
+				}
+			})
+		}
+	});
+
+	$('.ks-page').page();
+	return this;
+}
+
+
+/**
+ * 分页器渲染
+ * 通过选择器使用
+ * @returns {$.plugin}
+ */
+$.plugin.page = function(){
+	this.map(function(ele){
+		if(ele._KsaUIRenderPage){
+			return;
+		}
+		ele._KsaUIRenderPage = true;
+		ele = $(ele);
+		var total = parseInt(ele.attr('total') || 0);
+		if(!total){
+			return;
+		}
+		var current = parseInt(ele.attr('current') || 1);
+		var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
+
+		//给当前ele添加value属性值
+		ele[0].value = current;
+		var href = ele.attr('href');
+		var H = '';
+		H += '<button type="button" class="ks-page-first" icon="first_page" value="1"></button>';
+		H += '<button type="button" class="ks-page-prev" icon="arrow_left" value="prev"></button>';
+
+		(function(){
+			var start = Math.ceil(current - ((pageNum - 1) / 2));
+			for(var i = start; i < start+pageNum; i++) {
+				var txt = i;
+				var val = i;
+				var attr = ' value="' + val + '"';
+				if (href) {
+					attr += ' href="' + href.replace('{{page}}', val) + '"';
+				}
+				if (val === current) {
+					attr += ' class="a"';
+				}
+				H += '<a ' + attr + '>' + txt + '</a>';
+			}
+		})();
+
+		H += '<button type="button" class="ks-page-next" icon="arrow_right" value="next"></button>';
+		H += '<button type="button" class="ks-page-last" icon="last_page" value="'+total+'"></button>';
+		if($.isset(ele.attr('quick'))){
+			H += '<span class="ks-input-group"><i>转</i><input type="text" value="'+current+'"><i>页</i></span>';
+		}
+		ele.html(H);
+
+		function pgTo(val){
+			if(ele.attr('disabled')  || val == ele[0].value){
+				return;
+			}
+			if(val ==='prev'){
+				val = ele[0].value - 1;
+				val = val < 1 ? 1 : val;
+			}else if(val === 'next'){
+				val = ele[0].value + 1;
+				val = val > total ? total : val;
+			}
+			val = parseInt(val);
+
+			ele.children('.ks-page-next').attr('disabled', val === total);
+			ele.children('.ks-page-last').attr('disabled', val > total- pageNum / 2);
+			ele.children('.ks-page-prev').attr('disabled', val ===1);
+			ele.children('.ks-page-first').attr('disabled', val < pageNum / 2);
+
+			ele.attr('current', val);
+			ele[0].value = val;
+			var startPg = val - ((pageNum - 1) / 2);
+			var endPg = total - pageNum+1;
+			startPg = startPg < 1 ? 1 : (startPg > endPg ? endPg : startPg);
+			ele.children('a').map(function (a) {
+				$(a).attr('value', startPg).text(startPg);
+				startPg++;
+			});
+			ele.children('a[value="'+val+'"]').addClass('a').siblings('a').removeClass('a');
+			ele.find('.ks-input-group > input').val(val);
+			ele.trigger('change');
+		}
+
+		ele.children('a , button').click(function(){
+			pgTo($(this).attr('value'));
+		});
+		ele.find('.ks-input-group > input').keyup(function(e){
+			if(e.keyCode === 13){
+				pgTo(this.value);
+			}
+		}).focus(function(){
+			$(this).select();
+		});
 	});
 	return this;
 }
@@ -2330,7 +2564,7 @@ $.plugin.slide = function(options){
  * 		{
  * 			name:'sex', //字段名
  * 			type:'select', //展现类型select/radio/checkbox/switch/text/date
- * 			text:'性别', //表单标题名称
+ * 			label:'性别', //表单标题名称
  * 			value:'2',
  * 			option:{ //多个选项列表 键名=值 键值=名称
  * 		    	'0' : '不填写',
