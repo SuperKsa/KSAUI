@@ -2081,7 +2081,7 @@ function debugTime(key){
 					_data = option.data;
 				}else{
 					_data = new FormData();
-					$.loop(option.data, function(k, val){
+					$.loop(option.data, function(val, k){
 						_data.append(k, val);
 					});
 				}
