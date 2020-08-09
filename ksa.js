@@ -1890,24 +1890,24 @@ function debugTime(key){
 
 	/**
 	 * 给指定元素绑定一个自定义事件
-	 * @param ele 事件对应绑定的元素
 	 * @param name 事件名称
 	 * @param func 回调函数
 	 * @param useCapture  addEventListener第三个参数
 	 * @param isRun 是否立即执行
 	 * @param runDel 立即执行后是否删除
 	 */
-	K.addEvent = function(ele, name, func, useCapture, isRun, runDel){
-		var result;
-		var eEvn = $.Event(name);
-		ele.addEventListener(name, func, useCapture);
-		if(isRun) {
-			result = ele.dispatchEvent(eEvn);
-		}
-		if(runDel){
-			$.removeEvent(ele, name, func, useCapture);
-		}
-		return result;
+	K.addEvent = function(name, func, useCapture, isRun, runDel){
+		this.map(function(ele){
+			var eEvn = $.Event(name);
+			ele.addEventListener(name, func, useCapture);
+			if(isRun) {
+				ele.dispatchEvent(eEvn);
+			}
+			if(runDel){
+				$.removeEvent(ele, name, func, useCapture);
+			}
+		});
+		return this;
 	}
 
 	/**
@@ -1944,7 +1944,7 @@ function debugTime(key){
 		this.map(function(ele){
 			var evn = ele.onsubmit;
 			var result = false;
-			$.addEvent(ele, 'formEvent', function (e) {
+			$(ele).addEvent('formEvent', function (e) {
 				if(callFun){
 					if(callFun.apply(this, e) === false){
 						evn = null;
