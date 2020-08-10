@@ -50,14 +50,35 @@ function debugTime(key){
 		return events;
 	}
 
+	//浏览器不会单独解析table某个标签，它们必须有规则的在一起
+	//所以需要针对table做单独的处理
+	var wrapMap = {
+		thead: [ 1, "<table>", "</table>" ],
+		col: [ 2, "<table><colgroup>", "</colgroup></table>" ],
+		tr: [ 2, "<table><tbody>", "</tbody></table>" ],
+		td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
+		_default: [ 0, "", "" ]
+	};
+	wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
+	wrapMap.th = wrapMap.td;
+	var rtagName = ( /<([a-z][^\/\0>\x20\t\r\n\f]*)/i );
 	/**
 	 * 字符串转虚拟dom
 	 * @param code
 	 * @returns {ActiveX.IXMLDOMNodeList | NodeListOf<ChildNode>}
 	 */
 	function createDom(code){
+		var fragment = document.createDocumentFragment()
+		var tag = ( rtagName.exec( code ) || [ "", "" ] )[ 1 ].toLowerCase();
+		var wrap = wrapMap[ tag ] || wrapMap._default;
 		//创建虚拟dom并写入字符串
-		var dom = document.createRange().createContextualFragment(code);
+		//var dom = document.createRange().createContextualFragment(code);
+		var dom = fragment.appendChild( document.createElement( "div" ) );
+		dom.innerHTML = wrap[1]+code+wrap[2];
+		var j = wrap[0];
+		while ( j-- ) {
+			dom = dom.lastChild;
+		}
 		return [].slice.call(dom.childNodes);
 	}
 
@@ -1788,7 +1809,6 @@ function debugTime(key){
 		this.on('touchstart touchmove touchend mousedown mousemove mouseup mouseout', function(e){
 
 			e.stopPropagation();
-
 			var ex = 0, ey = 0, cx=0, cy=0;
 			//鼠标或手指按下
 			if($.inArray(e.type, ['touchstart','mousedown'])) {
@@ -1805,39 +1825,28 @@ function debugTime(key){
 				cx = ex-X;
 				cy = ey - Y; //得到xy终点坐标
 				//滑动距离必须超过10个像素时才触发
-				if(!action && (Math.abs(cx) >=5 || Math.abs(cy) >=5)) {
+				if(!action && (Math.abs(cx) >=20 || Math.abs(cy) >=20)) {
 					var ages = $.rightTriangleAge(cx, cy);
-					//向下滑动
-					if (cy > 0) {
-						if (ages.age.ac < 80) {
-							action = 'down';
-						} else if (cx > 0) {
-							action = 'right'
-						} else {
-							action = 'left';
-						}
-						//向上滑动
-					} else {
-						if (ages.age.ac < 80) {
-							action = 'top';
-						} else if (cx > 0) {
-							action = 'right'
-						} else {
-							action = 'left';
-						}
+					//滑动角度判断 15度以内为左右滑动
+					if (ages.scale < 15) {
+						action = cx > 0 ? 'right' : 'left';
+					} else{
+						action = cy > 0 ? 'down' : 'top';
 					}
 				}
 				//动作存在 回调
 				if (action) {
 					moveFun && moveFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y});
 				}
-				//鼠标或手指在元素上释放（离开）
+			//鼠标或手指在元素上释放（离开）
 			}else if(Run){
 				ex = (e.changedTouches ? e.changedTouches[0].pageX : e.pageX) || 0;
 				ey = (e.changedTouches ? e.changedTouches[0].pageY : e.pageY) || 0;
-				cx = ex-X;
+				cx = ex - X;
 				cy = ey - Y; //得到xy终点坐标
-				endFun && endFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y});
+				//计算三角形位置与角度
+				var ages = $.rightTriangleAge(cx, cy);
+				endFun && endFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y, scaleX:(Math.abs(cx) /$(this).width(true)*100), scaleY:(Math.abs(cy) /$(this).height(true)*100)});
 
 				X=0;
 				Y=0;
@@ -1866,7 +1875,7 @@ function debugTime(key){
 		bc = parseInt((bc / Math.PI * 180) * 10000) / 10000;
 		//ac角度 = 90 - bc角度
 		var ac = 90 - bc;
-		return {a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
+		return {scale:bc, a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
 	}
 
 
