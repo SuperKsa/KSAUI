@@ -2194,7 +2194,7 @@ $.plugin.render = function(){
 
 	$('.ks-slide:not([_ksauirender_])').each(function(_, ele){
 		ele = $(ele);
-		var sdt = ele.data();
+		var sdt = ele.attr();
 		ele.attr('_ksauirender_',1).slide({
 			auto : sdt.auto,
 			card : sdt.card,
@@ -2234,13 +2234,14 @@ $.plugin.render = function(){
 			return;
 		}
 		ele.attr('fixed-height','');
-		var tbody = ele.children('tbody');
 		var thead = ele.children('thead');
 		var allWidth = ele.width(true); //总宽度值
 		var dom = $('<div class="ks-table-fixed-header"><div class="ks-table-header"></div><div class="ks-table-body" style="overflow-y: scroll; max-height:'+fixedHeight+'px"></div></div>');
-		var colgroup = '<table class="ks-table"><colgroup>';
+
 		var rowCols = ele.children().eq(0).children().children();
 		var rowColsNum = rowCols.length -1;
+
+		var colgroup = '<colgroup>';
 		rowCols.each(function(index, el){
 			if(index === rowColsNum){
 				return;
@@ -2248,10 +2249,11 @@ $.plugin.render = function(){
 			var w = $(el).width(true) / allWidth * 100;
 			colgroup += '<col style="width:'+w+'%; min-width: '+w+'%">';
 		});
-		colgroup += '</colgroup></table>';
-		dom.find('.ks-table-header').html(colgroup).find('table').append(thead);
-		dom.find('.ks-table-body').html(colgroup).find('table').append(tbody);
+		colgroup += '</colgroup>';
 		ele.after(dom);
+		dom.find('.ks-table-header').html('<table class="ks-table">'+colgroup+'</table>').find('table').append(thead);
+		dom.find('.ks-table-body').append(ele[0]).find('table').prepend(colgroup);
+
 		var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度
 		var scrollTd = document.createElement('td');
 		scrollTd.style.width = scrollWidth+'px';
@@ -2384,10 +2386,10 @@ $.plugin.page = function(){
  */
 $.plugin.slide = function(options){
 	options = {
-		auto : $.isset(options.auto) ? parseFloat(options.auto) : 5,
-		card : $.isset(options.card) ? parseInt(options.card) : false,
-		control : $.isset(options.control) ? parseInt(options.control) : true,
-		status : $.isset(options.status) ? parseInt(options.status) : true,
+		auto : $.isset(options.auto) ? parseFloat(options.auto ==='' ? 5 : options.auto) : 5,
+		card : $.isset(options.card),
+		control : $.isset(options.control),
+		status : $.isset(options.status),
 	};
 
 	options.auto = options.auto ? (parseFloat(options.auto) * 1000) : 0;
@@ -2398,6 +2400,7 @@ $.plugin.slide = function(options){
 		}
 		ele._KSAUI_slideRender = true;
 		_Run(ele);
+
 	});
 
 	function _Run(ele) {
@@ -2433,8 +2436,8 @@ $.plugin.slide = function(options){
 				//状态栏 带属性：data-slide-status
 				if(options.status){
 					h += '<div class="ks-slide-status">';
-					$.loop(ths.num, function(i, v){
-						h +='<span>'+(options.status == 2 ? (v) : '')+'</span>';
+					$.loop(ths.num+1	, function(){
+						h +='<span></span>';
 					});
 					h +='</div>';
 				}
@@ -2477,6 +2480,34 @@ $.plugin.slide = function(options){
 
 				ths.playIndex = ths.num;
 				ths.play('next',0);
+
+				//触摸事件
+				var moveXs = {};
+				var slideC = ele.children('.ks-slide-c');
+				ele.touch(function(){
+
+				},function(evn, touch){
+					if(touch.action === 'left' || touch.action ==='right'){
+						slideC.children('._up').each(function(i, e){
+							e = $(e);
+							var mx = parseInt(e.attr('css-mx')) + touch.moveX;
+
+							e.css({transform:'translateX(' + mx + 'px) scale('+e.attr('css-scale')+')', transition:'none'})
+						});
+					}
+				}, function(evn, touch){
+					//横向移动距离超过10%才触发
+					if(touch.action =='left'){
+						E.play('next');
+					}else if(touch.action =='right'){
+						E.play('prev');
+					}else{
+						slideC.children('._up').each(function(i, e){
+							e = $(e);
+							e.css({transform:'translateX(' + e.attr('css-mx') + 'px) scale('+e.attr('css-scale')+')', transition:''})
+						});
+					}
+				});
 			},
 			move : function(i, n, isCard){
 				var mX = (this.itemWidth * n);
@@ -2491,7 +2522,7 @@ $.plugin.slide = function(options){
 						scale = .8;
 					}
 				}
-				this.item.eq(i).css('transform', 'translateX(' + mX + 'px) scale('+scale+')');
+				this.item.eq(i).css('transition','').css('transform', 'translateX(' + mX + 'px) scale('+scale+')').attr({'css-mx':mX,'css-scale':scale});
 			},
 			play : function(tp, index){
 				var ths = this;
