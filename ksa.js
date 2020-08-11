@@ -445,7 +445,7 @@ function debugTime(key){
 			}
 			if(key.length === 1){
 				return attrs[key[0]];
-			}else if(!$.isEmpty(attrs)){
+			}else{
 				return attrs;
 			}
 		//写入模式
@@ -1283,6 +1283,9 @@ function debugTime(key){
 		}
 		if(dt instanceof $ || $.isArrayLike(dt)) {
 			var length = dt.length;
+			if(!length){
+				return;
+			}
 			for (i = 0; i < dt.length; i++) {
 				var val = dt[i];
 				if ((actions && (actions === 'first' || (actions === 'last' && i === length - 1))) || fun(val, i, i) === true) {
@@ -1858,29 +1861,6 @@ function debugTime(key){
 	}
 
 	/**
-	 * 根据两个直角边长推测三角度数
-	 * 必须是直角
-	 * @param a A边长
-	 * @param b B边长
-	 * return {object}
-	 */
-	K.rightTriangleAge = function(a, b){
-		//已知四个坐标组成直角四边形 根据勾股定理推测出直角三角形后得到每个角的角度
-		a = Math.abs(a); //取绝对值
-		b = Math.abs(b); // 取绝对值
-		var c = Math.sqrt(a*a+b*b); //求c边长
-		//余弦定理 求bc的弧度
-		var bc = Math.acos((a*a + c*c - b*b)/(2.0*a*c));
-		//bc弧度转角度 得到结束坐标端三角度数
-		bc = parseInt((bc / Math.PI * 180) * 10000) / 10000;
-		//ac角度 = 90 - bc角度
-		var ac = 90 - bc;
-		return {scale:bc, a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
-	}
-
-
-
-	/**
 	 * 创建一个自定义事件
 	 * @param name
 	 * @constructor
@@ -1971,8 +1951,29 @@ function debugTime(key){
 			}
 		});
 	}
+
+	/**
+	 * 根据两个直角边长推测三角度数
+	 * 必须是直角
+	 * @param a A边长
+	 * @param b B边长
+	 * return {object}
+	 */
+	$.rightTriangleAge = function(a, b){
+		//已知四个坐标组成直角四边形 根据勾股定理推测出直角三角形后得到每个角的角度
+		a = Math.abs(a); //取绝对值
+		b = Math.abs(b); // 取绝对值
+		var c = Math.sqrt(a*a+b*b); //求c边长
+		//余弦定理 求bc的弧度
+		var bc = Math.acos((a*a + c*c - b*b)/(2.0*a*c));
+		//bc弧度转角度 得到结束坐标端三角度数
+		bc = parseInt((bc / Math.PI * 180) * 10000) / 10000;
+		//ac角度 = 90 - bc角度
+		var ac = 90 - bc;
+		return {scale:bc, a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
+	}
 // ====================== 当前或指定url格式化为对象 ====================== //
-	K.urls = function(url){
+	$.urls = function(url){
 		var P = {}, u = [];
 		if(url){
 			u = url.match(/(([a-z]+)\:\/\/)?([^:/]*?)(:(\d+)?)([^?]*)([^#]*)(#.*)?/i);
@@ -2013,7 +2014,7 @@ function debugTime(key){
 	 * @param query 参数：xxx=value
 	 * @returns {string}
 	 */
-	K.urlsAdd = function(url, query){
+	$.urlsAdd = function(url, query){
 		return url + (url.indexOf('?') !== -1 ? '&' : '?') + query;
 	}
 
@@ -2022,7 +2023,7 @@ function debugTime(key){
 	 * @param url
 	 * @returns {*}
 	 */
-	K.urlsParam = function(url){
+	$.urlsParam = function(url){
 		if($.isObject(url) || $.isArray(url)){
 			var u = [];
 			$.loop(url, function(value, key){
@@ -2040,7 +2041,7 @@ function debugTime(key){
 	 * 注：data值不再做任何二次处理，直接放入FormData提交，所以POST时支持文件与参数同时传递，无需其他设置
 	 * @param option
 	 */
-	K.ajax = function(option){
+	$.ajax = function(option){
 		var getType = option.type ? option.type.toUpperCase() : 'GET',
 			headers = option.header || {},
 			dataType = option.dataType ? option.dataType.toLowerCase() : 'html',
@@ -2140,43 +2141,12 @@ function debugTime(key){
 	}
 // ====================== 元素监听 ====================== //
 
-	/**
-	 * 对象变量名分割为主变量名 索引名
-	 * 例：
-	 * data.user[1] = [data.user, 1]
-	 * data.user = [data, user]
-	 * @param kname 需要处理的变量名
-	 * @returns {[string, string]}
-	 */
-	K.keyNameMap = {};
-	/**
-	 *
-	 * @param kname
-	 * @param isOne 数组第一个只返回第一个变量名
-	 * @returns {*}
-	 */
-	K.keyName = function(kname, isOne){
-		var kmapI = kname+'{'+isOne+'}';
-		if(!this.keyNameMap[kmapI]) {
-			var keys = '', p = kname;
-			var dn = !isOne ? kname.lastIndexOf('.') : kname.indexOf('.'), qn =0;
-			if(dn === -1){
-				qn = !isOne ? kname.lastIndexOf('[') : kname.indexOf('[');
-			}
-			var vlast = Math.max(qn, dn);
-			if(vlast >0){
-				p = kname.substr(0,vlast);
-				keys = kname.substr(dn>0 ? vlast+1 : vlast);
-			}
-			this.keyNameMap[kmapI] = [p, keys, kname];
-		}
-		return this.keyNameMap[kmapI];
-	}
+
 
 	/**
 	 * 变量监听函数
 	 */
-	K.def = {
+	$.def = {
 		Event : {}, //监听链
 		/**
 		 * 创建监听事件
@@ -2321,7 +2291,7 @@ function debugTime(key){
 	 * 获取调用此函数的参数名与参数值
 	 * @param Args
 	 */
-	K.getIncludeFunc = function(Args){
+	$.getIncludeFunc = function(Args){
 		var argsNames = Args.callee.toString().match(/^function(\s[^(]+)?\(([^\)]+)?\)\{/);
 		if(argsNames && argsNames[2]) {
 			var dt = {};
@@ -2340,7 +2310,7 @@ function debugTime(key){
 	 * @param func 回调函数
 	 * @param time 时间
 	 */
-	K.setTimeout = function(skey, func, time){
+	$.setTimeout = function(skey, func, time){
 		if(!this.setTimeoutMap){
 			this.setTimeoutMap = {};
 		}
@@ -2359,7 +2329,7 @@ function debugTime(key){
 	 * @param key
 	 * @returns {number}
 	 */
-	K.autoID = function(key){
+	$.autoID = function(key){
 		if(!autoIDMap[key]){
 			autoIDMap[key] = 0;
 		}
@@ -2375,7 +2345,7 @@ function debugTime(key){
 	 * @returns {number}
 	 */
 	var _KSAobjectIDIndex = 1;
-	K.objectID = function (obj, isdel) {
+	$.objectID = function (obj, isdel) {
 		var k = '__$_objectID_$__';
 		if($.isObject(obj) || obj instanceof HTMLElement){
 			if(isdel){
@@ -2408,8 +2378,10 @@ function debugTime(key){
 		}
 	}
 // ====================== TPL模板语法 ====================== //
-	K.tpl = function(_DATA){
-		_DATA = _DATA || {};
+	$.tpl = function(Config){
+		if(Config.el){
+			Config.template = $(Config.el).html();
+		}
 		var $this = this;
 
 		//匹配模板变量正则 {xxx}
@@ -2417,27 +2389,97 @@ function debugTime(key){
 		//匹配js变量名正则
 		var varsNameRegx = /(([\u4e00-\u9fa5_a-zA-Z$]+([\u4e00-\u9fa5_a-zA-Z0-9$]+)?)(((\[[0-9]+\])+|(\.[\u4e00-\u9fa5_a-zA-Z$][\u4e00-\u9fa5_a-zA-Z$0-9]+))+)?)(\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)\(.*?\))?/g;
 
-		var ksaTpl = function(){
-			return this.$tpl.init($this[0]);
+		//将换行符替换为实体
+		function torn(str){
+			if(str){
+				str = str.replace(/(\r\n|\r|\n)/g, function (_1) {
+					return _1 === "\r\n" ? '\\r\\n' : (_1 === "\r" ? '\\r' : '\\n');
+				});
+			}
+			return str;
 		}
-		ksaTpl.prototype.$tpl = {
-			E : null,
-			data : _DATA,
+		//将字符串用双引号包裹
+		function strToQuotes(str) {
+			return '"'+str+'"';
+		}
+
+		/**
+		 * 对象变量名分割为主变量名 索引名
+		 * 例：
+		 * data.user[1] = [data.user, 1]
+		 * data.user = [data, user]
+		 * @param kname 需要处理的变量名
+		 * @returns {[string, string]}
+		 */
+		var keyNameMap = {};
+		/**
+		 *
+		 * @param kname
+		 * @param isOne 数组第一个只返回第一个变量名
+		 * @returns {*}
+		 */
+		function keyName(kname, isOne){
+			var kmapI = kname+'{'+isOne+'}';
+			if(!keyNameMap[kmapI]) {
+				var keys = '', p = kname;
+				var dn = !isOne ? kname.lastIndexOf('.') : kname.indexOf('.'), qn =0;
+				if(dn === -1){
+					qn = !isOne ? kname.lastIndexOf('[') : kname.indexOf('[');
+				}
+				var vlast = Math.max(qn, dn);
+				if(vlast >0){
+					p = kname.substr(0,vlast);
+					keys = kname.substr(dn>0 ? vlast+1 : vlast);
+				}
+				keyNameMap[kmapI] = [p, keys, kname];
+			}
+			return keyNameMap[kmapI];
+		}
+
+		var ksaTpl = {
+			EL : $(Config.el)[0],
+			isMonitor : $.isset(Config.isMonitor) ? Config.isMonitor : true,
+			data : Config.data || {},
+			Template : Config.template,
+			debug : Config.debug,
+			Html : '', //解析完成的HTML
 			cache : {},
 			Dom : document.createDocumentFragment(), //虚拟节点
 			ECODE : [],
 			def : $this.def,
-			init : function(ele){
-				this.E = ele;
-				this.formatHTML();
-				this.ECODE = this.vdom(this.Dom.childNodes);
-				delete this.Dom;
-				this.parseVDOMcode(this.ECODE);
-				delete this.ECODE;
+			init : function(){
+				var ths = this;
+				if(ths.Template) {
+					ths.formatHTML();
+					ths.ECODE = ths.vdom(ths.Dom.childNodes);
+					delete ths.Dom;
+					var newDom = ths.parseVDOMcode(ths.ECODE);
+					if (newDom) {
+						delete ths.ECODE;
+						if (ths.EL) {
+							if (ths.EL.tagName === 'SCRIPT') {
+								$(ths.EL).after(newDom).remove();
+							} else {
+								$(ths.EL).html(newDom);
+							}
+						}
+						$.loop(newDom, function (e) {
+							ths.Html += e.outerHTML || e.textContent;
+						});
+					}
+				}
+				return {
+					el : ths.EL,
+					template : ths.Template,
+					data : ths.data,
+					dom : newDom,
+					html : ths.Html,
+					isMonitor : ths.isMonitor
+				};
 			},
 			formatHTML : function () {
 				var ths = this;
-				var code = this.E.innerHTML;
+				var code = this.Template;
 				//规整语法 去掉{{}}里面的空白字符
 				code = code.replace(/\{\{(.*?)\}\}/g, function(){
 					return '{{'+arguments[1].trim()+'}}';
@@ -2503,16 +2545,16 @@ function debugTime(key){
 			 * @returns {[list, key, value]} undefined=非loop节点
 			 */
 			vdom_loop : function(ele){
-				if(ele.nodeType === 8 && ele.nodeValue.indexOf('loop-') ===0){
+				if(ele.nodeType === 8 && ele.textContent.indexOf('loop-') ===0){
 					ele.isKsaNode = 1;
-					var farr = $.explode(' ', ele.nodeValue, '');
+					var farr = $.explode(' ', ele.textContent, '');
 					farr[2] = farr[2] || '__value';
 					var loopExp = [farr[0], farr[1], farr[3] ? farr[2] : '__', farr[3] ? farr[3] : farr[2]];
-					var rcode = '_$T._LOOP(' + loopExp[1] + ', function(' + loopExp[2] + ', ' + loopExp[3] + '){ return ';
+					var rcode = '_$$_.LOOP(' + loopExp[1] + ', function(' + loopExp[2] + ', ' + loopExp[3] + '){ return ';
 					var scop = [], scopEnd = 0;
 					$(ele).nextAll('', true).each(function (i, e) {
 						if (!scopEnd) {
-							if (e.nodeType === 8 && e.nodeValue.indexOf('/' + loopExp[0]) === 0) {
+							if (e.nodeType === 8 && e.textContent.indexOf('/' + loopExp[0]) === 0) {
 								scopEnd = 1;
 							} else {
 								scop.push(e);
@@ -2527,15 +2569,15 @@ function debugTime(key){
 			},
 			vdom_if : function(ele){
 				var ths = this;
-				if(ele.nodeType === 8 && ele.nodeValue.indexOf('if-') ===0){
+				if(ele.nodeType === 8 && ele.textContent.indexOf('if-') ===0){
 					ele.isKsaNode = 1;
 					var scop = {}, scopEnd = 0;
-					var ifName = ele.nodeValue.substr(0, ele.nodeValue.indexOf(' '));
+					var ifName = ele.textContent.substr(0, ele.textContent.indexOf(' '));
 					var scopIndex = 0;
-					var factor = ele.nodeValue.substr(ifName.length);
+					var factor = ele.textContent.substr(ifName.length);
 					var nodeName = 'if';
 					$(ele).nextAll('', true).each(function (i, e) {
-						var nodeVal = e.nodeValue;
+						var nodeVal = e.textContent;
 
 						if (!scopEnd) {
 							if (e.nodeType === 8 && nodeVal.indexOf('/' + ifName) === 0) {
@@ -2586,7 +2628,7 @@ function debugTime(key){
 						rcode.push(code);
 					});
 					if(rcode.length){
-						return '_$T._if('+rcode.join(', ')+')';
+						return '_$$_.IF('+rcode.join(', ')+')';
 					}
 					return '';
 				}
@@ -2608,7 +2650,7 @@ function debugTime(key){
 							});
 						}
 						if(key ==='v-update' || key ==='v-updatetext'){
-							var upbj = $.keyName(v.value);
+							var upbj = keyName(v.value);
 							if(upbj[0]){
 								if(!upbj[1]){
 									upbj[1] = upbj[0];
@@ -2635,8 +2677,8 @@ function debugTime(key){
 				return attrs;
 			},
 			vdomEval : function(ele){
-				if(ele.nodeType === 8 && ele.nodeValue.indexOf('eval') === 0){
-					return ele.nodeValue.substr(4);
+				if(ele.nodeType === 8 && ele.textContent.indexOf('eval') === 0){
+					return ele.textContent.substr(4);
 				}
 			},
 			vdom : function(eleList, isScore){
@@ -2644,7 +2686,7 @@ function debugTime(key){
 				var Enode = [];
 				$.loop(eleList, function(ele){
 					var nodeType = ele.nodeType;
-					if(ele._vdomBreak || (nodeType === 8 && (ele.nodeValue.indexOf('/if') ===0 || ele.nodeValue.indexOf('/loop') ===0))){
+					if(ele._vdomBreak || (nodeType === 8 && (ele.textContent.indexOf('/if') ===0 || ele.textContent.indexOf('/loop') ===0))){
 						return;
 					}
 					ele._vdomBreak = true;
@@ -2653,7 +2695,7 @@ function debugTime(key){
 					var rcode = '', monitor = '';
 					var EvalCode = ths.vdomEval(ele);
 					if(EvalCode){
-						rcode += '_$T._F(function(){'+EvalCode+" \n\nreturn _$T._Dom(";
+						rcode += '_$$_._F(function(){'+EvalCode+" \n\nreturn _$$_.D(";
 						rcode += ths.vdom($(ele).nextAll('', true) );
 						rcode += ');})';
 						nodeType = 1;
@@ -2672,18 +2714,18 @@ function debugTime(key){
 								}
 							}
 							if(!ele.isKsaNode){
-								var exp = ths.parseText(ele.nodeValue, ele);
+								var exp = ths.parseText(ele.textContent, ele);
 								if (exp && exp[0]) {
 									rcode += exp[0];
 									if (exp[1]) {
 										//添加监听
 										$.loop(exp[1], function (skv, vname) {
 											if ($.isObject(skv)) {
-												monitor += "_$T._M(arguments[0], " + vname + ", '" + Object.keys(skv).join(' ') + "');\n";
+												monitor += "_$$_.M(arguments[0], " + vname + ", '" + Object.keys(skv).join(' ') + "');\n";
 											} else if (typeof (ths.data[vname]) !== "undefined") {
-												monitor += "_$T._M(arguments[0], _$data_, '" + vname + "');\n";
+												monitor += "_$$_.M(arguments[0], _$data_, '" + vname + "');\n";
 											} else if (typeof (window[vname]) !== "undefined") {
-												monitor += "_$T._M(arguments[0], window, '" + vname + "');\n";
+												monitor += "_$$_.M(arguments[0], window, '" + vname + "');\n";
 											}
 										});
 									}
@@ -2699,8 +2741,9 @@ function debugTime(key){
 						}
 					}
 					monitor = monitor ? (', function(){' + monitor) + '}' : '';
-					rcode = rcode ? rcode : '""';
-					rcode = '_$T._F(function(){return _$T._C((arguments[0]||"' + tag + '"), ' + nodeType + ', ' + (attrs || '""') + ', ' + rcode + ')}' + monitor + ')';
+
+					rcode = '_$$_._F(function(){return _$$_.C((arguments[0]||"' + tag + '"), ' + nodeType + ', ' + (attrs || '""') + ', ' + (rcode || '""') + ')}' + monitor + ')';
+
 					Enode.push(rcode);
 
 				});
@@ -2756,7 +2799,6 @@ function debugTime(key){
 				}
 				return [ifKey, R , monObj];
 			},
-
 			/**
 			 * 双向绑定
 			 */
@@ -2802,13 +2844,15 @@ function debugTime(key){
 				$.loop(this.data, function( value, key){
 					var svs = "_$data_"+($.isNumber(key) ? ("["+key+"]") : ("."+key));
 					invars.push("var "+key+" = "+svs+";");
-					ginvars.push("_$T._G(_$data_, '"+key+"', function(v){"+key+"= v;})");
+					ths.isMonitor && ginvars.push("_$$_.G(_$data_, '"+key+"', function(v){"+key+"= v;})");
 				});
 				invars = invars.join("\n");
 				ginvars = ginvars.join("\n");
-				_EvalCodes = invars+"\n"+ginvars+" \n return _$T._Dom("+_EvalCodes+")";
-				//_EvalCodes = "console.error(new Error('Evalcode回调'));"+_EvalCodes;
-				var Es = new Function('_$data_', 'var _$T = this; '+_EvalCodes+'');
+				_EvalCodes = invars+"\n"+ginvars+" \n return _$$_.D("+_EvalCodes+")";
+				if(ths.debug){
+					_EvalCodes = "console.error(new Error('Evalcode回调'));"+_EvalCodes;
+				}
+				var Es = new Function('_$data_', 'var _$$_ = this; '+_EvalCodes+'');
 
 				/**
 				 * 创建节点并创建变量监听
@@ -2830,16 +2874,16 @@ function debugTime(key){
 				 * @returns {Comment | DocumentFragment}
 				 * @private
 				 */
-				Es.prototype._C = function(){
+				Es.prototype.C = function(){
 					var _ts = this;
 					var tag = arguments[0];
 
 					var nodeType = arguments[1],
 						attrs = arguments[2],
-						nodeValue = arguments[3],
+						textContent = arguments[3],
 						monitorFunc = arguments[4];
 					if($.isObject(tag) && tag.nodeType){
-						tag.nodeValue = nodeValue;
+						tag.textContent = textContent;
 						return tag;
 					}
 					var ele;
@@ -2847,7 +2891,7 @@ function debugTime(key){
 						ele = document.createDocumentFragment();
 						$.loop(tag, function(e){
 							if($.isArray(e)){
-								e = _ts._C(e);
+								e = _ts.C(e);
 							}
 							e && ele.appendChild(e);
 						});
@@ -2856,10 +2900,10 @@ function debugTime(key){
 					}else{
 						switch (nodeType) {
 							case 3:
-								ele = document.createTextNode(nodeValue);
+								ele = document.createTextNode(textContent);
 								break;
 							case 8:
-								ele = document.createComment(nodeValue);
+								ele = document.createComment(textContent);
 								break;
 							default:
 								if(!tag){
@@ -2868,14 +2912,14 @@ function debugTime(key){
 									ele = document.createElement(tag);
 								}
 
-								if($.isArray(nodeValue)){
-									$.loop(nodeValue, function(e){
+								if($.isArray(textContent)){
+									$.loop(textContent, function(e){
 										if(e){
 											ele.appendChild(e);
 										}
 									});
-								}else if(nodeValue && $.isObject(nodeValue) && nodeValue.nodeType){
-									ele.appendChild(nodeValue);
+								}else if(textContent && $.isObject(textContent) && textContent.nodeType){
+									ele.appendChild(textContent);
 								}
 						}
 						if(attrs){
@@ -2942,7 +2986,7 @@ function debugTime(key){
 				 * @param objKey 需要监听的键名
 				 * @param at 动作 默认为写nodevalue
 				 */
-				Es.prototype._M = function _M(ele, obj, objKey, at){
+				Es.prototype.M = function M(ele, obj, objKey, at){
 					var func = [], func = ths.getAttrs(ele,'renderFunction');
 					if(!func){
 						return;
@@ -2953,7 +2997,10 @@ function debugTime(key){
 				}
 
 				//将DOM写到页面中
-				Es.prototype._Dom = function (element){
+				Es.prototype.D = function (element){
+					if(!element){
+						return;
+					}
 					var dom = document.createDocumentFragment();
 					if($.isArray(element)){
 						$.loop(element, function(e){
@@ -2971,11 +3018,11 @@ function debugTime(key){
 						dom.appendChild(element);
 					}
 
-					return dom;
+					return [].slice.call(dom.childNodes);
 				}
 
 				//收集监控变量
-				Es.prototype._G = function (obj, objKey, func){
+				Es.prototype.G = function (obj, objKey, func){
 					if(func) {
 						$this.def.createEvent('set', obj, objKey, function (v) {
 							func(v);
@@ -2984,7 +3031,7 @@ function debugTime(key){
 				}
 
 				//循环回调
-				Es.prototype._LOOP = function (dt, func){
+				Es.prototype.LOOP = function (dt, func){
 					if(!dt){
 						return;
 					}
@@ -3003,7 +3050,7 @@ function debugTime(key){
 						var inNodes = [];
 						var node = func.call('', key, value);
 						if($.isArray(node)){
-							node = _ts._C(node);
+							node = _ts.C(node);
 							inNodes = [].slice.call(node.childNodes);
 						}else{
 							inNodes = [node];
@@ -3095,7 +3142,7 @@ function debugTime(key){
 				/**
 				 * if判断节点回调处理
 				 */
-				Es.prototype._if = function (){
+				Es.prototype.IF = function (){
 					var Args = arguments;
 
 					var ifdt = ths.parseIF.apply(ths, Args);
@@ -3128,17 +3175,7 @@ function debugTime(key){
 					return ifdt[1];
 				}
 
-				var newDom = new Es(ths.data);
-				if(ths.E.tagName ==='SCRIPT'){
-					$(ths.E).after(newDom);
-				}else{
-					$(ths.E).empty();
-					ths.E.appendChild(newDom);
-				}
-
-				//_EvalCodes = "function Es(_$data_){\n"+invars+"\n"+ginvars+" \n "+_EvalCodes+"}";
-				//_EvalCodes += "\n\nconsole.error(new Error('测试错误 爆源码'))";
-				//Es.call('',ths.data);
+				return new Es(ths.data);
 			},
 			/**
 			 * 提取字符串中的变量名
@@ -3184,16 +3221,18 @@ function debugTime(key){
 						while ((match = tagRE.exec(text))) {
 							index = match.index;
 							if (index > lastIndex) {
-								parseCode.push('"' + text.slice(lastIndex, index) + '"');
+								parseCode.push( strToQuotes(text.slice(lastIndex, index)) );
 							}
 							var kname = match[1].trim();
 							$.loop(ths.extractParamName(kname), function (v) {
-								var skv = $.keyName(v);
-								if (skv[1]) {
-									variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
-									variableList[skv[0]][skv[1]] = 1;
-								} else {
-									variableList[skv[0]] = 1;
+								var skv = keyName(v);
+								if(ths.isMonitor){
+									if (skv[1]) {
+										variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
+										variableList[skv[0]][skv[1]] = 1;
+									} else {
+										variableList[skv[0]] = 1;
+									}
 								}
 							});
 							parseCode.push(kname);
@@ -3205,9 +3244,7 @@ function debugTime(key){
 						}
 						parseCode = parseCode.length ? parseCode.join('+') : null;
 						if (parseCode) {
-							parseCode = parseCode.replace(/(\r\n|\r|\n)/g, function (_1) {
-								return _1 === "\r\n" ? '\\r\\n' : (_1 === "\r" ? '\\r' : '\\n');
-							});
+							parseCode = torn(parseCode);
 						}
 						variableList = $.isEmpty(variableList) ? null : variableList;
 						parseDt = [parseCode, variableList];
@@ -3217,25 +3254,28 @@ function debugTime(key){
 						ths.setAttrs(ele, 'parseCode', parseDt[0]);
 						ths.setAttrs(ele, 'variableList', parseDt[1]);
 					}
+				}else{
+					text = torn(text);
+					parseDt = [strToQuotes(text)];
 				}
 				return parseDt;
 			},
 		};
-		return new ksaTpl().$tpl;
+		return ksaTpl.init();
 	}
 
 // ====================== 判断与重写函数类 ====================== //
 
-	K.isWindow = function isWindow(obj) {
-		return obj != null && obj === obj.window;
+	$.isWindow = function isWindow(obj) {
+		return $.isObject(obj) && obj === obj.window;
 	};
 
-	K.isDocument = function(obj){
-		return obj != null && obj.nodeType == obj.DOCUMENT_NODE;
+	$.isDocument = function(obj){
+		return $.isObject(obj) && obj.nodeType == obj.DOCUMENT_NODE;
 	}
 
-	K.isArray = function(v){
-		return v && v.constructor == Array;
+	$.isArray = function(v){
+		return $.isObject(v) && v.constructor == Array;
 	}
 
 	/**
@@ -3244,20 +3284,20 @@ function debugTime(key){
 	 * @param str 指定需要检测的字符串 可选
 	 * @returns {boolean}
 	 */
-	K.isset = function(key, str){
+	$.isset = function(key, str){
 		if(str !== undefined){
 			return key.indexOf(str) === -1;
 		}else{
 			return typeof(key) !== 'undefined';
 		}
 	}
-	K.isTrue = function(v) {
+	$.isTrue = function(v) {
 		return v === true;
 	}
-	K.isFalse = function(v) {
+	$.isFalse = function(v) {
 		return v === false;
 	}
-	K.isArrayLike = function(obj) {
+	$.isArrayLike = function(obj) {
 
 		if ($.isFunction(obj) || $.isWindow(obj) || $.isString(obj) || $.isNumber(obj)) {
 			return false;
@@ -3267,37 +3307,37 @@ function debugTime(key){
 		return type === "array" || length === 0 || (typeof length === "number" && length > 0 && (length - 1) in obj);
 	};
 
-	K.isLoop = function(obj) {
+	$.isLoop = function(obj) {
 		var length = !!obj && "length" in obj && obj.length, type = typeof(obj);
 		return type === "array" || length === 0 || (typeof length === "number" && length > 0 && (length - 1) in obj);
 	};
 
-	K.isNumber = function(v){
+	$.isNumber = function(v){
 		var tp = typeof(v);
 		return (tp ==='string' || tp ==='number') && !isNaN(v);
 	}
 
-	K.isBool = function(v){
+	$.isBool = function(v){
 		return typeof(v) === 'boolean';
 	}
 
-	K.isObject = function(v){
+	$.isObject = function(v){
 		return v && typeof(v) === 'object';
 	}
 
-	K.isObjectPlain = function(v) {
+	$.isObjectPlain = function(v) {
 		return $.isObject(v) && !$.isWindow(v) && Object.getPrototypeOf(v) === Object.prototype;
 	}
 
-	K.isString = function(v){
+	$.isString = function(v){
 		return typeof(v) === 'string';
 	}
-	K.isFunction = function(v){
+	$.isFunction = function(v){
 		return v && typeof(v) === 'function';
 	}
 
 
-	K.isEmpty = function(v=[]){
+	$.isEmpty = function(v=[]){
 		if($.isObject(v) || $.isArray(v)){
 			for(var s in v) {
 				if(v !== undefined){
@@ -3315,7 +3355,7 @@ function debugTime(key){
 	 * @param dom
 	 * @returns {boolean}
 	 */
-	K.isDomAll = function(dom){
+	$.isDomAll = function(dom){
 		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList
 	}
 
@@ -3324,15 +3364,15 @@ function debugTime(key){
 	 * @param e
 	 * @returns {*|boolean}
 	 */
-	K.isIndom = function(e){
+	$.isIndom = function(e){
 		return e && e instanceof HTMLElement && !$.inArray(document.compareDocumentPosition(e), [35, 37]);
 	}
 
-	K.isNull = function(v){
+	$.isNull = function(v){
 		return v === null;
 	}
 
-	K.inArray = function(val, dt, rkey){
+	$.inArray = function(val, dt, rkey){
 		var S = false, valisArr = $.isArray(val);
 		$.loop(dt,function(v, k){
 			if((valisArr && $.inArray(v, val)) || (!valisArr && val == v)){
@@ -3343,7 +3383,7 @@ function debugTime(key){
 		return S;
 	}
 
-	K.count = function(dt){
+	$.count = function(dt){
 		var S = 0;
 		$.loop(dt,function(){
 			S ++;
@@ -3351,7 +3391,7 @@ function debugTime(key){
 		return S;
 	}
 
-	K.arrayMerge = function(){
+	$.arrayMerge = function(){
 		var arr = arguments[0] || {};
 		$.loop(arguments, function(value, key){
 			if(key > 0){
@@ -3367,7 +3407,7 @@ function debugTime(key){
 	 * 将任何数据转为数组
 	 * @param dt
 	 */
-	K.toArray = function(dt){
+	$.toArray = function(dt){
 		var tp = typeof(dt);
 		if($.isArray(dt)){
 			return dt;
@@ -3395,7 +3435,7 @@ function debugTime(key){
 	 * @param notemp 需要排除的值
 	 * @returns {[]}
 	 */
-	K.explode = function(ft, str, notemp){
+	$.explode = function(ft, str, notemp){
 		str = ft && str ? str.toString().split(ft) : [];
 		//如果需要排除空值
 		if($.isset(notemp)){
@@ -3409,7 +3449,7 @@ function debugTime(key){
 		}
 		return str;
 	}
-	K.implode = function(n, arr){
+	$.implode = function(n, arr){
 		var s = '', str = '';
 		for(var k in arr){
 			str += s+arr[k];
@@ -3418,7 +3458,7 @@ function debugTime(key){
 		return str;
 	}
 
-	K.unset = function(dt,keys){
+	$.unset = function(dt,keys){
 		var at = $.isObject(dt) ? 'object' : ($.isArray(dt) ? 'array' : null);
 		if(at){
 			keys = $.explode(' ', keys, '');
@@ -3437,7 +3477,7 @@ function debugTime(key){
 		return dt;
 	}
 
-	K.trim = function(str, char){
+	$.trim = function(str, char){
 		str = str.toString();
 		if(char){
 			str = str.replace(new RegExp('^\\'+char+'+', 'g'),'');
@@ -3448,7 +3488,7 @@ function debugTime(key){
 		return str;
 	}
 
-	K.intval = function(value){
+	$.intval = function(value){
 		if($.isObject(value) || $.isArray(value)){
 			$.loop(value, function(v, k){
 				value[k] = $.intval(v);
@@ -3459,7 +3499,7 @@ function debugTime(key){
 		return value;
 	}
 
-	K.strlen = function(value){
+	$.strlen = function(value){
 		return value.toString().length;
 	}
 
