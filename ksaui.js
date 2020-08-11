@@ -53,7 +53,7 @@ $.plugin.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
  * @param {document} showID 需要关闭的dom(jquery) 不传入表示取消id监听
  * 后退检测到需要关闭的dom时会直接remove
  */
-$.plugin.BackEvent = function(id, showID){
+$.BackEvent = function(id, showID){
 	var $this = this;
 	$this.BackEventData = $this.BackEventData ? $this.BackEventData : {};
 	$this.BackEventData.doms = $this.BackEventData.doms ? $this.BackEventData.doms : {};
@@ -108,7 +108,7 @@ $.plugin.BackEvent = function(id, showID){
  * @param {func} Fun 回调函数 参数1=宽度 参数2=高度
  * @param {number} ime 是否立即执行一次 1=立刻执行 2=dom完毕执行 3=1、2同时
  */
-$.plugin.resize = function(Fun, ime){
+$.resize = function(Fun, ime){
 	var $this = this;
 	if(ime ==1 || ime ==3){
 		Fun(window.innerWidth, window.innerHeight);
@@ -133,7 +133,7 @@ $.plugin.resize = function(Fun, ime){
  * @param {String} Key 键名
  * @param {String} Val 缓存内容（可以是一个JSON对象）
  */
-$.plugin.Cache = function(Key,Val){
+$.Cache = function(Key,Val){
 	if (typeof(Storage) !== "undefined") {
 
 		if(typeof(Val) ==='string' && !Val){//删除
@@ -164,7 +164,7 @@ $.plugin.Cache = function(Key,Val){
  * @param fellows 浮动层DOM对象
  * @constructor
  */
-$.plugin.Position = function(centerObj,fellows){
+$.Position = function(centerObj,fellows){
 	centerObj = $(centerObj);
 	fellows = $(fellows);
 	var offset = {left:centerObj.offset().left, top:(centerObj.offset().top+centerObj.height(true))};
@@ -180,7 +180,7 @@ $.plugin.Position = function(centerObj,fellows){
 /**
  * 关闭当前iframe所在的父级layer
  */
-$.plugin.layerHideF = function(){
+$.layerHideF = function(){
 	if(! typeof(window.parent)){
 		return;
 	}
@@ -195,6 +195,7 @@ $.plugin.layerHideF = function(){
  * @param {number} Id 弹出层ID
  */
 $.plugin.layerHide = function(Id, Fun){
+	$('body').removeClass('ks-body-layer-overflow');
 	var $this = this;
 	var o;
 	if(!Id){
@@ -264,8 +265,7 @@ $.plugin.layerHide = function(Id, Fun){
  * @returns {k.fn.init}
  */
 
-$.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
-	var $this = this;
+$.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 	$.layerOption = $.layerOption ? $.layerOption : {};
 
 	if(typeof(option) =='string' || (option instanceof $ && option[0].innerHTML)){
@@ -427,7 +427,6 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 				}
 				D.after(cover);
 			}
-
 			//iframe body加当前ID
 			if (option.iframe) {
 				D.iframe = null;
@@ -544,6 +543,9 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 		P();
 
 		setTimeout(function () {
+			if(!$.isset(option.bodyOver) || option.bodyOver){
+				$('body').addClass('ks-body-layer-overflow');
+			}
 			D.addClass('_ksaui_layer_open_').css({
 				margin: 0,
 				opacity: 1,
@@ -576,7 +578,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 				var o;
 				o = $('.ks-layer').last();
 				if (o.length) {
-					$this.layerHide(o.attr('key'));
+					$.layerHide(o.attr('key'));
 				}
 			}
 		});
@@ -584,7 +586,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
 	}
 	var R = __run();
 	if(option.ajaxUrl){
-		$this.AJR(option.ajaxUrl,option.ajaxPost,function(d){
+		$.API(option.ajaxUrl,option.ajaxPost,function(d){
 			R.children('.ks-layer-content').html(d);
 		});
 	}
@@ -599,7 +601,7 @@ $.plugin.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun
  * 确认框 	参数：	1=confirm 2=标题 3=内容 4=确认回调函数 5=按钮文字
  * 表单框 	参数：	1=form 2=标题 3=数据 4=确认回调函数 5=按钮文字
  */
-$.plugin.Dialog = function(type){
+$.Dialog = function(type){
 	var $this = this;
 	var p = arguments;
 	var op = {class : 'ks-Dialog'};
@@ -671,7 +673,7 @@ $.plugin.Dialog = function(type){
 			op.pos = 5;
 			break;
 	}
-	return $this.layer(op);
+	return $.layer(op);
 }
 
 /**
@@ -682,7 +684,7 @@ $.plugin.Dialog = function(type){
  * @param {number} outTime 关闭时间(秒) 0=一直显示
  * @returns {k.fn.init}
  */
-$.plugin.toast = function(msg, tps, callFun, outTime){
+$.toast = function(msg, tps, callFun, outTime){
 	var cover = 0;
 	outTime = typeof(outTime) =='undefined' ? 2 : outTime;
 	if(msg =='loading'){
@@ -694,7 +696,7 @@ $.plugin.toast = function(msg, tps, callFun, outTime){
 	if(tps){
 		msg = '<div icon="'+tps+'">'+msg+'</div>';
 	}
-	return this.layer({
+	return $.layer({
 		content : msg,
 		class : 'ks-Dialog_toast',
 		type : tps,
@@ -709,7 +711,7 @@ $.plugin.toast = function(msg, tps, callFun, outTime){
  * 创建一个新的全屏页面
  * @param option 参数同layer
  */
-$.plugin.openWindow = function(option){
+$.openWindow = function(option){
 	var h = '<div class="ks-hdbar">';
 	if(option.backBtn === null || option.backBtn !== false){
 		h += '<span icon="back" onclick="window.history.go(-1);"></span>';
@@ -732,7 +734,7 @@ $.plugin.openWindow = function(option){
  * 关闭函数 所有KSAUI事件综合处理
  * @param closeFun
  */
-$.plugin.close = function(closeFun){
+$.close = function(closeFun){
 	this.layerID && this.layerHide('', closeFun);
 }
 
@@ -742,7 +744,7 @@ $.plugin.close = function(closeFun){
  * @param F 需要输出的格式(存在则输出日期，否则输出对象) Y-m-d H:i:s || Y年m月d日 H:i:s等
  * @returns {object} {Y: number, m: number, d: number, H: number, i: number, s: number}
  */
-$.plugin.times = function(str,F){
+$.times = function(str,F){
 	if($.isNumber(str) && $.inArray($.strlen(str),[10,13])){
 		if(str.length == 10){
 			str = str * 1000;
@@ -775,12 +777,12 @@ $.plugin.times = function(str,F){
 }
 
 //指定月份多少天
-$.plugin.days = function(y, m){
+$.days = function(y, m){
 	return new Date(y, m, 0).getDate();
 }
 
 //指定日期星期几
-$.plugin.week = function(y,m,d){
+$.week = function(y,m,d){
 	var w = new Date(y+'-'+m+'-'+d).getDay();
 	return w == 0 ? 7 : w; //周日序号为7
 }
@@ -795,7 +797,7 @@ $.plugin.week = function(y,m,d){
  * @param {type} isBflow 是否为数据流（上传文件）
  * @returns {Boolean}
  */
-$.plugin.AJR = function(url, postdata, fun, errfun, datatype,isBflow){
+$.API = function(url, postdata, fun, errfun, datatype,isBflow){
 	var $this = this;
 	datatype = datatype ? datatype : 'json';
 	url += (url.indexOf('?') == -1 ? '?' : '&') +'ajax=1';
@@ -852,10 +854,9 @@ $.plugin.AJR = function(url, postdata, fun, errfun, datatype,isBflow){
  * @param {type} url
  * @returns {undefined}
  */
-$.plugin.ajaxWin = function(tit, url){
-	var $this = this;
-	return $this.AJR(url,'', function(data){
-		$this.layer({
+$.ajaxWin = function(tit, url){
+	return $.API(url,'', function(data){
+		$.layer({
 			title : tit,
 			content : data,
 			cover : 1
@@ -865,59 +866,35 @@ $.plugin.ajaxWin = function(tit, url){
 
 /**
  * 表单AJAX提交
- * @param {type} obj 表单对象
+ * 实例化后使用
  * @param {type} callFun 回调函数
  * @returns {Boolean}
  */
-$.plugin.AJRS = function(obj,callFun){
-	var $this = this;
-	obj = $(obj);
-	var btn = obj.find('button[type=submit]');
-	var btnTxt = btn.html();
-	btn.addClass('btn-load').attr('disabled',true).text(btnTxt);
-	var formData = new FormData();
-	obj.find('input, textarea, select').each(function(i,ele){
-		var o = $(ele);
-		var name = o.attr('name');
-		var val = o.val();
-		if(name){
-			if(o.attr('type') =='file'){
-				formData.append(name, ele.files.length ? ele.files[0] : '');
-			}else if($.inArray(o.attr('type'),['radio','checkbox'])){
-				if(o.attr('checked')){
-					formData.append(name, val);
-				}
-			}else{
-				if($.isArray(val)){
-					$.loop(val,function(v){
-						formData.append(name, v);
-					})
-				}else{
-					formData.append(name, val);
-				}
-			}
+$.plugin.formSubmit = function(callFun){
+	this.map(function(obj){
+		obj = $(obj);
+		var btn = obj.find('button[type=submit]');
+		var btnTxt = btn.html();
+		btn.addClass('btn-load').attr('disabled',true).text(btnTxt);
+		var formData = obj.formData(true);
+		if(obj.attr('id')){
+			formData.append('FORMID', obj.attr('id'));
 		}
+		$.API($.urlsAdd(obj.attr('action'), 'formsubmit=true'), formData, function(dt){
+			if(typeof callFun == 'function'){
+				callFun(dt);
+			}
+			btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
+		},function(){
+			btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
+		},'json',1);
+
+		//30秒后解除提交按钮限制
+		setTimeout(function(){
+			btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
+		},30*1000);
 	});
 
-	if(obj.attr('id')){
-		formData.append('FORMID', obj.attr('id'));
-	}
-	var url = obj.attr('action');
-	url += url.indexOf('?') !== -1 ? '&' : '?';
-	url += 'formsubmit=true';
-	$this.AJR(url, formData, function(dt){
-		if(typeof callFun == 'function'){
-			callFun(dt);
-		}
-		btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
-	},function(){
-		btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
-	},'json',1);
-
-	//30秒后解除提交按钮限制
-	setTimeout(function(){
-		btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
-	},30*1000);
 	return false;
 }
 
@@ -943,7 +920,7 @@ $.plugin.upload = function(name, files, url, callFun){
 			formData.append(name, val);
 		}
 	});
-	this.AJR(url,formData, function(data){
+	this.API(url,formData, function(data){
 		callFun(data);
 	}, null, 'json', 1);
 }
@@ -957,7 +934,7 @@ $.plugin.upload = function(name, files, url, callFun){
  * @param {string} ed 是否不需要结尾 input等传入1
  * @returns {string} 返回一个标签html源码
  */
-$.plugin.tag = function(tp, dt, txt, ed){
+$.tag = function(tp, dt, txt, ed){
 	var h = '<'+tp;
 	$.loop(dt,function(v, k) {
 		h += k && v != null && v != 'undefined' ? (' '+k+'="'+v+'"') : '';
@@ -1143,7 +1120,7 @@ $.plugin.tab = function(callFun){
  * @param multiple 是否多选
  * @returns {[H|*|jQuery|HTMLElement, *, string]}
  */
-$.plugin.selectToHtml = function(element, multiple){
+$.selectToHtml = function(element, multiple){
 	var data, defvalue, select , Nums =0;
 	//如果传入的是json数据
 	if($.isObjectPlain(element)){
@@ -1314,6 +1291,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 		cover : 0,
 		content : htmlObj[2],
 		closeBtn : 0,
+		bodyOver : false, //body不需要裁切
 		init : function(layer){
 			if(!layer.layerID){
 				return;
@@ -1380,7 +1358,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 	}, layerOption, {class:'ks-layer-select'});
 
 	htmlObj = null;
-	return $this.layer(layerOption);
+	return $.layer(layerOption);
 }
 
 /**
@@ -1490,11 +1468,12 @@ $.plugin.showDate = function(input, format){
 	H += TimeHtml;
 	H +='</div>';
 
-	$this.layer({
+	$.layer({
 		cover : 0,
 		pos : input,
 		content: H,
 		closeBtn : 0,
+		bodyOver : false,
 		show : function(layer){
 			//将dom pop对象转为子级日历
 			var dom = layer.find('.'+cl.a);
@@ -1610,13 +1589,14 @@ $.plugin.showMenu = function(obj, content, title){
 		}
 		return;
 	}
-	return this.layer({
+	return $.layer({
 		pos : obj,
 		cover : 0,
 		title : title,
 		content : content,
 		closeBtn : 0,
 		BackEvent: 0,
+		bodyOver : false,
 		show : function(dom, layer){
 			obj.addClass('a').data('layerID',layer.layerID);
 			//如果是鼠标经过触发的事件 则绑定鼠标离开事件的处理
@@ -1712,7 +1692,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 	//从API获取数据
 	function g(upID, currID){
 		upID = upID ? upID : '';
-		$this.AJR(_APIurl,{id:upID, level:level},function(data){
+		$this.API(_APIurl,{id:upID, level:level},function(data){
 			var H = '';
 			$.loop(data,function (val) {
 				H += $this.tag('li',{
@@ -1765,7 +1745,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 	}
 
 	//底层弹出菜单
-	$this.layer({
+	$.layer({
 		pos : $this.device =='MOBILE' ? 8 : btn,
 		cover : $this.device =='MOBILE' ? 2 : 0,
 		width : $this.device =='MOBILE' ? '100%' : '',
@@ -1773,6 +1753,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 		class : 'ks-area-layer',
 		content : '<div class="ks-area-layer-btn"><p><span class="ks-text-gray">'+Ts[0]+'</span></p><p></p><p></p><p></p></div><div class="ks-area-layer-c">请稍后...</div>',
 		closeBtn : false,
+		bodyOver : false,
 		init : function(layer, id){
 			Dom = layer;
 			layerID = id;
@@ -2265,9 +2246,11 @@ $.plugin.render = function(){
 		ele = $(ele);
 		ele.attr('_ksaui-table-checkall-render_',1);
 		var tr = ele.find('tbody > tr');
+
 		var trFirst = tr.eq(0);
+
 		if(trFirst.children('td:first-child').find('.ks-checkbox').length){
-			tr.children('td:first-child').find('.ks-checkbox > input[type=checkbox]').change(function(){
+			tr.children('td:first-child').find('.ks-checkbox').on('change','input[type=checkbox]',function(){
 				var t = $(this);
 				var f = t.parents('tr');
 				if(t.attr('checked')){
@@ -2290,49 +2273,13 @@ $.plugin.render = function(){
  * @returns {$.plugin}
  */
 $.plugin.page = function(){
+	if(!this.length){
+		return this;
+	}
 	this.map(function(ele){
 		if(ele._KsaUIRenderPage){
 			return;
 		}
-		ele._KsaUIRenderPage = true;
-		ele = $(ele);
-		var total = parseInt(ele.attr('total') || 0);
-		if(!total){
-			return;
-		}
-		var current = parseInt(ele.attr('current') || 1);
-		var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
-
-		//给当前ele添加value属性值
-		ele[0].value = current;
-		var href = ele.attr('href');
-		var H = '';
-		H += '<button type="button" class="ks-page-first" icon="first_page" value="1"></button>';
-		H += '<button type="button" class="ks-page-prev" icon="arrow_left" value="prev"></button>';
-
-		(function(){
-			var start = Math.ceil(current - ((pageNum - 1) / 2));
-			for(var i = start; i < start+pageNum; i++) {
-				var txt = i;
-				var val = i;
-				var attr = ' value="' + val + '"';
-				if (href) {
-					attr += ' href="' + href.replace('{{page}}', val) + '"';
-				}
-				if (val === current) {
-					attr += ' class="a"';
-				}
-				H += '<a ' + attr + '>' + txt + '</a>';
-			}
-		})();
-
-		H += '<button type="button" class="ks-page-next" icon="arrow_right" value="next"></button>';
-		H += '<button type="button" class="ks-page-last" icon="last_page" value="'+total+'"></button>';
-		if($.isset(ele.attr('quick'))){
-			H += '<span class="ks-input-group"><i>转</i><input type="text" value="'+current+'"><i>页</i></span>';
-		}
-		ele.html(H);
-
 		function pgTo(val){
 			if(ele.attr('disabled')  || val == ele[0].value){
 				return;
@@ -2365,6 +2312,52 @@ $.plugin.page = function(){
 			ele.trigger('change');
 		}
 
+		ele._KsaUIRenderPage = true;
+		ele = $(ele);
+		var total = parseInt(ele.attr('total') || 0);
+		if(!total){
+			return;
+		}
+		var current = parseInt(ele.attr('current') || 1);
+		var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
+
+		//给当前ele添加value属性值
+		ele[0].value = current;
+		var href = ele.attr('href');
+		var pgcode = '';
+		(function(){
+			var start = Math.ceil(current - ((pageNum - 1) / 2));
+			start = start < 1 ? 1 : start;
+			var mx = Math.min(total+1, start+pageNum);
+			if(mx <=2){
+				return;
+			}
+			for(var i = start; i < mx; i++) {
+				var txt = i;
+				var val = i;
+				var attr = ' value="' + val + '"';
+				if (href) {
+					attr += ' href="' + href.replace('{{page}}', val) + '"';
+				}
+				if (val === current) {
+					attr += ' class="a"';
+				}
+				pgcode += '<a ' + attr + '>' + txt + '</a>';
+			}
+		})();
+		if(!pgcode){
+			return;
+		}
+		var H = '<button type="button" class="ks-page-first" icon="first_page" value="1"></button>';
+		H += '<button type="button" class="ks-page-prev" icon="arrow_left" value="prev"></button>';
+		H += pgcode;
+		H += '<button type="button" class="ks-page-next" icon="arrow_right" value="next"></button>';
+		H += '<button type="button" class="ks-page-last" icon="last_page" value="'+total+'"></button>';
+		if($.isset(ele.attr('quick'))){
+			H += '<span class="ks-input-group"><i>转</i><input type="text" value="'+current+'"><i>页</i></span>';
+		}
+		ele.html(H);
+
 		ele.children('a , button').click(function(){
 			pgTo($(this).attr('value'));
 		});
@@ -2391,9 +2384,7 @@ $.plugin.slide = function(options){
 		control : $.isset(options.control),
 		status : $.isset(options.status),
 	};
-
 	options.auto = options.auto ? (parseFloat(options.auto) * 1000) : 0;
-
 	this.map(function(ele){
 		if(ele._KSAUI_slideRender){
 			return;
@@ -2402,7 +2393,6 @@ $.plugin.slide = function(options){
 		_Run(ele);
 
 	});
-
 	function _Run(ele) {
 		ele = $(ele);
 		ele.children('.ks-slide-c').height(ele.height(true));

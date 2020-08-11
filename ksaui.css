@@ -313,7 +313,8 @@ alert[block] { display: block}
 .ks-table-header .ks-td-scroll { padding: 0; border-left: 0;}/*页头占位滚动条*/
 
 /*行被选中*/
-.ks-table-tr-checked { background: #e6f7ff}
+.ks-table tbody tr.ks-table-tr-checked { background: #e6f7ff !important;}
+.ks-table tbody tr.ks-table-tr-checked td , .ks-table tbody tr.ks-table-tr-checked {border-color: #d8e9f1}
 
 /*============== 表单结构 ==============*/
 
@@ -455,11 +456,12 @@ th.ks-label { width: 100px; padding: 10px;}
 
 
 /*============== 表单 按钮 ==============*/
-.ks-btn {transition:all 0.1s ease-in-out;   cursor:pointer; display:inline-block;  text-align:center; vertical-align:middle; white-space:nowrap; margin:0; user-select: none; font-style: normal; height: 36px; line-height:34px; font-size:1rem; background:#fff; color: #63666b; padding:0 15px; border-radius:3px; border: var(--bordercolor) 1px solid; opacity: .95; box-shadow: -3px -3px -3px #000}
+.ks-btn {transition:all 0.1s ease-in-out;   cursor:pointer; display:inline-block;  text-align:center; vertical-align:middle; white-space:nowrap; margin:0; user-select: none; font-style: normal; height: 36px; line-height:34px; font-size:1rem; background:#fff; color: #63666b; padding:0 15px; border-radius:3px; opacity: .95; border: 0; overflow: hidden}
+.ks-btn:not([color]) {border: var(--bordercolor) 1px solid;}
 /*状态*/
+
 /*获得焦点*/
 .ks-btn:hover { opacity: .8}
-
 .ks-btn:active { opacity: 1;}
 
 /*被禁用*/
@@ -1170,6 +1172,7 @@ mark[color='black'][line], .ks-btn[color='black'][line] { color: var(--black); b
 .ks-input-group input:disabled { background:#f0f0f0; cursor: not-allowed }
 
 /*============== 浮动提示窗口层 ==============*/
+.ks-body-layer-overflow { overflow: hidden}
 .ks-layer { position: fixed; top: 0; left: 0; font-size: 14px; background:#fff; opacity:0; box-shadow: #444 0 0 5px; border-radius: 3px; min-width:120px}
 .ks-layer[pos="7"], .ks-layer[pos="8"], .ks-layer[pos="9"] { top: inherit; border-radius:7px 7px 0 0}
 

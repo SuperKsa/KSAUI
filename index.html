@@ -48,8 +48,6 @@
 
 <script>
 
-    debug($.dom('<col><col><col><col>'));
-
     var LOOPMAX = 1;
 
     var sdt = {
@@ -225,10 +223,15 @@
     var KTPL;
     (function(){
         console.time('KSA');
-        KTPL = $('#template').tpl(sdt);
+        KTPL = $.tpl({
+            data:sdt,
+            el:'#template',
+            isMonitor : 1,
+            debug : 1
+        });
         console.timeEnd('KSA');
     })();
-
+debug(KTPL);
 
 /*
     //eval性能测试
