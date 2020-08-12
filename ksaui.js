@@ -1127,6 +1127,8 @@ $.selectToHtml = function(element, multiple){
 		data = element;
 		defvalue = element.value;
 		multiple = $.isset(multiple) ? multiple : element.multiple;
+	}else if($.isArray(element)){
+		data = element;
 	}else{
 		select = $(element);
 		multiple = select.attr('multiple');
@@ -1216,6 +1218,7 @@ $.selectToHtml = function(element, multiple){
 $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 	var $this = this;
 	var btn = $(this[0]);
+
 	//触发按钮被禁用时不响应
 	if(btn.attr('disabled') || btn.hasClass('_disabled')){
 		return;
@@ -1229,62 +1232,6 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 	var htmlObj = $.selectToHtml(data, multiple);
 	multiple = htmlObj[1];
 	var select = htmlObj[0];
-	/*
-	var select, Nums =0, defvalue = btn.data('value');
-
-	//如果不是数组、普通JSON参数（则认为是选择器、jq对象、dom对象）
-	if(data && !$.isObjectPlain(data) && !$.isArray(data)){
-		debug(selectToHtml(data));
-		select = $(data);
-		defvalue = select.data('value') || select.val();
-		data = option2json(data);
-		multiple = select.attr('multiple');
-
-	}
-
-	//将select元素转为JSON数据
-	function option2json(o){
-		var n = 0, dt = [];
-		$(o).children().each(function(i,t){
-			t = $(t);
-			var v = {
-				value : t.attr('value') || '',
-				title : t.attr('title') || null,
-				text : t.text() || '',
-				showtitle : t.attr('showtitle') || null,
-				selected : t.attr('selected') || null,
-				disabled : t.attr('disabled') || null,
-				icon : t.attr('icon') || null,
-				style : t.attr('style') || null,
-				n : Nums
-			};
-			if(t[0].tagName =='OPTGROUP'){
-				v.text = t.attr('label') || null;
-				v.data = option2json(t);
-			}else{
-				Nums ++;
-			}
-			dt[n] = v;
-			n ++;
-		});
-		return dt;
-	}
-	//将JSON数据转换为HTML菜单列表
-	function options(dt){
-		var h = '';
-		$.loop(dt,function(value, key){
-			if(value.data){
-				h += '<li class="_tit"><strong>'+(value.text)+'</strong><ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.data)+'</ul></li>';
-			}else{
-				if(!$.isObject(value) && !$.isArray(value)){
-					value = {value:key, text:value, selected: (($.isArray(defvalue) && $.inArray(key, defvalue)) || ($.isObjectPlain(defvalue) && $.isset(defvalue[key])) || key === value)}
-				}
-				h += $this.tag('li', {selected:value.selected ? 'selected' : null ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
-			}
-		});
-		return h;
-	}
-	*/
 	layerOption = layerOption || {};
 	layerOption = $.arrayMerge({
 		pos : btn,

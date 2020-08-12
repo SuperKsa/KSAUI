@@ -61,19 +61,6 @@
             {name : '李老五', sex : '男'}
         ],
         list : {
-            0 : {name : '张二娃', sex : '男'},
-
-            1 : {name : '李老五', sex : '男'},
-            2 : {name : '王同学', sex : '男'},
-            99 : {name : '梅老坎99', sex : '男'},
-            data : {
-                name : '附加list',
-                sex : '性别NO',
-                list : {
-                    'a1' : '男1',
-                    'a2' : '男2',
-                }
-            }
         }
     };
     $(document).on('click' ,'a', function(){
@@ -132,7 +119,7 @@
     </div>
     <table>
         {{loop list key  value}}
-        <tbody>
+        <tbody onclick="$.def.delete(sdt.list,'{{key}}');">
         <tr>
             <td>
                 {{eval}}
@@ -163,6 +150,25 @@
     </table>
 </script>
 <div id="mvvm"></div>
+<script>
+    var KTPL;
+    (function(){
+        console.time('KSA');
+        KTPL = $.tpl({
+            data:sdt,
+            el:'#template',
+            isMonitor : 1,
+            debug : 1
+        });
+        console.timeEnd('KSA');
+    })();
+
+    $.def.delete(sdt.list,'1');
+
+    $.def.set(sdt,'list',{"1":{"name":"李老五","sex":"男"},"2":{"name":"王同学","sex":"男"},"919":{"name":"梅老坎99","sex":"男"}});
+</script>
+
+
 <script>
     /*
     (function(template){
@@ -220,18 +226,7 @@
 
     })($('#template').html());
     */
-    var KTPL;
-    (function(){
-        console.time('KSA');
-        KTPL = $.tpl({
-            data:sdt,
-            el:'#template',
-            isMonitor : 1,
-            debug : 1
-        });
-        console.timeEnd('KSA');
-    })();
-debug(KTPL);
+
 
 /*
     //eval性能测试
