@@ -3482,7 +3482,7 @@ function debugTime(key){
 	 * @returns {boolean}
 	 */
 	$.isDomAll = function(dom){
-		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList
+		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList || ($.isObject(dom) && dom.nodeType && $.isString(dom.nodeName))
 	}
 
 	/**
