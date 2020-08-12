@@ -186,7 +186,7 @@ $.layerHideF = function(){
 	}
 	var id = $('body').attr('parentlayerid');
 	if(id){
-		window.parent.KSAUI.layerHide(id);
+		window.parent.$.layerHide(id);
 	}
 }
 
