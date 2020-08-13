@@ -61,6 +61,11 @@
             {name : '李老五', sex : '男'}
         ],
         list : {
+            0 : {name:'张三', sex:'男', age:'27岁'},
+            1 : {name:'小丽', sex:'女', age:'22岁'},
+            2 : {name:'老王', sex:'男', age:'53岁'},
+            99 : {name:'二哥', sex:'男', age:'27岁'},
+            data : {name:'data数据', list: [1,2,3,4]},
         }
     };
     $(document).on('click' ,'a', function(){
@@ -117,6 +122,7 @@
         <input type="radio" name="a" value="值2" v-updateText="updateValue">选项2</input>
         <div>双向绑定值：{{updateValue}}</div>
     </div>
+    {{if !$.isEmpty(list)}}
     <table>
         {{loop list key  value}}
         <tbody onclick="$.def.delete(sdt.list,'{{key}}');">
@@ -148,6 +154,7 @@
 
 
     </table>
+    {{/if}}
 </script>
 <div id="mvvm"></div>
 <script>
@@ -163,9 +170,9 @@
         console.timeEnd('KSA');
     })();
 
-    $.def.delete(sdt.list,'1');
+    //$.def.delete(sdt.list,'1');
 
-    $.def.set(sdt,'list',{"1":{"name":"李老五","sex":"男"},"2":{"name":"王同学","sex":"男"},"919":{"name":"梅老坎99","sex":"男"}});
+    //$.def.set(sdt,'list',{"1":{"name":"李老五","sex":"男"},"2":{"name":"王同学","sex":"男"},"919":{"name":"梅老坎99","sex":"男"}});
 </script>
 
 <script>

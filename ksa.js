@@ -2287,7 +2287,7 @@ function debugTime(key){
 			var oldValue = obj[keyName];
 			var objID = $.objectID(obj);
 			obj[keyName] = dt;
-			var evnObj = thisEvent[objID];
+
 
 			//如果被更新的键名 原始值是一个对象 则判定方式为重置
 			if($.isObject(oldValue) && $.isObject(dt)){
@@ -2319,6 +2319,7 @@ function debugTime(key){
 			}else {
 				//检查对象监听链
 				this.checkEvent(obj);
+				var evnObj = thisEvent[objID];
 				var evnKey = evnObj.set[keyName] ? evnObj.set[keyName] : null;
 				if (evnKey) {//被更新的键名存在 执行更新动作
 					evnKey.run('set', dt);
@@ -2442,8 +2443,22 @@ function debugTime(key){
 				$.isset(obj[k]) && delete obj[k];
 			}else{
 				if(!$.isset(obj[k])){
+					Object.defineProperty(obj.__proto__, 'objectID', {
+						value: function() {
+							if (!$.isset(this[k])) {
+								Object.defineProperty(this, k, {
+									value: _KSAobjectIDIndex ++,
+									enumerable: false,
+									writable: true
+								});
+							}
+							return this[k];
+						},
+						enumerable: false,
+						writable: true
+					});
+					/*
 					obj.__proto__.objectID = function() {
-
 						if (!$.isset(this[k])) {
 							Object.defineProperty(this, k, {
 								value: _KSAobjectIDIndex ++,
@@ -2453,6 +2468,7 @@ function debugTime(key){
 						}
 						return this[k];
 					};
+					*/
 					obj.objectID();
 				}
 				return obj[k];
@@ -2498,6 +2514,12 @@ function debugTime(key){
 		var variableReg = /\{\{((?:.|\r?\n)+?)\}\}/g;
 		//匹配js变量名正则
 		var varsNameRegx = /(([\u4e00-\u9fa5_a-zA-Z$]+([\u4e00-\u9fa5_a-zA-Z0-9$]+)?)(((\[[0-9]+\])+|(\.[\u4e00-\u9fa5_a-zA-Z$][\u4e00-\u9fa5_a-zA-Z$0-9]+))+)?)(\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)\(.*?\))?/g;
+
+		var extractReg = [
+			/\s+([\.\(\)\[\]\:\?])[\s+]?/g,
+			/\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)(\(.*?\))/g,
+			/[\(\)\+\-\*\/\=\%\?\|\&\>\<\:\!\~\s]/
+		]
 
 		//将换行符替换为实体
 		function torn(str){
@@ -2556,8 +2578,9 @@ function debugTime(key){
 			cache : {},
 			Dom : document.createDocumentFragment(), //虚拟节点
 			ECODE : [],
-			init : function(){
+			init : function(){debug(arguments);
 				var ths = this;
+				//ths.eachData();
 				if(ths.Template) {
 					ths.formatHTML();
 					ths.ECODE = ths.vdom(ths.Dom.childNodes);
@@ -2591,6 +2614,38 @@ function debugTime(key){
 						$.def.delete.apply($.def, arguments)
 					}
 				};
+			},
+			/**
+			 * 遍历data下所有对象并生成ID
+			 */
+			eachData : function(){
+				function fors(dt, fname){
+					if($.isObject(dt)){
+
+						var oid = $.objectID(dt);
+						debug('id:'+oid+' / '+JSON.stringify(dt));
+						if(fname) {
+							//父级键名
+							Object.defineProperty(dt, '_parentKeyName_', {
+								value: fname,
+								enumerable: false,
+								writable: true
+							});
+						}
+						$.loop(dt, function(v, k){
+							var f = fname ? fname : '';
+							if($.isNumber(k)){
+								k = f+'['+k+']';
+							}else{
+								k = f+'.'+k;
+							}
+							fors(v, k);
+						});
+					}
+				}
+
+				fors(this.data,'_$data_');
+				debug(this.data)
 			},
 			formatHTML : function () {
 				var ths = this;
@@ -2725,6 +2780,8 @@ function debugTime(key){
 						$.loop(exp[1], function(v, k){
 							if($.isObject(v)){
 								factor.push('['+k+', ["'+Object.keys(v).join('","')+'"]]');
+							}else{
+								factor.push('[null, "'+k+'"]');
 							}
 						});
 						if(factor.length){
@@ -2873,46 +2930,6 @@ function debugTime(key){
 					Enode = '';
 				}
 				return Enode;
-			},
-			/**
-			 * 解析创建函数 IF区域中的数据
-			 * @returns {[number, *, {}]}
-			 */
-			parseIF : function(){
-				var ths = this;
-				var R, Rcheck, monObj = {};
-				var ifKey = $.autoID('ktpl-parseIF');
-
-				$.loop(arguments, function(value){
-					//监听if条件中的变量
-					if(value[1]) {
-						$.loop(value[1], function (val) {
-							var valID = $.objectID(val[0]);
-							if(monObj[valID]){
-								$.loop(val[1], function (k) {
-									if(!$.inArray(k, monObj[valID][1])){
-										monObj[valID][1].push(k);
-									}
-								});
-							}else{
-								monObj[valID] = val;
-							}
-						});
-					}
-					//如果是else 或者条件结果为真 则跳出循环 不再执行下一个if条件
-					if(!Rcheck && (value[0] ==='else' || value[0]())){
-						R = value[2]();
-						Rcheck = true;
-						return true; //跳出loop循环
-					}
-				});
-				if(!ths.cache.ifscope){
-					ths.cache.ifscope = {};
-				}
-				if(R){
-					ths.cache.ifscope[ifKey] = R;
-				}
-				return [ifKey, R , monObj];
 			},
 			/**
 			 * 双向绑定
@@ -3142,6 +3159,12 @@ function debugTime(key){
 						$.def.createEvent('set', obj, objKey, function (v) {
 							func(v);
 						});
+						$.def.createEvent('delete', obj, objKey, function (v) {
+							func(v);
+						});
+						$.def.createEvent('add', obj, objKey, function (v) {
+							func(v);
+						});
 					}
 				}
 
@@ -3172,8 +3195,7 @@ function debugTime(key){
 						}
 
 						//loop删除数据监听
-						$.def.createEvent('delete', dt, key, function(){
-
+						$.def.createEvent('delete', dt, key, function(){debug('删除：'+key);
 							//如果缓存中只有一个循环时 先创建占位节点
 							var lastDom;
 							if($.count(loopCache) === 1){
@@ -3222,7 +3244,7 @@ function debugTime(key){
 
 					//监听 loop添加数据动作
 					$.def.createEvent('add', dt, function(key, value){
-
+						debug('loop添加'+key);
 						loopCache[key] = [];
 						//根据数据创建节点
 						var node = pushNode(value, key);
@@ -3271,37 +3293,97 @@ function debugTime(key){
 					return newEle;
 				}
 
+
 				/**
 				 * if判断节点回调处理
+				 * 每个参数代表一个判断条件
+				 * 每个参数内的参数：
+				 * 1 = 条件判断函数
+				 * 2 = 监听变量数组 [  ]
+				 * 3 = DOM生成函数
 				 */
 				Es.prototype.IF = function (){
+					//生成当前执行ID
+					var ifKey = $.autoID('ktpl-parseIF');
+					//缓存中存放当前if域有效元素列表
+					if(!ths.cache.ifscope){
+						ths.cache.ifscope = {};
+					}
+					//var cache = ths.cache.ifscope[ifKey];
 					var Args = arguments;
 
-					var ifdt = ths.parseIF.apply(ths, Args);
-					var cachekey = ifdt[0];
-					if(ifdt[2]){
-						$.loop(ifdt[2], function (mv) {
-							$.def.createEvent('set', mv[0], mv[1], function(){
-								var cache = ths.cache.ifscope[cachekey];
-								if(cache){
-									var newdom = ths.parseIF.apply(ths, Args);
-									if(newdom !== cache){
-										ths.cache.ifscope[cachekey] = newdom[1];
-										var markDom;
-										$.loop(cache, function(e){
-											if(!markDom && $.isIndom(e)) {
-												markDom = e;
-											}else{
-												$(e).remove();
-											}
-										});
-										$(markDom).before(newdom[1]).remove();
-									}
-								}
-							});
+					//解析当前域的条件 返回 为真的条件顺序
+					function _factor(){
+						var index = null;
+						$.loop(Args, function(value , i){
+							//如果是else 或者条件结果为真 则跳出循环 不再执行下一个if条件
+							if(value[0] ==='else' || value[0]()){
+								index = i;
+								return true; //跳出loop循环
+							}
 						});
+						return index;
 					}
-					return ifdt[1];
+					//根据条件顺序 生成DOM
+					function _parse(index){
+						var dom;
+						if(index !== null) {
+							dom = Args[index][2]();
+						}
+						//如果没有生成节点 则创建占位节点
+						if (!dom) {
+							dom = [document.createComment('KSA-Placeholder:if')];
+						}
+						return dom;
+					}
+
+					var monObj = {};
+					//提取if条件中 待监听变量
+					$.loop(arguments, function(value){
+						$.loop(value[1], function (val) {
+							var objID;
+							//如果第一个参数为null 表示变量可能是一个顶级变量或者window变量
+							if(val[0] === null){
+								//找变量的父级
+								var f = $.isset(ths.data[val[1]]) ? ths.data : window;
+								objID = $.objectID(f);
+								monObj[objID] = monObj[objID] || [f , []];
+								monObj[objID][1].push(val[1]);
+							}else {
+								objID = $.objectID(val[0]);
+								monObj[objID] = monObj[objID] || [val[0], []];
+								$.loop(val[1], function (kname) {
+									monObj[objID][1].push(kname);
+								});
+							}
+						});
+					});
+
+					//判断条件为真的 语句块索引值
+					var ifIndex = _factor();
+					//push到dom中的元素列表
+					var pushDom = _parse(ifIndex);
+
+					function monFunc(){
+						var index = _factor(); //得到当前为真的条件顺序
+						if(index !== ifIndex){
+							var lastDom = pushDom[pushDom.length-1];
+							var dom = _parse(index);
+							//当前节点后添加新节点
+							$(lastDom).after(dom);
+							$(pushDom).remove();
+							pushDom = dom;
+							ifIndex = index;
+						}
+					}
+					//监听变量变化
+					$.loop(monObj, function (value) {
+						$.loop(value[1], function(kname){
+							$.def.createEvent('set', value[0], kname, monFunc);
+							$.def.createEvent('delete', value[0], kname, monFunc);
+						})
+					});
+					return pushDom;
 				}
 
 				return new Es(ths.data);
@@ -3312,6 +3394,48 @@ function debugTime(key){
 			 * @returns {[]}
 			 */
 			extractParamName : function(str){
+
+				var strArr = [];
+				//滤掉转义引号、空白
+				str = str.replace(/\\'|\\"/g,'').replace(extractReg[0],'$1');
+				//滤掉原生方法
+				str = str.replace(extractReg[1],'|$2');
+				var S = ''; //连续字符串
+				for(var i =0; i < str.length; i ++){
+					var value = str[i];
+					//如果碰到圆括号、运算符等特殊符号 直接拆行
+					if(extractReg[2].test(value)) {
+						strArr.push([S, value]);
+						S = '';
+						//跳过运算符、空格
+					}else{
+						S += value;
+					}
+				}
+				if(S){
+					strArr.push([S, '']);
+				}
+
+				var Vars = {};
+				//提取变量名
+				for(var i =0; i < strArr.length; i ++){
+					var value = strArr[i], val = value[0];
+					val = val.trim();
+					if(val !==''){
+						//滤掉字符串 引号之间的内容
+						val = val.replace(/^('.*?')|(".*?")$/g,'');
+					}
+					//检查中括号中是否存在变量名
+					val.replace(/\[([a-z\$_][^\]]+)\]/ig, function(){
+						Vars[arguments[1]] = arguments[1];
+					});
+					//不是起始括号 且第一个字符符合变量名要求
+					if(val && value[1] !== '(' && /^[a-z\$_]/i.test(val)){
+						Vars[val] = val;
+					}
+				}
+				return Object.keys(Vars);
+				/*
 				var ParamName = [];
 				str = str.trim();
 				//去掉字符串 去掉转义引号' " 去掉引号中间的内容 去掉.()[]左右空格
@@ -3322,6 +3446,7 @@ function debugTime(key){
 					}
 				});
 				return ParamName;
+				 */
 			},
 			/**
 			 * 解析文本节点内容
