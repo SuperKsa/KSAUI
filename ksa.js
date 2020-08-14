@@ -260,7 +260,7 @@ function debugTime(key){
 			var eleID = $.objectID(ele);
 			var events = bindEventData[eleID];
 			var newEle = ele.cloneNode(withs);
-			$.objectID(newEle,true);
+			$.objectID(newEle,'');
 			//复制事件
 			if(deepWith && events){
 				var $newEle = $(newEle);
@@ -2141,13 +2141,37 @@ function debugTime(key){
 	}
 // ====================== 元素监听 ====================== //
 
-
-
 	/**
 	 * 变量监听函数
+	 * 所有监听回调必须在新值改变以前
 	 */
 	$.def = {
+		debug : 1,
 		Event : {}, //监听链
+		/**
+		 * 创建一个监听链
+		 * @returns {{add: {}, isPush: boolean, set: {}, get: {}, run: run, delete: {}}}
+		 */
+		newQueue : function(){
+			return {
+				isPush : false,
+				set : {}, //写值监听列表
+				get : {}, //读取监听列表
+				delete : {}, //删除监听列表
+				add : {}, //新增监听列表
+				reset : {}, //重置监听列表
+				monitor : {}, //当前对象下待监听的键名列表
+				run : function (ac, newObj, keyName, newV) {
+					var ths = this;
+					ths.obj = newObj;
+					if (ths[ac]) {
+						$.loop(ths[ac], function (f) {
+							f(newV, keyName, newObj);//添加数据回调键名与数据 第一个回调参数必须是新值
+						});
+					}
+				}
+			};
+		},
 		/**
 		 * 检查监听链是否存在 没有则新建一个
 		 * @param obj
@@ -2156,24 +2180,12 @@ function debugTime(key){
 		checkEvent : function(obj){
 			var objID = $.objectID(obj);
 			if(!this.Event[objID]){
-				this.Event[objID] = {
-					object : obj,
-					set : {},
-					add : {},
-					delete : {},
-					reset : {},
-					run : function (ac, keyName, newV) {
-						if (this[ac]) {
-							$.loop(this[ac], function (f) {
-								f(keyName, newV);//添加数据回调键名与数据
-							});
-						}
-					}
-				}
+				this.Event[objID] = this.newQueue();
 				return false;
 			}
 			return true;
 		},
+		funlist : {},
 		/**
 		 * 创建监听事件
 		 * @param ac 需要监听的动作 set=值改变 get=值读取 add=值添加 delete=值删除
@@ -2181,7 +2193,7 @@ function debugTime(key){
 		 * @param keyName 需要监听的键名 多个以空格分开
 		 * @param Fun 事件触发时的回调函数 参数1=最新的值
 		 */
-		createEvent : function(ac, obj, keyName, Fun){
+		createEvent : function(action, obj, keyName, Fun){
 			var ths = this;
 			if(!Fun && $.isFunction(keyName)){
 				Fun = keyName;
@@ -2194,31 +2206,30 @@ function debugTime(key){
 			var objID = $.objectID(obj);
 			ths.checkEvent(obj);
 			var evnObj = ths.Event[objID];
-			if(keyName){
-				$.loop($.explode(' ', keyName,''),  function(val){
+			keyName = keyName ? $.explode(' ', keyName,'') : '';
 
-					if(!evnObj.set[val]){
-						evnObj.set[val] = {
-							isPush : false,
-							run : function(ac, newV, oldV){
-								if(this[ac]) {
-									$.loop(this[ac], function (f) {
-										f(newV, oldV, obj, keyName);
-									});
-								}
-							},
-							set : {}, //写值监听列表
-							get : {}, //读取监听列表
-							delete : {}, //删除监听列表
-							add : {} //新增监听列表
-						};
-					}
-					evnObj.set[val][ac][FunID] = evnObj.set[val][ac][FunID] || Fun;
-					ths.monitor(obj, val);//刷新监听队列
-				});
-			}else{
-				evnObj[ac][FunID] = evnObj[ac][FunID] || Fun;
-			}
+			$.loop($.explode(' ', action, ''), function(ac){
+				if(keyName){
+					$.loop(keyName,  function(val){
+						if(!evnObj.monitor[val]){
+							evnObj.monitor[val] = ths.newQueue();
+						}
+
+						if(ac ==='delete' && !$.isWindow(obj)){
+							//debug('监听 '+ac+' / KEY:' + val + ' / objID:'+objID+' / Data:'+ JSON.stringify(obj));
+							//console.error(new Error());
+						}
+
+
+						evnObj.monitor[val][ac][FunID] = evnObj.monitor[val][ac][FunID] || Fun;
+						ths.monitor(obj, val);//刷新监听队列
+
+					});
+				}else{
+					evnObj[ac][FunID] = evnObj[ac][FunID] || Fun;
+				}
+			});
+			//consoleData.length && debug(consoleData);
 		},
 		/**
 		 * 刷新或创建监听队列
@@ -2232,7 +2243,7 @@ function debugTime(key){
 			var ths = this;
 			var objID = $.objectID(obj);
 
-			var eventDt = ths.Event[objID] && ths.Event[objID].set[keyName] ? ths.Event[objID].set[keyName] : null;
+			var eventDt = ths.Event[objID] && ths.Event[objID].monitor[keyName] ? ths.Event[objID].monitor[keyName] : null;
 
 			//如果变量已经在监听队列 则不重复监听
 			if(!eventDt || eventDt.isPush){
@@ -2259,11 +2270,10 @@ function debugTime(key){
 						_Svalue = v;
 
 						defSet(v); //默认事件回调
-						eventDt && eventDt.run('set', v, oldValue);
+						eventDt && eventDt.run('set', obj, keyName, v, oldValue);
 
 					},
 					get : function(v){
-						eventDt && eventDt.run('get', v);
 						return _Svalue;
 					}
 				});
@@ -2271,6 +2281,73 @@ function debugTime(key){
 				eventDt.isPush = true; //打上监听成功标记
 			}catch (e) {
 
+			}
+		},
+		add : function(obj, keyName, dt){
+			var ths = this,
+				objID = $.objectID(obj), //当前对象ID
+				events = ths.Event[objID]; //当前对象监听事件
+
+			//触发对象add事件 父级关联的
+			events && events.run('add', obj, keyName, dt);
+			if (ths.debug) {
+				debug('def.set '+keyName+' 值 add');
+			}
+
+		},
+		reset : function(obj, keyName, dt){
+			if(!$.isObject(obj) || !keyName || !$.isObject(dt)){
+				return;
+			}
+			var ths = this;
+			//当前对象ID
+			var objID = $.objectID(obj);
+
+			var originalID = $.objectID(obj[keyName]) || (ths.deleteObjectIdList[objID] ? ths.deleteObjectIdList[objID][keyName] : null);
+			//同步对象ID
+			originalID && $.objectID(dt, originalID);
+
+			//触发对象add事件 父级关联的
+			var events = ths.Event[objID]; //当前对象监听事件
+			events && events.monitor[keyName] && events.monitor[keyName].run('reset', obj, keyName, dt);
+
+			//触发对象add事件
+			originalID && ths.Event[originalID] && ths.Event[originalID].run('reset', obj, keyName, dt);
+
+			if (ths.debug) {
+				debug('def.set '+keyName+'(' + originalID +') 值 reset');
+			}
+		},
+		update : function(obj, keyName, dt){
+			if(!$.isObject(obj) || !keyName){
+				return;
+			}
+
+			var ths = this,
+				objID = $.objectID(obj), //当前对象ID
+				events = ths.Event[objID]; //当前对象监听事件
+			if($.isObject(dt)){
+				var setObj = obj[keyName];
+				var originalID = $.objectID(setObj);
+				//继承原来的ID
+				originalID && $.objectID(dt, originalID);
+
+				//检查对象监听链
+				this.checkEvent(obj);
+
+				//触发当前对象监听事件
+				var evnKey = events.monitor[keyName] ? events.monitor[keyName] : null;
+
+				if (evnKey) {//被更新的键名存在 执行更新动作
+					evnKey.run('set', obj, keyName, dt);
+				}
+			}else{
+				obj[keyName] = dt;
+				
+			}
+
+			if (ths.debug) {
+				debug('def.update '+keyName+'(' + originalID +') / Data: '+JSON.stringify(dt));
 			}
 		},
 		/**
@@ -2283,79 +2360,77 @@ function debugTime(key){
 			if(!$.isObject(obj) || !keyName){
 				return;
 			}
-			var thisEvent = this.Event;
-			var oldValue = obj[keyName];
-			var objID = $.objectID(obj);
-			obj[keyName] = dt;
+			var ths = this,
+				objID = $.objectID(obj), //当前对象ID
+				setObj = obj[keyName], //待更新对象
+				setObjID = $.isObject(setObj) ? $.objectID(setObj) : null; //待更新对象ID
+
+			var delObj = this.deleteObjectIdList[objID];
+			//值新增 当前对象已经被删除
+			if(delObj && delObj[keyName]){
+
+				ths.reset(obj, keyName, dt);
+				delete this.deleteObjectIdList[objID][keyName];
+
+			//被直接重新赋值 待更新对象之前是一个对象
+			}else if($.isObject(setObj)){
+
+				//如果新值也是一个对象 则对比判断增删改
+				if($.isObject(dt)){
 
 
-			//如果被更新的键名 原始值是一个对象 则判定方式为重置
-			if($.isObject(oldValue) && $.isObject(dt)){
-				var oldValueID = $.objectID(oldValue);
-				var dtID = $.objectID(dt);
-				if(oldValueID !== dtID) {
-					//objectID跟随旧ID
-					Object.defineProperty(obj[keyName], '_uniqueid_', {
-						value: oldValueID,
-						enumerable: false,
-						writable: true
-					});
-				}
-				//遍历旧数据 不存在的直接删除
-				$.loop(oldValue, function(oldV, k){
-					//如果新数据不存在 则删除
-					if(!$.isset(dt[k])){
-						$.def.delete(oldValue, k);
-					}
-				});
-
-				//遍历新数据，判断增删改
-				$.loop(dt, function(newV, k){
-					//旧数据不存在 则添加
-					if(!$.isset(oldValue[k])){
-						$.def.set(oldValue, k, newV);
-					}
-				});
-			}else {
-				//检查对象监听链
-				this.checkEvent(obj);
-				var evnObj = thisEvent[objID];
-				var evnKey = evnObj.set[keyName] ? evnObj.set[keyName] : null;
-				if (evnKey) {//被更新的键名存在 执行更新动作
-					evnKey.run('set', dt);
-				} else {//被更新的键名不存在 执行新增动作
-					evnObj.run('add', keyName, dt);
-				}
-			}
-			return obj;
-		},
-		delEvent : function(obj){
-			var ths = this;
-			var id = $.objectID(obj);
-			var evns = ths.Event[id];
-			if(!evns){
-				return;
-			}
-			function d(t){
-				if(evns[t]) {
-					$.loop(evns[t], function (_, k) {
-						ths.Event[k] && delete ths.Event[k];
-					});
-				}
-				if(evns.object) {
-					$.loop(evns.object, function (v) {
-						if ($.isObject(v)) {
-							ths.delEvent(v);
+					//遍历旧数据 不存在的直接删除
+					$.loop(setObj, function(oldV, k){
+						//如果新数据不存在 则删除
+						if(!$.isset(dt[k])){
+							$.def.delete(setObj, k);
 						}
 					});
+					//遍历新数据，判断增删改
+					$.loop(dt, function(newV, k){
+						//旧数据存在 则更新
+						if($.isset(setObj[k])){
+							$.def.update(setObj, k, newV);
+						//不存在 则添加
+						}else{
+							$.def.add(setObj, k, newV);
+						}
+					});
+
+					if (ths.debug) {
+						debug('def.set '+keyName+'(' + $.objectID(obj[keyName])+') /'+setObjID+' 值 重置');
+					}
+				} else {
+					this.update(obj, keyName, dt);
 				}
+			//原来的值不存在 添加
+			}else if(!$.isset(setObj)){
+				$.def.add(obj, keyName, dt);
 			}
-			d('add');
-			d('delete');
-			d('set');
-			d('get');
-			evns && delete ths.Event[id];
+
+			//给对象赋值
+			obj[keyName] = dt;
+			return obj;
 		},
+		/**
+		 * 删除对象下所有子对象的事件
+		 * @param obj
+		 */
+		deleteEvent : function(obj, keyName){
+			var ths = this;
+			var delObj = obj[keyName];
+			var delObjID = $.objectID(delObj);
+			$.loop(delObj, function (v, k) {
+				if($.isObject(v)){
+					var vid = $.objectID(v);
+					ths.Event[vid] && delete ths.Event[vid];
+					ths.deleteEvent(delObj, k);
+				}
+			});
+			ths.Event[delObjID] && delete ths.Event[delObjID];
+		},
+		//已删除对象ID列表 被删除的对象ID会保存在这里
+		deleteObjectIdList : {},
 		/**
 		 * 删除对象某个键名
 		 * @param obj 需要删除的对象
@@ -2367,16 +2442,37 @@ function debugTime(key){
 			}
 			var ths = this;
 			var objID = $.objectID(obj);
+			var objEvent = ths.Event[objID];
 			keyName = keyName.toString();
+			//如果被删除的是一个对象 则保存它的ID 以便重新给它赋值时使用
+			if($.isObject(obj[keyName])){
+				ths.deleteObjectIdList[objID] = ths.deleteObjectIdList[objID] || {};
+				ths.deleteObjectIdList[objID][keyName] = $.objectID(obj[keyName]);
+			}
+			if(ths.debug){
+				debug('def.delete '+keyName+'('+$.objectID(obj[keyName])+')');
+			}
 			$.loop($.explode(' ', keyName, ''), function(key){
-				var evnObj = ths.Event[objID];
-				var eventDt = evnObj && evnObj.set[key] ? evnObj.set[key] : null;
-				if(eventDt){
-					eventDt.run('delete')
-					delete evnObj.set[key];
+				var thisID = $.objectID(obj[key]);
+				var thsE = ths.Event[thisID];
+				if(thsE){
+					thsE.run('delete', obj, key);
+					//删除操作 重置监听列表 只允许重置 reset
+					thsE.set = {};
+					thsE.get = {};
+					thsE.add = {};
+					thsE.delete = {};
+					thsE.monitor = {};
 				}
-				//一并删除该对象所有的监听事件
-				ths.delEvent(obj[key]);
+				var eventDt = objEvent && objEvent.monitor[key] ? objEvent.monitor[key] : null;
+				if(eventDt){
+					eventDt.run('delete', obj, key);
+					eventDt.monitor = {};
+					//delete objEvent.monitor[key];
+				}
+
+				//删除对象所有的监听事件
+				//ths.deleteEvent(obj,key);
 				delete obj[key];
 			});
 			return obj;
@@ -2430,76 +2526,85 @@ function debugTime(key){
 	};
 
 	/**
+	 * 对象的唯一ID累加变量
+	 */
+	var _KSAobjectIDIndex = 1;
+
+	/**
 	 * 获取一个对象的唯一ID
 	 * 支持 对象、数组、函数
 	 * @param obj
 	 * @returns {number}
 	 */
-	var _KSAobjectIDIndex = 1;
-	$.objectID = function (obj, isdel) {
-		var k = '_uniqueid_';
-		if($.isObject(obj)){
+	$.objectID = function (obj, newValue) {
+		var keyName = '_uniqueID_';
+		var isValue = $.isset(newValue);
+		var isdel = newValue === '';
+		if($.isWindow(obj)){
+			return 0;
+		}else if($.isObjectPlain(obj)){
 			if(isdel){
-				$.isset(obj[k]) && delete obj[k];
+				$.isset(obj[keyName]) && delete obj[keyName];
+			}else if(isValue){
+				Object.defineProperty(obj, keyName, {
+					value: newValue,
+					enumerable: false,
+					writable: true
+				});
+				return newValue;
 			}else{
-				if(!$.isset(obj[k])){
-					Object.defineProperty(obj.__proto__, 'objectID', {
+				if(!$.isset(obj[keyName])){
+					Object.defineProperty(obj, '_uniqueIDFunc_', {
 						value: function() {
-							if (!$.isset(this[k])) {
-								Object.defineProperty(this, k, {
+							if (!$.isset(this[keyName])) {
+								Object.defineProperty(this, keyName, {
 									value: _KSAobjectIDIndex ++,
 									enumerable: false,
 									writable: true
 								});
 							}
-							return this[k];
+							return this[keyName];
 						},
 						enumerable: false,
-						writable: true
+						writable: false
 					});
-					/*
-					obj.__proto__.objectID = function() {
-						if (!$.isset(this[k])) {
-							Object.defineProperty(this, k, {
-								value: _KSAobjectIDIndex ++,
-								enumerable: false,
-								writable: true
-							});
-						}
-						return this[k];
-					};
-					*/
-					obj.objectID();
+					obj._uniqueIDFunc_();
 				}
-				return obj[k];
+				return obj[keyName];
 			}
 		}else if(obj instanceof HTMLElement){
 			if(isdel){
-				$.isset(obj[k]) && delete obj[k];
+				$.isset(obj[keyName]) && delete obj[keyName];
+			}else if(isValue){
+				obj[keyName] = newValue;
 			}else{
-				if(!obj[k]) {
-					obj[k] = _KSAobjectIDIndex++;
+				if(!obj[keyName]) {
+					obj[keyName] = _KSAobjectIDIndex++;
 				}
 			}
-			return obj[k];
+			return obj[keyName];
 		}else if($.isFunction(obj)){
 			if(isdel){
-				$.isset(obj.prototype[k]) && delete obj.prototype[k];
+				$.isset(obj.prototype[keyName]) && delete obj.prototype[keyName];
+			}else if(isValue){
+				obj.prototype[keyName] = newValue;
 			}else{
-				if(!obj.prototype[k]) {
-					obj.prototype[k] = _KSAobjectIDIndex++;
+				if(!obj.prototype[keyName]) {
+					obj.prototype[keyName] = _KSAobjectIDIndex++;
 				}
-				return obj.prototype[k];
+				return obj.prototype[keyName];
 			}
 
 		}else if($.isArray(obj)){
 			if(isdel){
-				$.isset(obj.__proto__[k]) && delete obj.__proto__[k];
+				$.isset(obj.__proto__[keyName]) && delete obj.__proto__[keyName];
+			}else if(isValue){
+				obj.__proto__[keyName] = newValue;
 			}else{
-				if(!obj.__proto__[k]) {
-					obj.__proto__[k] = _KSAobjectIDIndex++;
+				if(!obj.__proto__[keyName]) {
+					obj.__proto__[keyName] = _KSAobjectIDIndex++;
 				}
-				return obj.__proto__[k];
+				return obj.__proto__[keyName];
 			}
 		}
 	}
@@ -2508,13 +2613,8 @@ function debugTime(key){
 		if(Config.el){
 			Config.template = $(Config.el).html();
 		}
-		var $this = this;
-
 		//匹配模板变量正则 {xxx}
 		var variableReg = /\{\{((?:.|\r?\n)+?)\}\}/g;
-		//匹配js变量名正则
-		var varsNameRegx = /(([\u4e00-\u9fa5_a-zA-Z$]+([\u4e00-\u9fa5_a-zA-Z0-9$]+)?)(((\[[0-9]+\])+|(\.[\u4e00-\u9fa5_a-zA-Z$][\u4e00-\u9fa5_a-zA-Z$0-9]+))+)?)(\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)\(.*?\))?/g;
-
 		var extractReg = [
 			/\s+([\.\(\)\[\]\:\?])[\s+]?/g,
 			/\.(charAt|charCodeAt|concat|fromCharCode|indexOf|includes|lastIndexOf|match|repeat|replace|search|slice|split|startsWith|substr|substring|toLowerCase|toUpperCase|trim|toLocaleLowerCase|toLocaleUpperCase|valueOf|toString|anchor|big|blink|bold|fixed|fontcolor|fontsize|italics|link|small|strike|sub|sup)(\(.*?\))/g,
@@ -2578,9 +2678,9 @@ function debugTime(key){
 			cache : {},
 			Dom : document.createDocumentFragment(), //虚拟节点
 			ECODE : [],
-			init : function(){debug(arguments);
+			init : function(){
+
 				var ths = this;
-				//ths.eachData();
 				if(ths.Template) {
 					ths.formatHTML();
 					ths.ECODE = ths.vdom(ths.Dom.childNodes);
@@ -2614,38 +2714,6 @@ function debugTime(key){
 						$.def.delete.apply($.def, arguments)
 					}
 				};
-			},
-			/**
-			 * 遍历data下所有对象并生成ID
-			 */
-			eachData : function(){
-				function fors(dt, fname){
-					if($.isObject(dt)){
-
-						var oid = $.objectID(dt);
-						debug('id:'+oid+' / '+JSON.stringify(dt));
-						if(fname) {
-							//父级键名
-							Object.defineProperty(dt, '_parentKeyName_', {
-								value: fname,
-								enumerable: false,
-								writable: true
-							});
-						}
-						$.loop(dt, function(v, k){
-							var f = fname ? fname : '';
-							if($.isNumber(k)){
-								k = f+'['+k+']';
-							}else{
-								k = f+'.'+k;
-							}
-							fors(v, k);
-						});
-					}
-				}
-
-				fors(this.data,'_$data_');
-				debug(this.data)
 			},
 			formatHTML : function () {
 				var ths = this;
@@ -2748,13 +2816,12 @@ function debugTime(key){
 					var nodeName = 'if';
 					$(ele).nextAll('', true).each(function (i, e) {
 						var nodeVal = e.textContent;
-
+						var nodeType = e.nodeType;
 						if (!scopEnd) {
-							if (e.nodeType === 8 && nodeVal.indexOf('/' + ifName) === 0) {
+							if (nodeType === 8 && nodeVal.indexOf('/' + ifName) === 0) {
 								scopEnd = 1;
 							} else {
-
-								if(e.nodeType === 8 && (nodeVal.indexOf('elseif ') ===0 || nodeVal === 'else')){
+								if(nodeType === 8 && (nodeVal.indexOf('elseif ') ===0 || nodeVal === 'else')){
 									scopIndex ++;
 									if(nodeVal === 'else'){
 										factor = '';
@@ -3123,6 +3190,7 @@ function debugTime(key){
 					if(!func){
 						return;
 					}
+
 					$.def.createEvent('set', obj, objKey, function(){
 						func(ele)
 					});
@@ -3156,64 +3224,55 @@ function debugTime(key){
 				//收集监控变量
 				Es.prototype.G = function (obj, objKey, func){
 					if(func) {
-						$.def.createEvent('set', obj, objKey, function (v) {
-							func(v);
-						});
-						$.def.createEvent('delete', obj, objKey, function (v) {
-							func(v);
-						});
-						$.def.createEvent('add', obj, objKey, function (v) {
-							func(v);
-						});
+						$.def.createEvent('set reset add delete', obj, objKey, func);
 					}
 				}
 
 				//循环回调
+				var loopKey = $.autoID('ktpl-parseLoop');
 				Es.prototype.LOOP = function (dt, func){
 					if(!dt){
 						return;
 					}
 					var _ts = this;
+					var oldDt = dt;
 					if(!ths.cache.loopscope){
 						ths.cache.loopscope = {};
 					}
-					var loopKey = $.autoID('ktpl-parseLoop');
-					var loopCache = ths.cache.loopscope[loopKey] = {};
+					var cache = ths.cache.loopscope[loopKey] = {};
 
 					var newEle = document.createDocumentFragment();
 					var valueOld = {};
 
 					//用数据解析一个循环
 					function pushNode(value, key){
-						var inNodes = [];
 						var node = func.call('', key, value);
 						if($.isArray(node)){
 							node = _ts.C(node);
-							inNodes = [].slice.call(node.childNodes);
-						}else{
-							inNodes = [node];
 						}
-
 						//loop删除数据监听
-						$.def.createEvent('delete', dt, key, function(){debug('删除：'+key);
+
+						$.def.createEvent('delete', dt, key, function(){
+
 							//如果缓存中只有一个循环时 先创建占位节点
 							var lastDom;
-							if($.count(loopCache) === 1){
-								var objkeys = Object.keys(loopCache);
-								lastDom = loopCache[objkeys[objkeys.length -1]][0];
+							if($.count(cache) === 1){
+								var objkeys = Object.keys(cache);
+								lastDom = cache[objkeys[objkeys.length -1]][0];
 								if(lastDom){
 									_loopcreateCom();
-									$(lastDom).before(loopCache.Placeholder);
+									$(lastDom).before(cache.Placeholder);
 								}
 							}
 
 							//删除当前循环中的元素
-							$.loop(loopCache[key], function(e){
+							$.loop(cache[key], function(e){
 								$(e).remove();
 							});
 							//从缓存中删除当前元素信息
-							delete loopCache[key];
+							delete cache[key];
 						});
+
 						valueOld[key] = value;
 						return node;
 					}
@@ -3222,12 +3281,14 @@ function debugTime(key){
 					function _loopcreateCom(){
 						var node = document.createComment('KSA-Placeholder:loop');
 						node._KSA_Placeholder = 1;
-						loopCache.Placeholder = node;
+						cache.Placeholder = node;
 						return node;
 					}
 
+
+
 					$.loop(dt, function(value, key){
-						loopCache[key] = loopCache[key] || [];
+						cache[key] = cache[key] || [];
 						var node = pushNode(value, key);
 						var nodes;
 						if(node.nodeType === 11){
@@ -3238,57 +3299,89 @@ function debugTime(key){
 						newEle.appendChild(node);
 
 						$.loop(nodes, function(v){
-							loopCache[key].push(v);
+							cache[key].push(v);
 						});
 					});
 
+
+
 					//监听 loop添加数据动作
-					$.def.createEvent('add', dt, function(key, value){
-						debug('loop添加'+key);
-						loopCache[key] = [];
-						//根据数据创建节点
-						var node = pushNode(value, key);
-						//节点信息push到缓存
-						if(node.nodeType === 11){
-							$.loop(node.childNodes, function(v){
-								loopCache[key].push(v);
-							});
-						}else{
-							loopCache[key].push(node);
+					$.def.createEvent('add', dt, function(value, key){
+						if(!$.count(cache)){
+							//return;
 						}
-						var lastDom = loopCache.Placeholder;
-						if(!lastDom){
-							//重新遍历loopCache在对应位置节点上添加 目的是保持顺序
-							var objKeys = Object.keys(loopCache);
-							var prevV;
-							$.loop(objKeys, function(sv, sk){
-								if(sv == key){//找到当前顺序
-									if(sk ===0){
-										lastDom = loopCache[objKeys[sk+1]][0]; //添加位置 取 下一个列表第一个
-										$(lastDom).before(loopCache[key]);
-									}else{
-										lastDom = prevV[prevV.length-1]; //添加位置 取 上一个列表最后一个
-										$(lastDom).after(loopCache[key]);
+						var lastDom = cache.Placeholder;
+							//跳过无变化的数据
+							if(value === dt[key] && cache[key]){
+								return;
+							}
+
+							cache[key] = [];
+							//根据数据创建节点
+							var node = pushNode(value, key);
+							//节点信息push到缓存
+							if (node.nodeType === 11) {
+								$.loop(node.childNodes, function (v) {
+									cache[key].push(v);
+								});
+							} else {
+								cache[key].push(node);
+							}
+
+							if (!lastDom) {
+								//重新遍历cache在对应位置节点上添加 目的是保持顺序
+								var objKeys = Object.keys(cache);
+								var prevV;
+								$.loop(objKeys, function (sv, sk) {
+									if (sv == key) {//找到当前顺序
+										if (sk === 0) {
+											lastDom = cache[objKeys[sk + 1]][0]; //添加位置 取 下一个列表第一个
+											$(lastDom).before(cache[key]);
+										} else {
+											lastDom = prevV[prevV.length - 1]; //添加位置 取 上一个列表最后一个
+											$(lastDom).after(cache[key]);
+										}
+										return true; //跳出循环
 									}
-									return true; //跳出循环
-								}
-								prevV = loopCache[sv];//记录上一次的元素列表
-							});
-							prevV = null;
-						}else{
-							$(lastDom).after(loopCache[key]);
-						}
-						//如果存在占位节点则删除
-						if(loopCache.Placeholder){
-							$(lastDom).remove();
-							delete loopCache.Placeholder;
-						}
+									prevV = cache[sv];//记录上一次的元素列表
+								});
+								prevV = null;
+							} else {
+								$(lastDom).after(cache[key]);
+							}
+
+							//如果存在占位节点则删除
+							if (cache.Placeholder) {
+								$(lastDom).remove();
+								delete cache.Placeholder;
+							}
 					});
 
+					$.def.createEvent('reset', dt, function(value){
+						var newKey = [];
+						$.loop(value, function(val, k){
+							newKey.push(k);
+						});
+						$.loop(cache, function(v, k){
+							if(!$.inArray(k, newKey)){
+								$(v).remove();
+								delete cache[k];
+							}
+						});
+						ths.cache.loopscope[loopKey] = cache;
+					});
+					$.def.createEvent('delete', dt, function(){
+						$.loop(cache, function(v, k){
+							$(v).remove();
+							delete cache[k];
+						});
+						ths.cache.loopscope[loopKey] = cache;
+					});
 					//如果loop没有数据 则创建一个占位符
-					if(!$.count(loopCache)){
+					if(!$.count(cache)){
 						newEle.appendChild(_loopcreateCom());
 					}
+					ths.cache.loopscope[loopKey] = cache;
 					//添加数据后增加更新事件
 					return newEle;
 				}
@@ -3379,8 +3472,7 @@ function debugTime(key){
 					//监听变量变化
 					$.loop(monObj, function (value) {
 						$.loop(value[1], function(kname){
-							$.def.createEvent('set', value[0], kname, monFunc);
-							$.def.createEvent('delete', value[0], kname, monFunc);
+							$.def.createEvent('set reset add delete', value[0], kname, monFunc);
 						})
 					});
 					return pushDom;

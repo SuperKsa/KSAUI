@@ -130,6 +130,7 @@
             <td>
                 {{eval}}
                 var evaladd = {a:('123'+key)};
+
                 {{/eval}}
 
                 {{if value.name}}
@@ -140,6 +141,7 @@
                 {{else}}
                 <div>【else】</div>
                 {{/if}}
+
                 {{if key =='data'}}
                 {{loop value.list k v}}
                 <p>{{v}}</p>
@@ -168,11 +170,15 @@
             debug : 1
         });
         console.timeEnd('KSA');
-    })();
 
-    //$.def.delete(sdt.list,'1');
 
-    //$.def.set(sdt,'list',{"1":{"name":"李老五","sex":"男"},"2":{"name":"王同学","sex":"男"},"919":{"name":"梅老坎99","sex":"男"}});
+        $.def.delete(sdt,'list');
+        $.def.set(sdt,'list',{
+            "1":{"name":"李老五","sex":"男"},
+            "2":{"name":"王同学","sex":"男"},
+            "919":{"name":"梅老坎99","sex":"男"}
+        });
+    })()
 </script>
 
 <script>
