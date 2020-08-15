@@ -1081,12 +1081,12 @@ $.plugin.listSelect = function(callFun){
 			T.attr('selected',true).siblings().removeAttr('selected');
 		}
 		var txtM = {};
-		$this.find('li[selected]').each(function (i,l) {
+		$this.find('li[selected]').each(function (_, l) {
 			l = $(l);
 			txtM[l.attr('value')] = T.attr('_text') || T.attr('text') || T.text();
 		});
 		//值回调
-		$.isFunction(callFun) && callFun(T.attr('value'), T.attr('_text') || T.attr('text') || T.text(), txtM, T, e);
+		$.isFunction(callFun) && callFun(T.attr('value'), (T.attr('_text') || T.attr('text') || T.text()), txtM, T, e);
 		return false;
 	});
 	return this;
@@ -1132,9 +1132,12 @@ $.selectToHtml = function(element, multiple){
 	}else{
 		select = $(element);
 		multiple = select.attr('multiple');
-		defvalue = select.data('value') || select.val();
-		defvalue = $.explode(' ', defvalue, '');
+		defvalue = select.val();
 		data = option2json(select);
+	}
+
+	function _isSelected(v){
+		return (($.isArray(defvalue) && $.inArray(v, defvalue)) || ($.isObjectPlain(defvalue) && $.isset(defvalue[v])) || v === defvalue);
 	}
 
 	//将select元素转为JSON数据
@@ -1148,7 +1151,7 @@ $.selectToHtml = function(element, multiple){
 				title : attr.title || null,
 				text : t.text() || '',
 				showtitle : attr.showtitle || null,
-				selected : $.inArray(attr.value, defvalue) ? true : null,
+				selected : _isSelected(attr.value) ? true : null,
 				disabled : t.attr('disabled') || null,
 				icon : attr.icon || null,
 				style : attr.style || null,
@@ -1174,7 +1177,7 @@ $.selectToHtml = function(element, multiple){
 				h += '<li class="ks-select-optgroup-title"><strong>'+(value.text)+'</strong><ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.data)+'</ul></li>';
 			}else{
 				if(!$.isObject(value) && !$.isArray(value)){
-					value = {value:key, text:value, selected: (($.isArray(defvalue) && $.inArray(key, defvalue)) || ($.isObjectPlain(defvalue) && $.isset(defvalue[key])) || key === value)}
+					value = {value:key, text:value, selected: _isSelected(key)}
 				}
 				h += $.tag('li', {selected:value.selected ? 'selected' : null ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
 			}
@@ -1183,6 +1186,25 @@ $.selectToHtml = function(element, multiple){
 	}
 	return [select, multiple, '<ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(data)+'</ul>'];
 }
+
+/**
+ * 获取select已选中文本 并组合为ksaui需要的结果
+ */
+$.plugin.selectText = function(){
+	var select = this[0];
+	if(!select){
+		return;
+	}
+	select = $(select);
+	var text = '';
+	select.find('option:selected').each(function(_, e){
+		text += '<span>'+e.text+'</span>';
+	});
+	text = text ? text : (select.attr('deftitle') || '请选择');
+	return text;
+}
+
+
 /**
  * select下拉菜单模拟
  * 触发函数
@@ -1252,7 +1274,6 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 			//选项点击事件
 			$(d.find('.ks-list-select')).listSelect(function(val, txt, valdt, T, e){
 				e.stopPropagation();//阻止冒泡
-
 				//多选下拉菜单
 				if(multiple){
 					select && select.find('option').eq(T.attr('n')).attr('selected', T.attr('selected') ? true : false);
@@ -1265,7 +1286,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				}else{
 					select && select.val(val);
 				}
-				select && select.trigger('change');
+				select && select.trigger('change'); //手动触发change事件
 				//选择后回调函数
 				if(typeof(callFun) =='function'){
 					var calltxt = callFun(val, txt, valdt);
@@ -1839,17 +1860,21 @@ $.plugin.render = function(){
 		input.removeClass(appendClass);
 		var attr = 'style title color';
 		var dt = {};
-		$.loop(attr.split(' '), function(val, key){
+
+		$.loop(attr.split(' '), function(val){
 			dt[val] = input.attr(val);
 		});
+
 		dt.class = (dt.class ? dt.class : '') +' '+appendClass;
 		input.removeAttr(attr);
+
 		return $this.tag(tagname, dt);
 	}
 	var R = {
 		'ks-radio' : function(t, at){
 			var txt = at.text ? '<em>'+at.text+'</em>' : '';
 			t.attr('type','radio').wrap(moveLabelAttr('label', t, 'ks-radio'));
+
 			t.after('<i>'+txt+'</i>');
 		},
 		'ks-checkbox' : function(t, at){
@@ -1944,6 +1969,12 @@ $.plugin.render = function(){
 					$(this).showSelect(t);
 				});
 			}
+
+			//绑定一个内部事件 让select表单值改变后通知父级
+			t.on('ksachange',function(){
+				var select =  $(this);
+				select.parent().children('.ks-select-tit').html(select.selectText());
+			});
 
 		},
 		'ks-date' : function(t, at){

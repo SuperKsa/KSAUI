@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <script src="ksa.js"></script>
+    <script type="text/javascript" src="ksaui.js"></script>
+    <link rel="stylesheet" type="text/css" href="ksaui.css">
     <!--
     <script src="./data/vue.js"></script>
     -->
 </head>
 <body>
-<style>
-    div { background: rgba(0,0,0,.2); padding: 20px; color: #fff; margin: 5px;}
-</style>
+
 <a>link</a>
 <template id="vue-template">
     <table>
@@ -51,7 +51,7 @@
     var LOOPMAX = 1;
 
     var sdt = {
-        updateValue : '',
+        updateValue : '值2',
         name : '二大爷',
         sex : '男',
         school :'江山中学',
@@ -97,7 +97,7 @@
     })();
 
 </script>
-
+<input type="ks-radio" name="a" value="值1" v-updateText="updateValue">选项1</input>
 <script type="text/html" id="template">
     <table class="as">
         <tr><th>姓名</th><td>{{name}}</td></tr>
@@ -109,17 +109,17 @@
     {{name =='1' ? 'name1' : (name === 3 ? 3 : sdt.sex)}}
     <div>
         <p>双向绑定：</p>
-        <input type="text" value="" placeholder="请输入" v-updateText="updateValue">
-        <textarea value="" placeholder="请输入" v-updateText="updateValue"></textarea>
-        <select v-updateText="updateValue" multiple="multiple">
+        <input type="text" value="" placeholder="请输入" v-update="updateValue">
+        <textarea value="" placeholder="请输入" v-update="updateValue"></textarea>
+        <select class="ks-select" v-update="updateValue" multiple="multiple">
             <option value="值1">选项1</option>
             <option value="值2">选项2</option>
         </select>
 
-        <input type="checkbox" value="值1" v-updateText="updateValue">选项1</input>
-        <input type="checkbox" value="值2" v-updateText="updateValue">选项2</input>
-        <input type="radio" name="a" value="值1" v-updateText="updateValue">选项1</input>
-        <input type="radio" name="a" value="值2" v-updateText="updateValue">选项2</input>
+        <input type="ks-checkbox" value="值1" v-update="updateValue" text="选项1">
+        <input type="ks-checkbox" value="值2" v-update="updateValue" text="选项2">
+        <input type="ks-radio" name="a" value="值1" v-update="updateValue" text="选项1">
+        <input type="ks-radio" name="a" value="值2" v-update="updateValue" text="选项2">
         <div>双向绑定值：{{updateValue}}</div>
     </div>
     {{if !$.isEmpty(list)}}
@@ -171,13 +171,15 @@
         });
         console.timeEnd('KSA');
 
-
+/*
         $.def.delete(sdt,'list');
+
         $.def.set(sdt,'list',{
             "1":{"name":"李老五","sex":"男"},
             "2":{"name":"王同学","sex":"男"},
             "919":{"name":"梅老坎99","sex":"男"}
         });
+*/
     })()
 </script>
 
