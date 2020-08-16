@@ -2301,7 +2301,6 @@ function debugTime(key){
 			var ths = this,
 				objID = $.objectID(obj), //当前对象ID
 				events = ths.Event[objID]; //当前对象监听事件
-
 			//触发对象add事件 父级关联的
 			events && events.run('add', obj, keyName, dt);
 			//给对象赋值
@@ -2367,12 +2366,14 @@ function debugTime(key){
 				setObj = obj[keyName]; //待更新对象
 
 			var delObj = this.deleteObjectIdList[objID];
-			//值新增 当前对象已经被删除
-			if(delObj && delObj[keyName]){
+
+
+			//值新增 空值、已删除、类型不同
+			if($.isEmpty(setObj) || (delObj && delObj[keyName]) || ($.isObject(setObj) && $.isObject(dt) && setObj.__proto__.constructor !== dt.__proto__.constructor)){
 
 				ths.reset(obj, keyName, dt);
 
-				delete this.deleteObjectIdList[objID][keyName];
+				delObj && delObj[keyName] && delete delObj[keyName];
 
 			//被直接重新赋值 待更新对象之前是一个对象
 			}else if($.isObject(setObj)){
@@ -2385,6 +2386,7 @@ function debugTime(key){
 							$.def.delete(setObj, k);
 						}
 					});
+
 					//遍历新数据，判断增删改
 					$.loop(dt, function(newV, k){
 						//旧数据存在 则更新
@@ -2457,7 +2459,6 @@ function debugTime(key){
 			if(!$.isObject(delObj)){
 				return;
 			}
-			var delObjID = $.objectID(delObj);
 			$.loop(delObj, function (v, k) {
 				if($.isObject(v)){
 					var vid = $.objectID(v);
@@ -2529,9 +2530,20 @@ function debugTime(key){
 		var keyName = '_uniqueID_';
 		var isValue = $.isset(newValue);
 		var isdel = newValue === '';
-		if($.isWindow(obj)){
+		if(obj instanceof HTMLElement){
+			if(isdel){
+				$.isset(obj[keyName]) && delete obj[keyName];
+			}else if(isValue){
+				obj[keyName] = newValue;
+			}else{
+				if(!obj[keyName]) {
+					obj[keyName] = _KSAobjectIDIndex++;
+				}
+			}
+			return obj[keyName];
+		}else if($.isWindow(obj)){
 			return 0;
-		}else if($.isObjectPlain(obj)){
+		}else if($.isObject(obj)){
 			if(isdel){
 				$.isset(obj[keyName]) && delete obj[keyName];
 			}else if(isValue){
@@ -2561,17 +2573,6 @@ function debugTime(key){
 				}
 				return obj[keyName];
 			}
-		}else if(obj instanceof HTMLElement){
-			if(isdel){
-				$.isset(obj[keyName]) && delete obj[keyName];
-			}else if(isValue){
-				obj[keyName] = newValue;
-			}else{
-				if(!obj[keyName]) {
-					obj[keyName] = _KSAobjectIDIndex++;
-				}
-			}
-			return obj[keyName];
 		}else if($.isFunction(obj)){
 			if(isdel){
 				$.isset(obj.prototype[keyName]) && delete obj.prototype[keyName];
@@ -2584,17 +2585,6 @@ function debugTime(key){
 				return obj.prototype[keyName];
 			}
 
-		}else if($.isArray(obj)){
-			if(isdel){
-				$.isset(obj.__proto__[keyName]) && delete obj.__proto__[keyName];
-			}else if(isValue){
-				obj.__proto__[keyName] = newValue;
-			}else{
-				if(!obj.__proto__[keyName]) {
-					obj.__proto__[keyName] = _KSAobjectIDIndex++;
-				}
-				return obj.__proto__[keyName];
-			}
 		}
 	}
 // ====================== TPL模板语法 ====================== //
@@ -2691,6 +2681,7 @@ function debugTime(key){
 				}
 				return {
 					el : ths.EL,
+					cache : ths.cache,
 					template : ths.Template,
 					data : ths.data,
 					dom : newDom,
@@ -3250,13 +3241,12 @@ function debugTime(key){
 				}
 
 				//循环回调
-				var loopKey = $.autoID('ktpl-parseLoop');
 				Es.prototype.LOOP = function (dt, func){
 					if(!dt){
 						return;
 					}
 					var _ts = this;
-					var oldDt = dt;
+					var loopKey = $.autoID('ktpl-parseLoop');
 					if(!ths.cache.loopscope){
 						ths.cache.loopscope = {};
 					}
