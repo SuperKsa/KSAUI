@@ -642,7 +642,7 @@ $.Dialog = function(type){
             ]
         */
 		case type =='form':
-			var H = $this.newForm(p[2]);
+			var H = $.newForm(p[2]);
 
 			var callFun = p[3];
 			op.title = p[1];
@@ -1333,7 +1333,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
  * @param {type} input 触发表单
  * @param {type} format 日期格式 必须为：YmdHis 区分大小写随意组合顺序
  */
-$.plugin.showDate = function(input, format){
+$.showDate = function(input, format){
 	var $this = this;
 	var defYmd = '2020-01-01';
 	input = $(input);
@@ -2275,7 +2275,19 @@ $.render = function(){
 		dom.find('[type="reset"]').click(function(){
 			dom.find('input:not([type="hidden"]), select, textarea').val('');
 		});
-    });
+	});
+	
+	$('.ks-btn[submit]').map(function(dom){
+		dom = $(dom);
+		var submits = dom.attr('submit');
+		dom.attr('submit','');
+		var form = submits ? $(submits) : dom.parents('form');
+		if(form.length){
+			dom.click(function(){
+				form.submit();
+			});
+		}
+	});
 	return this;
 }
 
@@ -2611,7 +2623,7 @@ $.plugin.slide = function(options){
  * ]
  * @returns {html}
  */
-$.plugin.newForm = function(data){
+$.newForm = function(data){
 	var $this = this;
 	var H = '';
 	H += '<form><div class="ks-form">';
