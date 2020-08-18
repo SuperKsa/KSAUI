@@ -13,7 +13,7 @@ function debug(data){
 	if(typeof data ==='object'){
 		console.dir(data);//debug
 	}else{
-		console.log('%cKsaOS.com Debug','background:#00c; color:#fff',data);//debug
+		console.log(data);//debug
 	}
 }
 
@@ -68,7 +68,7 @@ function debugTime(key){
 	 * @param code
 	 * @returns {ActiveX.IXMLDOMNodeList | NodeListOf<ChildNode>}
 	 */
-	function createDom(code){
+	function createDom(code, isEle){
 		var fragment = document.createDocumentFragment()
 		var tag = ( rtagName.exec( code ) || [ "", "" ] )[ 1 ].toLowerCase();
 		var wrap = wrapMap[ tag ] || wrapMap._default;
@@ -80,7 +80,13 @@ function debugTime(key){
 		while ( j-- ) {
 			dom = dom.lastChild;
 		}
-		return [].slice.call(dom.childNodes);
+		var eles = [];
+		$.loop(dom.childNodes, function (e) {
+			if(!isEle || (e.nodeType !== 3 && e.nodeType !== 8)){
+				eles.push(e);
+			}
+		})
+		return eles;
 	}
 
 	/**
@@ -143,7 +149,7 @@ function debugTime(key){
 		if (!selector || !ele || ele.nodeType !== 1){
 			return false
 		}
-		var matchesSelector = ele.matches || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.oMatchesSelector || ele.matchesSelector;
+		var matchesSelector = ele.matches || ele.matchesSelector || ele.webkitMatchesSelector || ele.mozMatchesSelector || ele.msMatchesSelector || ele.oMatchesSelector;
 		try {
 			return matchesSelector.call(ele, selectorStr(selector));
 		}catch (e) {
@@ -178,7 +184,9 @@ function debugTime(key){
 	}
 
 	function $(selector){
-		return new K_S_A(selector);
+		var dt = new K_S_A(selector);
+		dt.__proto__ = K;
+		return dt;
 	}
 
 	function K_S_A(selector){
@@ -189,7 +197,7 @@ function debugTime(key){
 				selector = [selector];
 
 			}else if($.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1 && selector.length >=3){
-				selector = createDom(selector);
+				selector = createDom(selector, true);
 
 			}else if($.isString(selector)) {
 				selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
@@ -216,8 +224,7 @@ function debugTime(key){
 		return this;
 	}
 
-	K_S_A.prototype =  $.prototype = $.__proto__ = K = {};
-
+	K_S_A.prototype =  $.prototype = K = {};
 
 	/**
 	 * 文档加载完成后执行代码
@@ -225,12 +232,12 @@ function debugTime(key){
 	 * @param callback
 	 * @returns {*}
 	 */
-	K.DocumentReadyFunction = [];
+	var DocumentReadyFunction = [];
 	K.ready = function(callback) {
 		this.map(function(ele){
 			//如果是document与window的事件 则送到队列中 防止多次触发
 			if(ele === document || ele === window){
-				$.DocumentReadyFunction.push(function(){
+				DocumentReadyFunction.push(function(){
 					callback.call(ele)
 				});
 			}else{
@@ -242,10 +249,10 @@ function debugTime(key){
 		return this;
 	}
 	window.addEventListener('DOMContentLoaded', function(){
-		$.loop($.DocumentReadyFunction, function(func){
+		$.loop(DocumentReadyFunction, function(func){
 			func();
 		});
-		$.DocumentReadyFunction = [];
+		DocumentReadyFunction = [];
 	}, false);
 
 	/**
@@ -278,7 +285,7 @@ function debugTime(key){
 
 
 // ====================== 创建虚拟DOM ====================== //
-	K.dom = function(code){
+	$.dom = function(code){
 		var dom = createDom(code);
 		return dom.length === 1 ? dom[0] : dom;
 	}
@@ -673,29 +680,32 @@ function debugTime(key){
 						case 'INPUT':
 							var tp = ele.getAttribute('type');
 							tp = tp.indexOf('ks-') === 0 ? tp.substr(3) : tp;
+							
 							if(tp ==='checkbox'){
-								if($.isset(ele.value)){
-									ele.checked = $.isArray(value) ? $.inArray(ele.value, value) : ele.value == value;
+								var val = $(ele).attr('value');
+								if($.isset(val)){
+									ele.checked = $.isArray(value) ? $.inArray(val, value) : val == value;
 								}else{
-									ele.checked = $.isEmpty(value);
+									ele.checked = $.isObject(value) ? $.isEmpty(value) : !!value;
 								}
+								
 							}else if(tp ==='radio'){
-								ele.checked = ele.value == value;
+								ele.checked = $(ele).attr('value') == value;
 							}else{
 								ele.value = value;
 							}
 							break;
 						case 'SELECT':
 							value = $.isArray(value) ? value : [value];
-
 							if (ele.options) {
 								$.loop(ele.options, function (e) {
 									var r = $.inArray(e.value, value);
 									if (r != e.selected) {
-										e.selected = r
+										e.selected = r;
 									}
 								});
 							}
+							$(ele).trigger('ksachange');//触发内部事件
 							break;
 						case 'TEXTAREA':
 							ele.value = value;
@@ -705,7 +715,8 @@ function debugTime(key){
 				}
 			});
 			return this;
-			//获取值，如果有多个对象，则按数组顺序返回对应值
+			
+		//获取值，如果有多个对象，则按数组顺序返回对应值
 		}else {
 			var t = [];
 			var ele = this[0];
@@ -715,15 +726,18 @@ function debugTime(key){
 			var tg = ele.tagName;
 			switch (tg) {
 				case 'INPUT':
-					t.push(ele.value);
+					var tp = ele.getAttribute('type');
+						tp = tp.indexOf('ks-') === 0 ? tp.substr(3) : tp;
+					var v = ele.value;
+					if($.inArray(tp, ['checkbox','radio'])){
+						v = $(ele).attr('value');
+					}
+					t.push(v);
 					break;
 				case 'SELECT':
-					var options = ele.selectedOptions;
-					if(options) {
-						$.loop(options, function (e) {
-							t.push(e.value);
-						});
-					}
+					$(ele).find('option:selected').map(function(e){
+						t.push(e.value);
+					});
 					break;
 				case 'TEXTAREA':
 					t.push(ele.value);
@@ -997,8 +1011,9 @@ function debugTime(key){
 				return size;
 			}
 		}else{
+			val = $.isNumber(val) ? val+'px' : val;
 			this.map(function(e){
-				e.style.height = parseFloat(val)+'px';
+				e.style.height = val;
 			});
 		}
 	}
@@ -1028,8 +1043,9 @@ function debugTime(key){
 			}
 
 		}else{
+			val = $.isNumber(val) ? val+'px' : val;
 			this.map(function(e){
-				e.style.width = parseFloat(val)+'px';
+				e.style.width = val;
 			});
 			return this;
 		}
@@ -1245,7 +1261,8 @@ function debugTime(key){
 			if (!isValue && keyIsObj) {
 				sets = key;
 			} else if(isValue){
-				sets = {[key] : value};
+				sets = {};
+				sets[key] = value;
 			}
 			var style = [];
 			$.loop(sets, function(value, key){
@@ -1291,7 +1308,7 @@ function debugTime(key){
 	 * @param {string} actions 取值动作 first=只取第一个 last=只取最后一个
 	 * @returns {*}
 	 */
-	K.loop = function(dt, fun, actions){
+	$.loop = function(dt, fun, actions){
 		if(!dt){
 			return;
 		}
@@ -1369,7 +1386,7 @@ function debugTime(key){
 	 * 取集合范围
 	 * @returns {*[]}
 	 */
-	K.slice = function(){
+	$.slice = function(){
 		var arr = $();
 		$.loop([].slice.apply(this, arguments), function(e){
 			arr.push(e);
@@ -1879,7 +1896,7 @@ function debugTime(key){
 	 * @param name
 	 * @constructor
 	 */
-	K.Event = function(name){
+	$.Event = function(name){
 		var events
 		try{
 			events = new Event(name, {bubbles:true, cancelable:false});
@@ -1907,7 +1924,7 @@ function debugTime(key){
 				ele.dispatchEvent(eEvn);
 			}
 			if(runDel){
-				$.removeEvent(ele, name, func, useCapture);
+				$(ele).removeEvent(name, func, useCapture);
 			}
 		});
 		return this;
@@ -1920,8 +1937,10 @@ function debugTime(key){
 	 * @param func 绑定时的触发函数
 	 * @param useCapture addEventListener第三个参数
 	 */
-	K.removeEvent = function(ele, name, func, useCapture){
-		ele.removeEventListener(name, func, useCapture);
+	K.removeEvent = function(name, func, useCapture){
+		this.map(function(ele) {
+			ele.removeEventListener(name, func, useCapture);
+		});
 	}
 
 	/**
@@ -2865,7 +2884,7 @@ function debugTime(key){
 						value = ep[0];
 						if($.isObject(ep[1])){
 							$.loop(ep[1], function(kv, kn){
-								attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
+								$.isObject(kv) && attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
 							});
 						}
 						if(key ==='v-update' || key ==='v-updatetext'){
@@ -3003,12 +3022,6 @@ function debugTime(key){
 							func : function(value , k){
 								$.loop(ths.cache.vUpdateModelinput[objID][k].ele, function(e, tp){
 									$(e).val(value);
-									//KSAUI内部事件触发
-									if($.inArray(tp, ['select-one','select-multiple'])){
-										$.loop(e, function(se){
-											$(se).trigger('ksachange');
-										})
-									}
 								});
 							}
 						};
@@ -3021,7 +3034,7 @@ function debugTime(key){
 							var v = [];
 							$(cache[objID][key].ele[type]).map(function(e){
 								if(e.checked){
-									v.push(isText && e.parentElement.nodeName ==='LABEL' ? e.parentElement.textContent : e.value);
+									v.push(isText && e.parentElement.nodeName ==='LABEL' ? e.parentElement.textContent : $(e).attr('value'));
 								}
 							});
 							obj[key] = v;
@@ -3165,14 +3178,16 @@ function debugTime(key){
 								insetattr = attrs;
 							}
 
-
 							if($.isObject(insetattr)){
 								var el = $(ele);
 								$.loop(insetattr, function(v, k){
+									if(k !=='v-update'){
+										el.attr(k, v);
+									}
+								});
+								$.loop(insetattr, function(v, k){
 									if(k ==='v-update'){
 										ths.vUpdateModel(ele, v)
-									}else{
-										el.attr(k, v);
 									}
 								});
 							}
@@ -3685,7 +3700,7 @@ function debugTime(key){
 	}
 
 
-	$.isEmpty = function(v=[]){
+	$.isEmpty = function(v){
 		if($.isObjectPlain(v)){
 			return Object.keys(v).length === 0;
 		}else if($.isArray(v)){
@@ -3701,7 +3716,13 @@ function debugTime(key){
 	 * @returns {boolean}
 	 */
 	$.isDomAll = function(dom){
-		return dom instanceof HTMLElement || dom instanceof Node || dom instanceof XMLDocument || dom instanceof  NodeList || ($.isObject(dom) && dom.nodeType && $.isString(dom.nodeName))
+		if(!dom || $.isString(dom)){
+			return;
+		}
+		return dom instanceof HTMLElement ||
+			dom instanceof Node ||
+			dom instanceof  NodeList ||
+			($.isObject(dom) && dom.nodeType && $.isString(dom.nodeName))
 	}
 
 	/**
@@ -3857,8 +3878,7 @@ function debugTime(key){
 		};
 	});
 	//插件钩子 $.plugin.xxx = xxx;
-	K.plugin = $.__proto__;
-
+	$.plugin = $.prototype;
 	window.KSA = window.$ = $;
 
 	/**

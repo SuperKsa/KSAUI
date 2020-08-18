@@ -6,44 +6,10 @@
     <script src="ksa.js"></script>
     <script type="text/javascript" src="ksaui.js"></script>
     <link rel="stylesheet" type="text/css" href="ksaui.css">
-    <!--
-    <script src="./data/vue.js"></script>
-    -->
+    <link rel="stylesheet" type="text/css" href="https://www.ksaos.com/ksaui/icon.css?hash=1597627264">
+
 </head>
 <body>
-
-<a>link</a>
-<template id="vue-template">
-    <table>
-        <tr><th>姓名</th><td>{{name}}</td></tr>
-        <tr><th>性别</th><td>{{sex}}</td></tr>
-        <tr><th>学校</th><td>{{school}}</td></tr>
-        <tr><th>电话</th><td>{{tel}}</td></tr>
-    </table>
-    ###
-    <!-- {{name}} -->
-    {{name =='1' ? 'name1' : (name === 3 ? 3 : sex)}}
-    <div>
-    <template v-for="(value,key) in list">
-        <template v-if="value.name != '张三1'">
-            <div>{{key}} : {{value.name}} {{value.sex}} {{name}}</div>
-        </template>
-        <template v-else-if="value.name == '张三10'">
-            <div>【elseif】 {{value.name}}</div>
-        </template>
-        <template v-else>
-            <div>【else】</div>
-        </template>
-        <template v-if="key =='data'">
-            <template v-for="(v,k) in value.list">
-            <p>{{v}}</p>
-            </template>
-        </template>
-    </template>
-    </div>
-</template>
-
-<div id="vuedom" style="display: none"></div>
 
 
 <script>
@@ -99,7 +65,7 @@
 </script>
 <input type="ks-radio" name="a" value="值1" v-updateText="updateValue">选项1</input>
 <script type="text/html" id="template">
-    <table class="as">
+    <table class="ks-table">
         <tr><th>姓名</th><td>{{name}}</td></tr>
         <tr><th>性别</th><td>{{sex}}</td></tr>
         <tr><th>学校</th><td>{{school}}</td></tr>
@@ -109,7 +75,7 @@
     {{name =='1' ? 'name1' : (name === 3 ? 3 : sdt.sex)}}
     <div>
         <p>双向绑定：</p>
-        <input type="text" value="" placeholder="请输入" v-update="updateValue">
+        <input type="ks-text" value="" placeholder="请输入" v-update="updateValue">
         <textarea value="" placeholder="请输入" v-update="updateValue"></textarea>
         <select class="ks-select" v-update="updateValue" multiple="multiple">
             <option value="值1">选项1</option>
@@ -123,35 +89,41 @@
         <div>双向绑定值：{{updateValue}}</div>
     </div>
     {{if !$.isEmpty(list)}}
-    <table>
+    <table class="ks-table">
+        <thead>
+            <tr>
+                <td>序号</td>
+                <td>姓名</td>
+                <td>性别</td>
+                <td>附加</td>
+            </tr>
+        </thead>
         {{loop list key  value}}
         <tbody onclick="$.def.delete(sdt.list,'{{key}}');">
-        <tr>
-            <td>
-                {{eval}}
-                var evaladd = {a:('123'+key)};
+            {{eval}}
+            var evaladd = {a:('123'+key)};
+            {{/eval}}
+            <tr>
+                <td>{{key}}</td>
+                <td>
+                    {{if value.name}}
+                        <div class="class-{{value.name}} sdjj">{{value.name}}  / {{name}}</div>
+                    {{elseif value.name ===''}}
+                        <div>【elseif】 {{value.name}} 空白</div>
+                    {{else}}
+                        <div>【else】</div>
+                    {{/if}}
 
-                {{/eval}}
-
-                {{if value.name}}
-                <div class="class-{{value.name}} sdjj">{{key}} : {{value.name}} {{value.sex}} / {{name}} / {{evaladd.a}}
-                </div>
-                {{elseif value.name ===''}}
-                <div>【elseif】 {{value.name}} 空白</div>
-                {{else}}
-                <div>【else】</div>
-                {{/if}}
-
-                {{if key =='data'}}
-                {{loop value.list k v}}
-                <p>{{v}}</p>
-                {{/loop}}
-
-                {{/if}}
-            </td>
-        </tr>
+                    {{if key =='data'}}
+                        {{loop value.list k v}}
+                        <p>{{v}}</p>
+                        {{/loop}}
+                    {{/if}}
+                </td>
+                <td>{{value.sex}}</td>
+                <td>{{evaladd.a}}</td>
+            </tr>
         </tbody>
-
         {{/loop}}
 
 

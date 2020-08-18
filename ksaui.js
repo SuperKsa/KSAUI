@@ -10,14 +10,14 @@
  * Update : 2020年7月29日
  */
 
-$.plugin.ZINDEX = 999;
-$.plugin.WINID = 1; //弹窗层初始ID
-$.plugin.W = 0; //当前窗口宽度
-$.plugin.H = 0; //当前窗口高度
-$.plugin.mouseX = 0;
-$.plugin.mouseY = 0;
-$.plugin.device = 'PC'; //设备类型 PC MOBILE
-$.plugin.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
+$.ZINDEX = 999;
+$.WINID = 1; //弹窗层初始ID
+$.W = 0; //当前窗口宽度
+$.H = 0; //当前窗口高度
+$.mouseX = 0;
+$.mouseY = 0;
+$.device = 'PC'; //设备类型 PC MOBILE
+$.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
 
 
 (function(){
@@ -196,10 +196,9 @@ $.layerHideF = function(){
  */
 $.plugin.layerHide = function(Id, Fun){
 	$('body').removeClass('ks-body-layer-overflow');
-	var $this = this;
 	var o;
 	if(!Id){
-		Id = $this.layerID;
+		Id = this.layerID;
 	}
 	o = $('#ks-layer-'+Id);
 	if(!o.length){
@@ -232,7 +231,7 @@ $.plugin.layerHide = function(Id, Fun){
 			if(option.close && typeof(option.close) == 'function'){
 				option.close();
 			}
-			option.backEvent && $this.BackEvent('KsaLayer'+Id);
+			option.backEvent && $.BackEvent('KsaLayer'+Id);
 			Fun && typeof(Fun) =='function' && Fun(Id);
 			if(option.cache){
 				nextEle.length && nextEle.hide();
@@ -1645,7 +1644,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 			ele = $(ele);
 			var f = ele.attr('field');
 			if(ele.attr('val')) {
-				let v = {id: ele.attr('val'), name: ele.text(), level:i, field:f};
+				var v = {id: ele.attr('val'), name: ele.text(), level:i, field:f};
 				if(currID && currID == ele.attr('val')){
 					dt.current = v;
 				}
@@ -1750,7 +1749,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 
 			//已选择地区增加点击事件 点击后选择下级地区
 			layer.find('.ks-area-layer-btn p').click(function(){
-				let t = $(this);
+				var t = $(this);
 				level = t.index();
 				t.nextAll().text('').removeClass('a').attr('upid','').attr('val','').hide();
 				g(t.attr('upid'), t.attr('val'));
@@ -1770,7 +1769,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 }
 
 //title提示文字处理
-$.plugin.showTip = function(obj, txt, click){
+$.showTip = function(obj, txt, click){
 	obj = $(obj);
 	txt = txt ? txt : (obj.attr('title') || '');
 	if(!txt){
@@ -1852,7 +1851,8 @@ $.plugin.checkAll = function(selector){
 	return this;
 }
 
-$.plugin.render = function(){
+$.render = function(){
+	
 	var $this = this;
 
 	function moveLabelAttr(tagname, input, appendClass){
@@ -1881,7 +1881,6 @@ $.plugin.render = function(){
 			var txt = at.text ? '<em>'+at.text+'</em>' : '';
 			t.attr('type','checkbox').wrap(moveLabelAttr('label', t, 'ks-checkbox'));
 			t.after('<i>'+txt+'</i>');
-
 			//最大选择数量支持
 			var area = t.parent().parent();
 			if(area.length && area[0].tagName =='CHECKGROUP' && area.attr('max')){
@@ -1939,7 +1938,7 @@ $.plugin.render = function(){
 				return;
 			}
 			//如果控件为展开类型 元素存在open属性
-			if(at.open ===''){
+			if($.isset(at.open)){
 				var obj = $.selectToHtml(t);
 				var ele = $('<div class="ks-select-list">'+obj[2]+'</div>');
 				ele.children().listSelect(function(value){
@@ -1948,6 +1947,15 @@ $.plugin.render = function(){
 				t.after(ele);
 				t.hide();
 				ele.prepend(t);
+				//绑定一个内部事件 让select表单值改变后通知父级
+				t.on('ksachange change',function(){
+					var val =  $(this).val();
+					ele.find('li').attr('selected',false);
+					val = !$.isArray(val) ? [val] : val;
+					$.loop(val, function(v){
+						ele.find('li[value="'+v+'"]').attr('selected',true);
+					});
+				});
 
 			}else{
 				//如果在标签属性data-value给定选中值 则处理到内部
@@ -1968,14 +1976,12 @@ $.plugin.render = function(){
 				t.parent().click(function(){
 					$(this).showSelect(t);
 				});
+				//绑定一个内部事件 让select表单值改变后通知父级
+				t.on('ksachange',function(){
+					var select =  $(this);
+					select.parent().children('.ks-select-tit').html(select.selectText());
+				});
 			}
-
-			//绑定一个内部事件 让select表单值改变后通知父级
-			t.on('ksachange',function(){
-				var select =  $(this);
-				select.parent().children('.ks-select-tit').html(select.selectText());
-			});
-
 		},
 		'ks-date' : function(t, at){
 			t.attr('type', 'text');
@@ -2240,7 +2246,36 @@ $.plugin.render = function(){
 		}
 	});
 
+	//分页初始化
 	$('.ks-page').page();
+
+	//表单结构初始化
+	$('ks-form').map(function(dom){
+		if(dom._KSAUIRENDER_form){
+			return;
+		}
+		dom._KSAUIRENDER_form = true;
+		dom = $(dom);
+		var domInline = $.isset(dom.attr('inline')),
+			labelWidth = dom.attr('label-width');
+        dom.find('ks-form-item').map(function(ele){
+            ele = $(ele);
+            var attrs = ele.attr();
+            !domInline && ele.addClass('ks-clear');
+            ele.wrapInner('<ks-form-content></ks-form-content>');
+			attrs.label && ele.prepend('<ks-form-label '+($.isset(attrs.required) ? 'required' : '')+'>'+attrs.label+'</ks-form-label>');
+            attrs.extra && ele.append('<ks-form-extra>'+attrs.extra+'</ks-form-extra>');
+			ele.attr({label:'',extra:'',required:''});
+			if(labelWidth){
+				labelWidth = $.isNumber(labelWidth) ? labelWidth+'px' : labelWidth;
+				ele.find('ks-form-label').width(labelWidth);
+				ele.find('ks-form-content , ks-form-extra').width('calc(100% - '+labelWidth+')');
+			}
+		});
+		dom.find('[type="reset"]').click(function(){
+			dom.find('input:not([type="hidden"]), select, textarea').val('');
+		});
+    });
 	return this;
 }
 
