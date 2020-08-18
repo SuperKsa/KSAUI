@@ -362,12 +362,12 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 			if (option.btn) {
 				var s = '';
 				if($.isString(option.btn)){
-					s += '<button type="button" class="ks-btn" data-btn-index="0">'+option.btn+'</button>';
+					s += '<ks-btn data-btn-index="0">'+option.btn+'</ks-btn>';
 				}else{
 					$.loop(option.btn, function (val, k) {
 						val = val.split(':');
 						var attr = $.isset(val[1]) ? ' color="' + val[1] + '"' : '';
-						s += '<button type="button" class="ks-btn" class="_' + k + '" data-btn-index="' + k + '" ' + attr + '>' + val[0] + '</button>';
+						s += '<ks-btn class="_' + k + '" data-btn-index="' + k + '" ' + attr + '>' + val[0] + '</ks-btn>';
 					});
 				}
 				H += s ? '<div class="ks-layer-bottom">' + s + '</div>' : '';
@@ -375,8 +375,8 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 			H += '</div>';
 			D = $(H);
 			//底部按钮最后一个增加主色
-			if (option.btn && !D.find('.ks-layer-bottom > .ks-btn:last-child').attr('color')) {
-				D.find('.ks-layer-bottom > .ks-btn:last-child').attr('color','primary');
+			if (option.btn && !D.find('.ks-layer-bottom > ks-btn:last-child').attr('color')) {
+				D.find('.ks-layer-bottom > ks-btn:last-child').attr('color','primary');
 			}
 
 		}
@@ -396,7 +396,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 
 			//底部按钮处理
 			if (option.btn) {
-				D.find('.ks-layer-bottom .ks-btn').click(function () {
+				D.find('.ks-layer-bottom ks-btn').click(function () {
 					var t = $(this);
 					if (!t.attr('disabled') && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), D) !== false))) {
 						clearTimeout(AutoEvn);
@@ -936,7 +936,9 @@ $.plugin.upload = function(name, files, url, callFun){
 $.tag = function(tp, dt, txt, ed){
 	var h = '<'+tp;
 	$.loop(dt,function(v, k) {
-		h += k && v != null && v != 'undefined' ? (' '+k+'="'+v+'"') : '';
+		v = v === '' ? null : v;
+		v = v === true ? k : v;
+		h += k && v != null ? (' '+k+'="'+v+'"') : '';
 	});
 	h +=  '>'+(txt ? txt : '');
 	if(!ed){
@@ -1020,32 +1022,30 @@ $.plugin.inputNumber = function(callFun){
  * @param isAc 是否自动关闭相邻列表 默认是
  */
 $.plugin.collapse = function(){
-	this.children('.ks-collapse-item').map(function(ele){
+	this.children().map(function(ele){
 		ele = $(ele);
-		var Pt = ele.parent();
-		//渲染dom
-		var subject = ele.children('.ks-title');
-		ele.wrapInner('<div class="ks-block"></div>').wrapInner('<div class="ks-content"></div>');
-		ele.prepend(subject);
-		subject = null;
+		var attr = ele.attr();
+		ele.wrapInner('<ks-collapse-block></ks-collapse-block>').wrapInner('<ks-collapse-content></ks-collapse-content>');
+		ele.prepend('<ks-collapse-title>'+(attr.label || '')+'</ks-collapse-title>')
 
-		var content = ele.children('.ks-content');
+		var Pt = ele.parent(), isAccordion = $.isset(Pt.attr('accordion'));
+		var content = ele.children('ks-collapse-content');
 		//如果默认打开，必须赋予实际高度值以完成css3动画
-		if(ele.attr('open')){
-			content.height(content.children('.ks-block').height(true, true));
+		if($.isset(attr.open)){
+			content.height(content.children('ks-collapse-block').height(true, true));
 		}
-		ele.children('.ks-title').click(function(){
-			var maxH = content.children('.ks-block').height(true, true);
+		ele.children('ks-collapse-title').click(function(){
+			var maxH = content.children('ks-collapse-block').height(true, true);
 			if(ele.attr('open')){
 				content.height(0);
 				ele.attr('open','');
 			}else{
 				content.height(maxH);
 				ele.attr('open',1);
-				var acList = Pt.attr('accordion') ? ele.siblings('.ks-collapse-item') : !!0;//手风琴面板同辈
+				var acList = isAccordion ? ele.siblings() : !!0;//手风琴面板同辈
 				if(acList){
 					acList.attr('open','');
-					acList.children('.ks-content').height(0);
+					acList.children('ks-collapse-content').height(0);
 				}
 			}
 		});
@@ -1061,7 +1061,7 @@ $.plugin.collapse = function(){
 $.plugin.listSelect = function(callFun){
 	var $this = this;
 	var m = $.isset($this.attr('multiple'));
-	$this.find('li').click(function(e) {
+	$this.find('v').click(function(e) {
 
 		var T = $(this);
 		//如果当前已选择或禁用状态则不做任何响应
@@ -1080,7 +1080,7 @@ $.plugin.listSelect = function(callFun){
 			T.attr('selected',true).siblings().removeAttr('selected');
 		}
 		var txtM = {};
-		$this.find('li[selected]').each(function (_, l) {
+		$this.find('v[selected]').each(function (_, l) {
 			l = $(l);
 			txtM[l.attr('value')] = T.attr('_text') || T.attr('text') || T.text();
 		});
@@ -1147,18 +1147,18 @@ $.selectToHtml = function(element, multiple){
 			var attr = t.attr();
 			var v = {
 				value : attr.value || '',
-				title : attr.title || null,
+				title : attr.title || '',
 				text : t.text() || '',
-				showtitle : attr.showtitle || null,
-				selected : _isSelected(attr.value) ? true : null,
-				disabled : t.attr('disabled') || null,
-				icon : attr.icon || null,
-				style : attr.style || null,
+				showtitle : attr.showtitle || '',
+				selected : _isSelected(attr.value) ? true : '',
+				disabled : t.attr('disabled') || '',
+				icon : attr.icon || '',
+				style : attr.style || '',
 				n : Nums
 			};
 
 			if(t[0].tagName =='OPTGROUP'){
-				v.text = attr.label || null;
+				v.text = attr.label || '';
 				v.data = option2json(t);
 			}else{
 				Nums ++;
@@ -1173,17 +1173,17 @@ $.selectToHtml = function(element, multiple){
 		var h = '';
 		$.loop(dt,function(value, key){
 			if(value.data){
-				h += '<li class="ks-select-optgroup-title"><strong>'+(value.text)+'</strong><ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.data)+'</ul></li>';
+				h += '<v class="ks-select-optgroup-title"><strong>'+(value.text)+'</strong><ks-list class="ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.data)+'</ks-list></v>';
 			}else{
 				if(!$.isObject(value) && !$.isArray(value)){
 					value = {value:key, text:value, selected: _isSelected(key)}
 				}
-				h += $.tag('li', {selected:value.selected ? 'selected' : null ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
+				h += $.tag('v', {selected:value.selected ? 'selected' : '' ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
 			}
 		});
 		return h;
 	}
-	return [select, multiple, '<ul class="ks-list ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(data)+'</ul>'];
+	return [select, multiple, '<ks-list class="ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(data)+'</ks-list>'];
 }
 
 /**
@@ -1267,8 +1267,8 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 			btn.data('layer-id',layer.layerID).addClass('a');
 			var d = layer.find('.ks-layer-content');
 			//自动定位到已选择区域
-			if(d.find('li[selected]').length){
-				d.scrollTop(d.find('li[selected]').eq(0).offset().top - d.offset().top - d.find('li').eq(0).height());
+			if(d.find('v[selected]').length){
+				d.scrollTop(d.find('v[selected]').eq(0).offset().top - d.offset().top - d.find('v').eq(0).height());
 			}
 			//选项点击事件
 			$(d.find('.ks-list-select')).listSelect(function(val, txt, valdt, T, e){
@@ -1277,7 +1277,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				if(multiple){
 					select && select.find('option').eq(T.attr('n')).attr('selected', T.attr('selected') ? true : false);
 					txt = '';
-					d.find('li[selected]').each(function (i,l) {
+					d.find('v[selected]').each(function (i,l) {
 						l = $(l);
 						txt += '<span>'+l.attr('_text')+'</span>';
 					});
@@ -1423,7 +1423,7 @@ $.showDate = function(input, format){
 
 		TimeHtml += '</div>';
 		if(isymd) {//只有存在年月日时才出现确认按钮
-			TimeHtml += '<button type="button" class="ks-btn" size="small" color="primary">确认</button>';
+			TimeHtml += '<ks-btn size="small" color="primary">确认</ks-btn>';
 		}
 		TimeHtml += '</div>';
 	}
@@ -1620,11 +1620,10 @@ $.plugin.showMenu = function(obj, content, title){
  * @param {int} maxLevel 最大层级 - 参考level解释
  * @param {url} apiUrl API接口地址 - 默认common/area，每组地区数据返回格式参考defDt介绍
  */
-$.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
-	var $this = this;
-	btn = $(btn);
+$.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
+	var btn = $(this[0]);
 	if(btn.data('layer-id')){
-		$this.layerHide(btn.data('layer-id'));
+		$.layerHide(btn.data('layer-id'));
 		btn.removeData('layer-id');
 		return;
 	}
@@ -1659,10 +1658,10 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 	//从API获取数据
 	function g(upID, currID){
 		upID = upID ? upID : '';
-		$this.API(_APIurl,{id:upID, level:level},function(data){
+		$.API(_APIurl,{id:upID, level:level},function(data){
 			var H = '';
 			$.loop(data,function (val) {
-				H += $this.tag('li',{
+				H += $.tag('v',{
 					upid : upID,
 					val : val.id,
 					selected : (currID && currID == val.id ? 'selected' : null)
@@ -1670,10 +1669,10 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 			});
 			//如果没有地区数据 则直接关闭
 			if(!H){
-				$this.layerHide(layerID);
+				$.layerHide(layerID);
 				btn.removeData('layer-id');
 			}else {
-				H = '<ul class="ks-list ks-list-select">'+H+'</ul>';
+				H = '<ks-list class="ks-list-select">'+H+'</ks-list>';
 				Dom.find('.ks-area-layer-c').html(H);
 				//计算地区列表区域的高度 以适应滚动窗口
 				(function(){
@@ -1681,7 +1680,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 					var o = Dom.find('.ks-area-layer-c');
 					o.height(h-Dom.find('.ks-area-layer-btn').height(true));
 
-					var p = o.find('li[selected]');
+					var p = o.find('v[selected]');
 					if(p.length){
 						o.scrollTop(p.index() * p.height(true));
 					}else{
@@ -1698,7 +1697,7 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 
 					//选择达到最后一级 关闭窗口
 					if (level == maxLevel-1) {
-						$this.layerHide(layerID);
+						$.layerHide(layerID);
 						btn.removeData('layer-id');
 						__callDt(id, 1);
 					} else if (level < maxLevel) {
@@ -1713,10 +1712,10 @@ $.plugin.area = function(btn, tit, defDt, callFun, maxLevel, apiUrl){
 
 	//底层弹出菜单
 	$.layer({
-		pos : $this.device =='MOBILE' ? 8 : btn,
-		cover : $this.device =='MOBILE' ? 2 : 0,
-		width : $this.device =='MOBILE' ? '100%' : '',
-		height : $this.device =='MOBILE' ? '75%' : '',
+		pos : $.device =='MOBILE' ? 8 : btn,
+		cover : $.device =='MOBILE' ? 2 : 0,
+		width : $.device =='MOBILE' ? '100%' : '',
+		height : $.device =='MOBILE' ? '75%' : '',
 		class : 'ks-area-layer',
 		content : '<div class="ks-area-layer-btn"><p><span class="ks-text-gray">'+Ts[0]+'</span></p><p></p><p></p><p></p></div><div class="ks-area-layer-c">请稍后...</div>',
 		closeBtn : false,
@@ -1883,7 +1882,7 @@ $.render = function(){
 			t.after('<i>'+txt+'</i>');
 			//最大选择数量支持
 			var area = t.parent().parent();
-			if(area.length && area[0].tagName =='CHECKGROUP' && area.attr('max')){
+			if(area.length && area.attr('max')){
 				var max = parseInt(area.attr('max')) || 0;
 				t.change(function () {
 					//域下相同类型的元素
@@ -2112,7 +2111,7 @@ $.render = function(){
 						defDt[k] = {id: v[0], name: v[1], level:k, field:val};
 					}
 				});
-				$this.area(obj, obj.attr('title'), defDt, function (dt) {
+				obj.area(obj.attr('title'), defDt, function (dt) {
 					if(!dt.isEnd){
 						return;
 					}
@@ -2185,10 +2184,12 @@ $.render = function(){
 
 
 	//折叠面板
-	$('.ks-collapse:not([_ksauicollapse_])').each(function(_, ele){
-		ele = $(ele);
-		ele.attr('_ksauicollapse_',1);
-		ele.collapse();
+	$('ks-collapse').each(function(_, ele){
+		if(ele._KSAUIRENDER_collapse){
+			return;
+		}
+		ele._KSAUIRENDER_collapse = true;
+		$(ele).collapse();
 	});
 
 	//表格固定头部
@@ -2247,7 +2248,7 @@ $.render = function(){
 	});
 
 	//分页初始化
-	$('.ks-page').page();
+	$('ks-page').page();
 
 	//表单结构初始化
 	$('ks-form').map(function(dom){
@@ -2272,12 +2273,10 @@ $.render = function(){
 				ele.find('ks-form-content , ks-form-extra').width('calc(100% - '+labelWidth+')');
 			}
 		});
-		dom.find('[type="reset"]').click(function(){
-			dom.find('input:not([type="hidden"]), select, textarea').val('');
-		});
 	});
 	
-	$('.ks-btn[submit]').map(function(dom){
+	//提交按钮
+	$('ks-btn[submit]').map(function(dom){
 		dom = $(dom);
 		var submits = dom.attr('submit');
 		dom.attr('submit','');
@@ -2285,6 +2284,22 @@ $.render = function(){
 		if(form.length){
 			dom.click(function(){
 				form.submit();
+			});
+		}
+	});
+
+	//重置按钮
+	$('ks-btn[reset]').map(function(dom){
+		dom = $(dom);
+		var resets = dom.attr('reset');
+		dom.attr('reset','');
+		var form = resets ? $(resets) : dom.parents('form');
+		if(!form.length){
+			form = dom.parents('ks-form');
+		}
+		if(form.length){
+			dom.click(function(){
+				form.find('input:not([type="hidden"]), select, textarea').val('');
 			});
 		}
 	});
@@ -2317,11 +2332,11 @@ $.plugin.page = function(){
 				val = val > total ? total : val;
 			}
 			val = parseInt(val);
-
-			ele.children('.ks-page-next').attr('disabled', val === total);
-			ele.children('.ks-page-last').attr('disabled', val > total- pageNum / 2);
-			ele.children('.ks-page-prev').attr('disabled', val ===1);
-			ele.children('.ks-page-first').attr('disabled', val < pageNum / 2);
+			
+			ele.children('ks-page-next').attr('disabled', val === total);
+			ele.children('ks-page-last').attr('disabled', val > total- pageNum / 2);
+			ele.children('ks-page-prev').attr('disabled', val ===1);
+			ele.children('ks-page-first').attr('disabled', val < pageNum / 2);
 
 			ele.attr('current', val);
 			ele[0].value = val;
@@ -2373,20 +2388,24 @@ $.plugin.page = function(){
 		if(!pgcode){
 			return;
 		}
-		var H = '<button type="button" class="ks-page-first" icon="first_page" value="1"></button>';
-		H += '<button type="button" class="ks-page-prev" icon="arrow_left" value="prev"></button>';
+		var H = '<ks-page-first icon="first_page" value="1"></ks-page-first>';
+		H += '<ks-page-prev icon="arrow_left" value="prev"></ks-page-prev>';
 		H += pgcode;
-		H += '<button type="button" class="ks-page-next" icon="arrow_right" value="next"></button>';
-		H += '<button type="button" class="ks-page-last" icon="last_page" value="'+total+'"></button>';
+		H += '<ks-page-next icon="arrow_right" value="next"></ks-page-next>';
+		H += '<ks-page-last icon="last_page" value="'+total+'"></ks-page-last>';
 		if($.isset(ele.attr('quick'))){
-			H += '<span class="ks-input-group"><i>转</i><input type="text" value="'+current+'"><i>页</i></span>';
+			H += '<ks-input-group><i>转</i><input type="text" value="'+current+'"><i>页</i></ks-input-group>';
 		}
 		ele.html(H);
 
-		ele.children('a , button').click(function(){
-			pgTo($(this).attr('value'));
+		ele.children('*:not(ks-input-group)').click(function(){
+			var el = $(this);
+			if(el.attr('disabled')){
+				return;
+			}
+			pgTo(el.attr('value'));
 		});
-		ele.find('.ks-input-group > input').keyup(function(e){
+		ele.find('ks-input-group > input').keyup(function(e){
 			if(e.keyCode === 13){
 				pgTo(this.value);
 			}
@@ -2626,7 +2645,7 @@ $.plugin.slide = function(options){
 $.newForm = function(data){
 	var $this = this;
 	var H = '';
-	H += '<form><div class="ks-form">';
+	H += '<form><ks-form>';
 	$.loop(data, function(value, key){
 		if(value && $.isObject(value)) {
 			value.value = value.value ? value.value : '';
@@ -2636,16 +2655,9 @@ $.newForm = function(data){
 			if (value.type == 'hidden') {
 				H += '<input type="hidden" name="' + value.name + '" value="' + value.value + '">';
 			}else{
-				H += '<div class="ks-row">';
-				if($.isset(value.label)){
-					H += $this.tag(value.col ? 'span' : 'div', {
-						class : 'ks-label',
-						'data-required' : value.required ? true : null,
-					}, value.label);
-				}
-				H += '<div class="ks-col">';
+				H += '<ks-form-item label="'+(value.label || '')+'" '+(value.required ? 'required' : '')+'>';
 				if (value.after || value.before) {
-					H += '<div class="ks-input">';
+					H += '<div class="ks-input-group">';
 					H += value.before ? value.before : '';
 				}
 				//数字 普通输入框 密码框
@@ -2655,8 +2667,7 @@ $.newForm = function(data){
 						name: value.name,
 						value: value.value,
 						placeholder: value.placeholder,
-						style: value.style,
-						class: 'ks-input'
+						style: value.style
 					}, '', 1);
 					//多行输入框
 				} else if ($.inArray(value.type, ['textarea'])) {
@@ -2666,7 +2677,7 @@ $.newForm = function(data){
 						style: value.style,
 						class: 'ks-input'
 					}, value.value);
-					//开关
+				//开关
 				} else if (value.type == 'switch') {
 					value.value = value.value ? value.value : '';
 					H += $this.tag('input', {
@@ -2677,7 +2688,7 @@ $.newForm = function(data){
 						style: value.style,
 						checked: (value.value == 1 ? ' checked' : null)
 					}, '', 1);
-					//单选框
+				//单选框
 				} else if (value.type == 'radio') {
 					$.loop(value.option, function (v,k) {
 						H += $this.tag('input', {
@@ -2689,7 +2700,7 @@ $.newForm = function(data){
 							style: value.style
 						}, '', 1);
 					});
-					//多选框
+				//多选框
 				} else if (value.type == 'checkbox') { //checkbox 字段名会自动追加[]
 					(function () {
 						function check_x(checklist) {
@@ -2717,14 +2728,14 @@ $.newForm = function(data){
 						H += check_x(value.option);
 					})();
 
-					//下拉选择
+				//下拉选择
 				} else if (value.type == 'select') {
 					H += '<select name="' + value.name + '" class="ks-select" ' + value.style + '>';
 					$.loop(value.option, function (v, k) {
 						H += '<option value="' + k + '" ' + (value.value == k ? ' selected' : '') + '>' + v + '</option>';
 					});
 					H += '</select>';
-					//日期
+				//日期
 				} else if (value.type == 'date') {
 					H += $this.tag('input', {
 						type: value.type,
@@ -2735,6 +2746,7 @@ $.newForm = function(data){
 						style: value.style,
 						'ks-render': ''
 					}, '', 1);
+				//地区选择
 				} else if (value.type == 'area') {
 					H += $this.tag('p', {
 						'class': 'ks-area',
@@ -2747,20 +2759,20 @@ $.newForm = function(data){
 					if ($.isset(value.value.address)) {
 						H += '<input type="text" name="address"  value="' + value.value.address + '" placeholder="请输入街道地址" class="ks-input ks-mt1">';
 					}
-					//HTML
+				//HTML
 				} else {
-					H += '<div class="ks-form-text">' + value.value + '</div>';
+					H += value.value;
 				}
 				if (value.after || value.before) {
 					H += value.after ? value.after : '';
 					H += '</div>';
 				}
-				H += '</div></div>';
+				H += '</ks-form-item>';
 			}
 		}else if(value && $.isString(value)){
-			H += '<div class="ks-form-title">'+value+'</div>';
+			H += '<ks-form-title>'+value+'</ks-form-title>';
 		}
 	});
-	H += '</div></form>';
+	H += '</ks-form></form>';
 	return H;
 }

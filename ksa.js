@@ -993,7 +993,6 @@ function debugTime(key){
 		if(!$.isset(val) || val === true){
 			var dom = this[0];
 			if(!dom){
-				console.error(new Error());
 				return;
 			}
 			if(dom === window || dom === document){
@@ -1015,6 +1014,7 @@ function debugTime(key){
 			this.map(function(e){
 				e.style.height = val;
 			});
+			return this;
 		}
 	}
 

@@ -3,77 +3,38 @@
  * Create：2014-01-23
  * Update：2020-4-24
  */
-/*通用主色*/
-/*浅色文字*/
-/*高亮主色 突出*/
-/* 蓝色 blue */
-/* 靛青色 indigo */
-/* 紫色 purple */
-/* 粉色 pink */
-/* 红 red */
-/* 橙色 orange */
-/* 黄色 yellow */
-/* 绿色 green */
-/* 天空蓝 teal */
-/* 青色 cyan */
-/* 白色 white */
-/* 灰色 gray */
-/* 浅白 light */
-/* 暗色 black */
-/*== 定义边框色 ==*/
-/*色调支持*/
-/*主色*/
-/*成功*/
-/*警告*/
-/*错误/危险*/
-/*============== 全局样式整理 ==============*/
+v,
+ks-list,
+ks-collapse,
+ks-collapse-item,
+ks-collapse-title,
+ks-collapse-content,
+ks-collapse-block {
+  display: block;
+}
 :root {
-  /*== 定义颜色 ==*/
   --defcolor: #4a4a4a;
-  /*通用主色*/
   --textcolor: #9e9e9e;
-  /*浅色文字*/
   --highcolor: #4792fb;
-  /*高亮主色 突出*/
   --blue: #4792fb;
-  /* 蓝色 blue */
   --indigo: #727cf5;
-  /* 靛青色 indigo */
   --purple: #6b5eae;
-  /* 紫色 purple */
   --pink: #ff679b;
-  /* 粉色 pink */
   --red: #ff381e;
-  /* 红 red */
   --orange: #ff9041;
-  /* 橙色 orange */
   --yellow: #f9bc0d;
-  /* 黄色 yellow */
   --green: #5abd48;
-  /* 绿色 green */
   --teal: #14d0ef;
-  /* 天空蓝 teal */
   --cyan: #00d4c0;
-  /* 青色 cyan */
   --white: #fff;
-  /* 白色 white */
   --gray: #9e9e9e;
-  /* 灰色 gray */
   --light: #bec3ca;
-  /* 浅白 light */
   --black: #474d56;
-  /* 暗色 black */
-  /*== 定义边框色 ==*/
   --bordercolor: #e4e8ec;
-  /*色调支持*/
   --primary: #4792fb;
-  /*主色*/
   --success: #5ab32d;
-  /*成功*/
   --warning: #ea981d;
-  /*警告*/
   --danger: #ff6a5b;
-  /*错误/危险*/
 }
 * {
   word-wrap: break-word;
@@ -146,12 +107,10 @@ textarea {
 label {
   white-space: nowrap;
 }
-/*滚动条整体样式*/
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
-/*滚动条里面小方块*/
 ::-webkit-scrollbar-thumb {
   cursor: pointer;
   border-radius: 5px;
@@ -159,12 +118,10 @@ label {
   -webkit-transition: color 0.2s ease;
   transition: color 0.2s ease;
 }
-/*滚动条里面轨道*/
 ::-webkit-scrollbar-track {
   background: #ededed;
   border-radius: 10px;
 }
-/*============== 主框架 白色背景 ==============*/
 .ks-box {
   background: #fff;
   padding: 15px;
@@ -185,7 +142,6 @@ label {
   padding: 0 15px;
   margin: 0 -15px 15px;
 }
-/*============== 警告提示框 ==============*/
 .ks-alert {
   padding: 15px 20px;
   background: #fff6da;
@@ -193,7 +149,6 @@ label {
   color: #d07d00;
   border-radius: 3px;
 }
-/*============== upload图片列表 ==============*/
 .ks-uploadbtn {
   width: 50px;
   height: 50px;
@@ -233,7 +188,6 @@ label {
   background: #f2f2f2;
   margin: 0 10px 10px 0;
 }
-/*遮罩*/
 .ks-uploadlist:after {
   content: '';
   width: 100%;
@@ -245,7 +199,6 @@ label {
   top: 0;
   z-index: 1;
 }
-/*关闭按钮*/
 .ks-uploadlist [icon='close'] {
   position: absolute;
   right: 0;
@@ -256,12 +209,10 @@ label {
   color: #fff;
   z-index: 2;
 }
-/*图片*/
 .ks-uploadlist img {
   max-width: 100%;
   min-height: 100%;
 }
-/*============== 浮动提示标 ==============*/
 .ks-ftip {
   position: absolute;
   left: 0;
@@ -284,7 +235,6 @@ label {
   bottom: -10px;
   left: 10px;
 }
-/*============== 提醒框 ==============*/
 alert {
   background: #e5f6ff;
   color: #699ce2;
@@ -297,7 +247,6 @@ alert {
 alert[block] {
   display: block;
 }
-/*============== TAB选项卡 ==============*/
 .ks-tab-title {
   width: 100%;
   height: 40px;
@@ -364,8 +313,7 @@ alert[block] {
 .ks-tab .ks-tab-item:first-of-type {
   display: block;
 }
-/*============== 分页样式处理 ==============*/
-.ks-page {
+ks-page {
   text-align: center;
   background: #fff;
   box-shadow: #eee 0 0 3px;
@@ -375,15 +323,14 @@ alert[block] {
   height: 2.285em;
   margin: 0 auto;
   display: inline-block;
-  /*快速跳转*/
 }
-.ks-page > a {
+ks-page > a {
   color: #757575 !important;
 }
-.ks-page *:before {
+ks-page *:before {
   vertical-align: unset;
 }
-.ks-page > * {
+ks-page > * {
   float: left;
   color: #9a9a9a;
   height: 2.285em;
@@ -395,32 +342,32 @@ alert[block] {
   cursor: pointer;
   margin-left: -1px;
 }
-.ks-page > *:first-child {
+ks-page > *:first-child {
   border-radius: 0.22em 0 0 0.22em;
 }
-.ks-page > *:last-child {
+ks-page > *:last-child {
   border-radius: 0 0.22em 0.22em 0;
 }
-.ks-page > *:hover {
+ks-page > *:hover {
   background: #fafafa;
 }
-.ks-page > *.a {
+ks-page > *.a {
   background: #4792fb;
   color: #fff !important;
   border-color: #4792fb;
   font-weight: bold;
 }
-.ks-page > *[disable] {
+ks-page > *[disabled] {
   cursor: not-allowed;
   color: #bbb;
   background: #fff;
 }
-.ks-page [icon='arrow_right']:before,
-.ks-page [icon='last_page']:before {
+ks-page [icon='arrow_right']:before,
+ks-page [icon='last_page']:before {
   float: right;
   margin-right: 0;
 }
-.ks-page .ks-input-group {
+ks-page ks-input-group {
   font-size: 1em;
   width: auto;
   padding: 0;
@@ -428,40 +375,44 @@ alert[block] {
   height: 2.285em;
   border: 0;
 }
-.ks-page .ks-input-group > * {
+ks-page ks-input-group > * {
   height: 2.285em !important;
   line-height: 2.285em !important;
   font-size: 1em;
 }
-.ks-page .ks-input-group > input {
+ks-page ks-input-group > input {
   width: 3.571em;
   padding: 0 0.357em;
   text-align: center;
 }
-.ks-page .ks-input-group .ks-btn {
+ks-page ks-input-group ks-btn {
   background: #9e9e9e;
 }
-.ks-page button[disabled] {
+ks-page ks-page-btn[disabled] {
   cursor: not-allowed;
   background: #f2f2f2;
 }
-.ks-page[disabled] {
+ks-page[disabled] {
   opacity: 0.5;
   background: #f2f2f2;
 }
-.ks-page[disabled] > * {
+ks-page[disabled] > * {
   cursor: not-allowed;
 }
-/*============== 列表样式 ==============*/
-/*普通列表*/
-.ks-list > * {
+ks-list {
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+ks-list > * {
+  display: block;
   padding: 0.71428em 0;
   position: relative;
   height: auto;
   overflow: hidden;
   list-style: none;
 }
-.ks-list > *:after {
+ks-list > *:after {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -472,68 +423,49 @@ alert[block] {
   -webkit-transform: scaleY(0.5);
   transform: scaleY(0.5);
 }
-.ks-list > *:not(.ks-fl):last-of-type:after {
+ks-list > *:not(.ks-fl):last-of-type:after {
   display: none;
 }
-.ks-list > * > small {
+ks-list > * > small {
   float: right;
   color: #898989;
 }
-/*点击展开 帮助类*/
-.ks-list-collapse > dl {
-  color: #9e9e9e;
-  transition: all 0.3s ease-in-out;
-}
-.ks-list-collapse > dl > dt {
-  display: block;
-  cursor: pointer;
-  outline: none;
-  color: #4a4a4a;
-}
-/*折叠面板*/
-.ks-collapse-item > * {
-  display: block;
-  width: 100%;
-  overflow: hidden;
-}
-.ks-collapse-item .ks-collapse-item:not([open]) > * {
-  height: 0;
-}
-.ks-collapse-item > .ks-title {
+ks-collapse > * > ks-collapse-title {
   height: auto;
   cursor: pointer;
   outline: none;
   padding: 6px 0;
 }
-.ks-collapse-item > .ks-content {
+ks-collapse > * > ks-collapse-content {
   transition: all 0.1s ease-in-out;
+  height: 0;
+  overflow: hidden;
 }
-.ks-collapse-item > .ks-title:not([icon])::before {
+ks-collapse > * > ks-collapse-title:not([icon])::before {
   content: '\e65d';
   float: left;
-  margin-right: 0.4em;
+  margin: 0.15em 0.4em;
   font-family: 'ksaui';
-  font-size: 1.2em;
+  font-size: 1em;
   line-height: 1.2em;
   transition: all 0.3s ease-in-out;
 }
-.ks-collapse-item > .ks-content {
+ks-collapse > * > ks-collapse-content {
   opacity: 0;
   transition: all 0.3s ease-in-out;
 }
-.ks-collapse-item[open] > .ks-title:not([icon])::before {
+ks-collapse > *[open] > ks-collapse-title:not([icon])::before {
   transform: rotate(90deg);
 }
-.ks-collapse-item[open] > .ks-content {
+ks-collapse > *[open] > ks-collapse-content {
   opacity: 1;
 }
-/*圆点列表*/
-.ks-list-dot > li {
+.ks-list-dot > v {
   padding: 0;
   height: 30px;
   line-height: 30px;
 }
-.ks-list-dot > li:before {
+.ks-list-dot > v:before {
   content: '';
   vertical-align: middle;
   display: inline-block;
@@ -544,19 +476,18 @@ alert[block] {
   background: #ccc;
   margin-right: 5px;
 }
-.ks-list-dot > li:after {
+.ks-list-dot > v:after {
   display: none;
 }
-/*数字列表*/
 .ks-list-number {
   counter-reset: kslistnumber;
 }
-.ks-list-number > li {
+.ks-list-number > v {
   padding: 0;
   height: 30px;
   line-height: 30px;
 }
-.ks-list-number > li:before {
+.ks-list-number > v:before {
   counter-increment: kslistnumber;
   content: counters(kslistnumber, '');
   display: inline-block;
@@ -568,24 +499,23 @@ alert[block] {
   color: #fff;
   font-size: 12px;
 }
-.ks-list-number > li:nth-of-type(1):before,
-.ks-list-number > li:nth-of-type(2):before,
-.ks-list-number > li:nth-of-type(3):before {
+.ks-list-number > v:nth-of-type(1):before,
+.ks-list-number > v:nth-of-type(2):before,
+.ks-list-number > v:nth-of-type(3):before {
   background: #fd4c08;
 }
-.ks-list-number > li:after {
+.ks-list-number > v:after {
   display: none;
 }
-/*带右箭头*/
-.ks-list > li[icon='arrow_right'],
-.ks-list-arrow > li {
-  padding-right: 1.5em;
+ks-list > v[icon='arrow_right'],
+.ks-list-arrow > v {
+  padding-right: 2em;
 }
-.ks-list > li[icon='arrow_right']:before,
-.ks-list-arrow > li:before {
+ks-list > v[icon='arrow_right']:before,
+.ks-list-arrow > v:before {
   color: #777;
   top: 50%;
-  font-size: 1.2em;
+  font-size: 1em;
   width: 1.2em;
   height: 1.2em;
   line-height: 1.2em;
@@ -595,15 +525,14 @@ alert[block] {
   position: absolute;
   right: 0;
 }
-.ks-list-arrow > li:before {
+.ks-list-arrow > v:before {
   content: '\e7da';
 }
-/*左侧图标 设置类*/
-.ks-list-icon > li {
+.ks-list-icon > v {
   padding-left: 39px;
   line-height: 34px;
 }
-.ks-list-icon > li > [icon]:first-of-type {
+.ks-list-icon > v > [icon]:first-of-type {
   width: 34px;
   height: 34px;
   text-align: center;
@@ -613,72 +542,67 @@ alert[block] {
   float: left;
   margin-left: -39px;
 }
-.ks-list-icon > li::after {
+.ks-list-icon > v::after {
   left: 39px;
 }
-/*单选列表*/
 .ks-list-select {
   width: 100%;
   overflow-y: auto;
-  /*被禁用的选项*/
-  /*分组名*/
-  /*多选列表*/
 }
-.ks-list-select > li {
+.ks-list-select > v {
   cursor: pointer;
   white-space: nowrap;
 }
-.ks-list-select > li:not(.ks-select-optgroup-title):hover {
+.ks-list-select > v:not(.ks-select-optgroup-title):hover {
   opacity: 0.7;
 }
-.ks-list-select > li:before {
-  font-size: 1.2em;
-  width: 1.2em;
-  height: 1.2em;
+.ks-list-select > v:before {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
   text-align: center;
   font-family: 'ksaui';
   color: #9e9e9e;
+  margin: 2px 5px 0 0;
 }
-.ks-list-select > li[selected] {
+.ks-list-select > v[selected] {
   color: #4792fb;
 }
-.ks-list-select > li:not([icon])[selected]:before {
+.ks-list-select > v:not([icon])[selected]:before {
   content: '\e652';
 }
-.ks-list-select > li[selected]:before {
+.ks-list-select > v[selected]:before {
   float: right;
   color: #4792fb;
 }
-.ks-list-select > li[disabled] {
+.ks-list-select > v[disabled] {
   color: #ddd;
   cursor: not-allowed;
   background: none;
 }
-.ks-list-select > li.ks-select-optgroup-title {
+.ks-list-select > v.ks-select-optgroup-title {
   cursor: default;
   padding-right: 0 !important;
 }
-.ks-list-select > li.ks-select-optgroup-title:before {
+.ks-list-select > v.ks-select-optgroup-title:before {
   display: none;
 }
-.ks-list-select > li.ks-select-optgroup-title > strong {
+.ks-list-select > v.ks-select-optgroup-title > strong {
   display: block;
 }
-.ks-list-select[multiple] > li:not([icon]):before {
+.ks-list-select[multiple] > v:not([icon]):before {
   content: '\e601';
 }
-.ks-list-select[multiple] > li:before {
+.ks-list-select[multiple] > v:before {
   float: left;
 }
-.ks-list-select[multiple] > li:not([icon])[selected]:before {
+.ks-list-select[multiple] > v:not([icon])[selected]:before {
   content: '\e602';
 }
-/*layer层处理*/
-.ks-layer-select .ks-list-select > li {
+.ks-layer-select .ks-list-select > v {
   padding-right: 0.57em;
   padding-left: 0.57em;
 }
-/*混排基础元素*/
 .ks-media {
   font-size: 14px;
   width: 100%;
@@ -686,10 +610,9 @@ alert[block] {
   overflow: hidden;
 }
 .ks-media > * {
-  margin-bottom: 7px;
+  margin-bottom: 12px;
   display: block;
 }
-/*最后一个去掉下边距*/
 .ks-media > *:last-child {
   margin-bottom: 0;
 }
@@ -705,11 +628,9 @@ alert[block] {
 .ks-tc > .ks-media-img {
   display: inline-block;
 }
-/*如果图片存在全圆角时，宽高必须相同*/
 .ks-media-img.ks-o {
   height: 80px;
 }
-/*浮动图片样式*/
 .ks-media-img:not(.ks-fl):not(.ks-fr) {
   width: 100%;
 }
@@ -724,12 +645,10 @@ alert[block] {
 .ks-media-img.ks-fr {
   margin-left: 10px;
 }
-/*图片右浮动时 内容区宽度的处理*/
 .ks-media-img.ks-fl + *,
 .ks-media-img.ks-fr + * {
   overflow: hidden;
 }
-/*标题*/
 .ks-media-title {
   font-size: 1.148rem;
   font-weight: 600;
@@ -741,12 +660,9 @@ alert[block] {
 .ks-media-title * {
   font-weight: normal;
 }
-/*标题子级去掉加粗*/
-/*内容摘要行 summary */
 .ks-media-text {
   color: #9e9e9e;
 }
-/*============== 头像尺寸 ==============*/
 .ks-avatar {
   display: inline-block;
   width: 30px;
@@ -770,21 +686,20 @@ alert[block] {
   width: 100px;
   height: 100px;
 }
-/*============== 轮播 ==============*/
 .ks-slide {
   width: 100%;
   position: relative;
   height: auto;
   overflow: hidden;
 }
-.ks-slide-c {
+.ks-slide .ks-slide-c {
   width: 100%;
   transition: all 0.6s ease-in-out;
   height: auto;
   overflow: hidden;
   transition-duration: 0ms;
 }
-.ks-slide-item {
+.ks-slide .ks-slide-item {
   position: absolute;
   left: 0;
   top: 0;
@@ -793,12 +708,11 @@ alert[block] {
   z-index: 1;
   transition: all 0.6s ease-in-out;
 }
-.ks-slide-item:not(:first-child) {
+.ks-slide .ks-slide-item:not(:first-child) {
   transform: translateX(200%) scale(1);
 }
-/*左右控制器*/
-.ks-slide-control-prev,
-.ks-slide-control-next {
+.ks-slide .ks-slide-control-prev,
+.ks-slide .ks-slide-control-next {
   position: absolute;
   top: 50%;
   z-index: 99;
@@ -813,48 +727,46 @@ alert[block] {
   transition: all 0.3s ease-in-out;
   opacity: 0;
 }
-.ks-slide-control-prev:before,
-.ks-slide-control-next:before {
+.ks-slide .ks-slide-control-prev:before,
+.ks-slide .ks-slide-control-next:before {
   content: '';
   display: inline-block;
   transform: rotate(45deg);
   transform-origin: 50% 50%;
   color: #fff;
 }
-.ks-slide-control-prev:before {
+.ks-slide .ks-slide-control-prev:before {
   transform: rotate(-135deg);
   margin-left: 3px;
 }
-.ks-slide-control-prev {
+.ks-slide .ks-slide-control-prev {
   left: 0;
 }
-.ks-slide-control-next {
+.ks-slide .ks-slide-control-next {
   right: 0;
 }
-.ks-slide:hover .ks-slide-control-prev {
+.ks-slide .ks-slide:hover .ks-slide-control-prev {
   opacity: 0.3;
   left: 15px;
 }
-.ks-slide:hover .ks-slide-control-next {
+.ks-slide .ks-slide:hover .ks-slide-control-next {
   opacity: 0.3;
   right: 15px;
 }
-.ks-slide-item._moveon {
+.ks-slide .ks-slide-item._moveon {
   z-index: 10;
 }
-.ks-slide-item._hide {
+.ks-slide .ks-slide-item._hide {
   opacity: 0;
   z-index: 0;
 }
-.ks-slide-item._up {
+.ks-slide .ks-slide-item._up {
   z-index: 20;
 }
-.ks-slide-item._on {
+.ks-slide .ks-slide-item._on {
   z-index: 90;
 }
-/*卡片式*/
-/*状态显示*/
-.ks-slide-status {
+.ks-slide .ks-slide-status {
   position: absolute;
   left: 0;
   bottom: 1em;
@@ -862,7 +774,7 @@ alert[block] {
   width: 100%;
   z-index: 99;
 }
-.ks-slide-status > * {
+.ks-slide .ks-slide-status > * {
   width: 30px;
   padding: 2px 0;
   background: rgba(0, 0, 0, 0.2);
@@ -872,17 +784,15 @@ alert[block] {
   cursor: pointer;
   margin: 0 2px;
 }
-.ks-slide-status > .a {
+.ks-slide .ks-slide-status > .a {
   background: rgba(255, 255, 255, 0.8);
   color: inherit;
 }
-/*============== 列表数据不存在时的提醒=====*/
 .ks-notdata {
   color: #aaa;
   text-align: center;
   padding: 40px 0;
 }
-/*============== 表格框(table.js必须) ==============*/
 .ks-table {
   width: 100%;
   background: #fff;
@@ -893,12 +803,6 @@ alert[block] {
   font-size: 14px;
   line-height: 1.5715;
 }
-.ks-table-toolbar {
-  margin-bottom: 10px;
-  width: 100%;
-  height: auto;
-  overflow: hidden;
-}
 .ks-table th {
   font-weight: bold;
   color: rgba(0, 0, 0, 0.75);
@@ -908,46 +812,50 @@ alert[block] {
   padding: 14px;
   min-width: 51px;
   overflow-wrap: break-word;
+  border-bottom: #f0f0f0 1px solid;
 }
-/*模式 左标题右内容*/
 .ks-table tr > th:only-of-type {
   width: 100px;
 }
 .ks-table tr > th:only-of-type ~ td:only-of-type {
   width: auto;
 }
-/*鼠标经过加背景色*/
 .ks-table[hover] tbody tr:hover {
   background: #fafafa;
   border-left: #999 2px solid;
   border-right: #999 2px solid;
 }
-/*thead增加背景色*/
 .ks-table > thead,
 .ks-table > tbody:first-child > tr:first-child,
 .ks-table[data-style*='hover'] tr:hover {
   background: #fafafa;
 }
-/*属性存在 striped = 隔行换色*/
 .ks-table[striped] tbody > tr:nth-of-type(even) {
   background: #fcfcfc;
-}
-/*line线条属性*/
-.ks-table td,
-.ks-table th {
-  border-bottom: #f0f0f0 1px solid;
 }
 .ks-table[border] td,
 .ks-table[border] th {
   border: #f0f0f0 1px solid;
 }
-/*自适应处理 table可能过长 或 屏幕过窄*/
-.ks-table-auto {
-  width: 100%;
-  overflow-x: auto;
+.ks-table tbody tr.ks-table-tr-checked {
+  background: #e6f7ff !important;
+}
+.ks-table tbody tr.ks-table-tr-checked td,
+.ks-table tbody tr.ks-table-tr-checked {
+  border-color: #d8e9f1;
 }
 .ks-table ~ page {
   margin-top: 20px;
+}
+.ks-table-toolbar {
+  margin-bottom: 10px;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+.ks-table-auto {
+  width: 100%;
+  overflow-x: auto;
 }
 .ks-table-header > table,
 .ks-table-body > table {
@@ -963,17 +871,6 @@ alert[block] {
   padding: 0;
   border-left: 0;
 }
-/*页头占位滚动条*/
-/*行被选中*/
-.ks-table tbody tr.ks-table-tr-checked {
-  background: #e6f7ff !important;
-}
-.ks-table tbody tr.ks-table-tr-checked td,
-.ks-table tbody tr.ks-table-tr-checked {
-  border-color: #d8e9f1;
-}
-/*============== 表单结构 ==============*/
-/*处理表单布局*/
 ks-form {
   display: block;
 }
@@ -1000,6 +897,7 @@ ks-form ks-form-content {
   float: right;
   width: calc(100% - 125px);
   min-height: 36px;
+  line-height: 36px;
 }
 ks-form ks-form-extra {
   float: right;
@@ -1024,7 +922,6 @@ ks-form ks-form-group > :first-child {
 ks-form ks-form-group > :last-child {
   padding-right: 0;
 }
-/*垂直结构*/
 ks-form[top] ks-form-label,
 ks-form[top] ks-form-content,
 ks-form[top] ks-form-extra {
@@ -1051,86 +948,6 @@ ks-form[inline] ks-form-extra {
   text-align: left;
   display: inline-block;
   vertical-align: top;
-}
-/*
-.ks-form .ks-row { display: flex; align-items:center; flex-wrap:wrap;}
-.ks-form .ks-row:after { content: none;}
-*/
-formitem,
-form-content {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-formitem:after,
-form-content:after {
-  content: '';
-  width: 100%;
-  height: 0;
-  display: block;
-  overflow: hidden;
-}
-.ks-form > row,
-.ks-form > formitem {
-  margin-bottom: 20px;
-}
-/*内容区*/
-form-content {
-  line-height: 40px;
-}
-/*普通标题(非div标签) 默认左右结构*/
-.ks-form .ks-label,
-form-label {
-  display: block;
-  font-weight: 400;
-  color: rgba(0, 0, 0, 0.7);
-  width: 100%;
-  padding: 10px 10px 10px 0;
-  min-height: 36px;
-  color: #7d7d7d;
-}
-.ks-form .ks-label > small,
-form-label > small {
-  vertical-align: baseline;
-  font-size: 0.86em;
-  font-weight: normal;
-  color: #999;
-  margin-left: 5px;
-}
-form-label[left] {
-  float: left;
-  width: 100px;
-}
-form-label[left] ~ form-content {
-  float: left;
-  width: calc(100% - 100px);
-}
-form-label[left] > small {
-  display: block;
-}
-formitem .ks-input,
-formitem .ks-select,
-formitem .ks-date,
-formitem .ks-area {
-  width: 100%;
-}
-.ks-form .ks-label:not(div) ~ * {
-  width: calc(100% - 100px);
-  float: left;
-}
-/*整行标题(div标签) 上下结构*/
-.ks-form div.ks-label {
-  display: block;
-  width: 100%;
-  margin-bottom: 6px;
-}
-.ks-form div.ks-label > small {
-  display: inline-block;
-  margin-left: 5px;
-}
-.ks-form div.ks-label ~ * {
-  width: 100%;
-  height: auto;
 }
 row {
   display: flex;
@@ -1229,7 +1046,6 @@ row[spacing='5'] column {
 row[spacing='6'] column {
   padding: 25px;
 }
-/*栅格 平板*/
 @media (min-width: 576px) {
   column[sm='1'] {
     width: 8.33333%;
@@ -1268,7 +1084,6 @@ row[spacing='6'] column {
     width: 100%;
   }
 }
-/*栅格 PC*/
 @media (min-width: 1024px) {
   column[pc='1'] {
     width: 8.33333%;
@@ -1307,7 +1122,6 @@ row[spacing='6'] column {
     width: 100%;
   }
 }
-/*栅格 高分屏*/
 @media (min-width: 1900px) {
   column[hd='1'] {
     width: 8.33333%;
@@ -1346,26 +1160,11 @@ row[spacing='6'] column {
     width: 100%;
   }
 }
-/*固定列 最小固定100px 自定义
-.ks-col-fixed, .ks-flex > .ks-label { flex: 0; min-width: 100px; align-items: stretch}
-*/
-/*form标题 ks-label
-.ks-label:not(th) {display: block;}
-.ks-label {margin-bottom: 8px; font-weight: 600; font-size: 1rem; color: #6d6d6d; width: 100%; overflow: hidden;}
-.ks-label > sub {vertical-align: baseline; font-size: .86em; font-weight: normal; color: #999; margin-left: 5px;}
-*/
-/*form 左右结构时 初始宽度100px 内边距10px
-.ks-flex > .ks-label {flex-basis: 100px; padding: 10px; margin-bottom: 0}
-*/
-/*如果label之后紧邻的只有一个 ks-col时 则对齐内容
-.ks-flex > .ks-label ~ .ks-col:last-child {padding-top: 10px; padding-bottom: 10px;}
-*/
 th.ks-label {
   width: 100px;
   padding: 10px;
 }
-/*============== 表单 按钮 ==============*/
-.ks-btn {
+ks-btn {
   transition: all 0.1s ease-in-out;
   cursor: pointer;
   display: inline-block;
@@ -1383,43 +1182,26 @@ th.ks-label {
   padding: 0 15px;
   border-radius: 3px;
   opacity: 0.95;
-  border: 0;
-  overflow: hidden;
-}
-.ks-btn:not([color]) {
   border: #e4e8ec 1px solid;
+  overflow: hidden;
+  position: relative;
 }
-/*状态*/
-/*获得焦点*/
-.ks-btn:hover {
-  opacity: 0.8;
+ks-btn:hover:not([disabled]) {
+  border-color: #4792fb;
+  color: #4792fb;
+  z-index: 10;
 }
-.ks-btn:active {
+ks-btn:active {
   opacity: 1;
 }
-/*被禁用*/
-.ks-btn[disabled] {
+ks-btn[disabled] {
   cursor: not-allowed;
   opacity: 0.5;
 }
-/*胶囊*/
-.ks-btn[cap],
-btngroup[cap] > .ks-btn {
-  border-radius: 10em;
-}
-/*胶囊 纯图标*/
-.ks-btn[cap]:empty,
-btngroup[cap] > .ks-btn:empty {
-  padding: 0;
-  text-align: center;
-  min-width: 40px;
-}
-/*整行*/
-.ks-btn[block] {
+ks-btn[block] {
   width: 100%;
 }
-/*加载中*/
-.ks-btn[icon='loading']::before {
+ks-btn[icon='loading']::before {
   content: '';
   margin: 0 5px 0 0;
   width: 10px;
@@ -1430,45 +1212,42 @@ btngroup[cap] > .ks-btn:empty {
   opacity: 0.8;
   vertical-align: middle;
 }
-.ks-btn[icon='loading']:not([color])::before {
+ks-btn[icon='loading']:not([color])::before {
   border-color: rgba(0, 0, 0, 0.3);
   border-top-color: transparent;
 }
-.ks-btn[line][icon='loading']::before,
-.ks-btn[color*='white'][icon='loading']::before {
+ks-btn[line][icon='loading']::before,
+ks-btn[color*='white'][icon='loading']::before {
   border-color: rgba(0, 0, 0, 0.2);
   border-top-color: transparent;
 }
-/*按钮图标统一增加右边距*/
-.ks-btn[icon]:before:not(:only-child) {
+ks-btn[icon]:before:not(:only-child) {
   margin-right: 3px;
 }
-/*按钮尺寸*/
-.ks-btn[size='mini'] {
-  height: 20px;
-  line-height: 18px;
+ks-btn[size='mini'] {
+  height: 22px;
+  line-height: 20px;
   padding: 0 5px;
   font-size: 12px;
 }
-.ks-btn[size='mini'][icon='loading']::before {
+ks-btn[size='mini'][icon='loading']::before {
   width: 8px;
   height: 8px;
 }
-.ks-btn[size='small'] {
-  height: 26px;
+ks-btn[size='small'] {
+  height: 28px;
   line-height: 26px;
   padding: 0 10px;
   font-size: 12px;
 }
-.ks-btn[size='small'][icon='loading']::before {
+ks-btn[size='small'][icon='loading']::before {
   width: 10px;
   height: 10px;
 }
-/*按钮存在上传表单的处理 icon=upload */
-.ks-btn[icon='upload'] {
+ks-btn[icon='upload'] {
   position: relative;
 }
-.ks-btn[icon='upload'] input[type='file'] {
+ks-btn[icon='upload'] input[type='file'] {
   position: absolute;
   left: 0;
   top: 0;
@@ -1477,92 +1256,132 @@ btngroup[cap] > .ks-btn:empty {
   height: 100%;
   width: 100%;
 }
-/*按钮组处理*/
-btngroup {
+ks-btn:not([line])[color] {
+  color: #fff;
+  border: 0;
+}
+ks-btn:not([line])[color='primary'] {
+  background: #4792fb;
+  border-color: #4792fb;
+}
+ks-btn:not([line])[color='success'] {
+  background: #5ab32d;
+  border-color: #5ab32d;
+}
+ks-btn:not([line])[color='warning'] {
+  background: #ea981d;
+  border-color: #ea981d;
+}
+ks-btn:not([line])[color='danger'] {
+  background: #ff6a5b;
+  border-color: #ff6a5b;
+}
+ks-btn[line] {
+  background: none;
+}
+ks-btn[line][color='primary'] {
+  color: #4792fb;
+  border-color: #4792fb;
+  background: #ecf5ff;
+}
+ks-btn[line][color='success'] {
+  color: #5ab32d;
+  border-color: #5ab32d;
+  background: #f4ffef;
+}
+ks-btn[line][color='warning'] {
+  color: #ea981d;
+  border-color: #ea981d;
+  background: #fff9f0;
+}
+ks-btn[line][color='danger'] {
+  color: #ff6a5b;
+  border-color: #ff6a5b;
+  background: #fff1f1;
+}
+ks-btn[cap],
+ks-btn-group[cap] > ks-btn {
+  border-radius: 10em;
+}
+ks-btn[cap]:empty,
+ks-btn-group[cap] > ks-btn:empty {
+  padding: 0;
+  text-align: center;
+  min-width: 36px;
+}
+ks-btn-group {
   display: inline-block;
 }
-btngroup:after {
+ks-btn-group:after {
   content: '';
   display: block;
   clear: both;
   width: 100%;
   overflow: hidden;
 }
-btngroup > .ks-btn {
+ks-btn-group > ks-btn {
   float: left;
 }
-btngroup > .ks-btn:not(:first-child) {
+ks-btn-group > ks-btn:not(:first-child) {
   margin-left: -1px;
 }
-/*不是最后一个和第一个*/
-btngroup > .ks-btn:not(:last-child):not(:first-child) {
+ks-btn-group > ks-btn:not(:last-child):not(:first-child) {
   border-radius: 0 !important;
 }
-/*第一个*/
-btngroup > .ks-btn:first-child {
+ks-btn-group > ks-btn:first-child {
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
-/*最后一个*/
-btngroup > .ks-btn:last-child {
+ks-btn-group > ks-btn:last-child {
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
 }
-/*按钮颜色*/
-btngroup[color] > .ks-btn,
-.ks-btn[color] {
+ks-btn-group[color] > ks-btn {
   color: #fff;
 }
-btngroup[color='primary'] > .ks-btn,
-.ks-btn[color='primary'] {
+ks-btn-group[color]:not([line]) > ks-btn:not([disabled]):hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #fff;
+}
+ks-btn-group[color='primary'] > ks-btn {
   background: #4792fb;
   border-color: #4792fb;
 }
-btngroup[color='success'] > .ks-btn,
-.ks-btn[color='success'] {
+ks-btn-group[color='success'] > ks-btn {
   background: #5ab32d;
   border-color: #5ab32d;
 }
-btngroup[color='warning'] > .ks-btn,
-.ks-btn[color='warning'] {
+ks-btn-group[color='warning'] > ks-btn {
   background: #ea981d;
   border-color: #ea981d;
 }
-btngroup[color='danger'] > .ks-btn,
-.ks-btn[color='danger'] {
+ks-btn-group[color='danger'] > ks-btn {
   background: #ff6a5b;
   border-color: #ff6a5b;
 }
-/*空心按钮*/
-btngroup[line] > .ks-btn,
-.ks-btn[line] {
+ks-btn-group[line] > ks-btn {
   background: none;
 }
-btngroup[line][color='primary'] > .ks-btn,
-.ks-btn[line][color='primary'] {
+ks-btn-group[line][color='primary'] > ks-btn {
   color: #4792fb;
-  border-color: #4792fb;
+  border-color: #9dc7ff;
   background: #ecf5ff;
 }
-btngroup[line][color='success'] > .ks-btn,
-.ks-btn[line][color='success'] {
+ks-btn-group[line][color='success'] > ks-btn {
   color: #5ab32d;
   border-color: #5ab32d;
   background: #f4ffef;
 }
-btngroup[line][color='warning'] > .ks-btn,
-.ks-btn[line][color='warning'] {
+ks-btn-group[line][color='warning'] > ks-btn {
   color: #ea981d;
   border-color: #ea981d;
   background: #fff9f0;
 }
-btngroup[line][color='danger'] > .ks-btn,
-.ks-btn[line][color='danger'] {
+ks-btn-group[line][color='danger'] > ks-btn {
   color: #ff6a5b;
   border-color: #ff6a5b;
   background: #fff1f1;
 }
-/*============== mark标记 ==============*/
 mark {
   display: inline-block;
   white-space: nowrap;
@@ -1570,14 +1389,26 @@ mark {
   font-size: 14px;
   border-radius: 0.22em;
   line-height: 1.5;
-  background: #e5e5e5;
-  color: rgba(0, 0, 0, 0.45);
+  background: #ecf5ff;
+  color: #4792fb;
 }
 mark[cap] {
   border-radius: 1em;
 }
-/*圆角*/
-mark[color] {
+mark:not([line])[color='primary'] {
+  background: #4792fb;
+  color: #fff;
+}
+mark:not([line])[color='success'] {
+  background: #5ab32d;
+  color: #fff;
+}
+mark:not([line])[color='warning'] {
+  background: #ea981d;
+  color: #fff;
+}
+mark:not([line])[color='danger'] {
+  background: #ff6a5b;
   color: #fff;
 }
 mark[line] {
@@ -1585,20 +1416,37 @@ mark[line] {
   color: inherit;
   background: none;
 }
-/*============== 输入框、日期框、select ==============*/
-/*去掉number默认箭头*/
+mark[line][color='primary'] {
+  color: #4792fb;
+  border-color: #4792fb;
+  background: #ecf5ff;
+}
+mark[line][color='success'] {
+  color: #5ab32d;
+  border-color: #5ab32d;
+  background: #f4ffef;
+}
+mark[line][color='warning'] {
+  color: #ea981d;
+  border-color: #ea981d;
+  background: #fff9f0;
+}
+mark[line][color='danger'] {
+  color: #ff6a5b;
+  border-color: #ff6a5b;
+  background: #fff1f1;
+}
 input[type='number']::-webkit-outer-spin-button,
 input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   appearance: none;
   margin: 0;
 }
-/*默认高度 边框 背景色*/
 input.ks-input,
 textarea.ks-input,
 .ks-input input,
 .ks-textarea textarea,
-.ks-input-group > input,
+ks-input-group > input,
 .ks-select,
 .ks-date,
 .ks-area {
@@ -1609,21 +1457,19 @@ textarea.ks-input,
   border-radius: 3px;
   background: #fff;
 }
-/*蛋疼的placeholder*/
 .ks-input::placeholder,
-.ks-input-group input::placeholder,
-.ks-input-group textarea::placeholder {
+ks-input-group input::placeholder,
+ks-input-group textarea::placeholder {
   color: #ccc;
 }
-/*默认宽度100%*/
-.ks-input-group,
+ks-input-group,
 .ks-input,
 .ks-area,
 .ks-textarea {
   width: 100%;
 }
-.ks-input-group,
-.ks-input-group > *,
+ks-input-group,
+ks-input-group > *,
 .ks-input,
 .ks-input > input,
 .ks-input-arrow input,
@@ -1633,7 +1479,6 @@ textarea.ks-input,
   height: 36px;
   line-height: 34px;
 }
-/*日期输入框 单行内 输入框 底色 宽度 边框 圆角 内边距*/
 .ks-date {
   align-items: center;
   padding: 0 40px 0 10px;
@@ -1659,29 +1504,28 @@ textarea.ks-input,
   padding: 0;
   display: block;
 }
-/*下拉选择框*/
 .ks-select {
   display: inline-block;
   position: relative;
   background: #fff;
   cursor: pointer;
   overflow: hidden;
+  min-width: 140px;
 }
 .ks-select select {
   display: none;
 }
-.ks-select-tit {
+.ks-select .ks-select-tit {
   display: block;
   position: relative;
   padding: 0 25px 0 10px;
   height: 100%;
   overflow: hidden;
 }
-.ks-select-tit:before,
-.ks-select ul {
+.ks-select .ks-select-tit:before {
   transition: all 0.2s ease-in-out;
 }
-.ks-select-tit:before {
+.ks-select .ks-select-tit:before {
   font-size: 14px;
   position: absolute;
   right: 0;
@@ -1689,13 +1533,17 @@ textarea.ks-input,
   width: 20px;
   text-align: center;
 }
+.ks-select .ks-select-tit > span:first-child ~ span:before {
+  content: '/';
+  margin: 0 3px;
+  color: #999;
+}
 .ks-select.disabled,
 .ks-select.disabled button {
   background: #dedede;
   color: #999;
   cursor: not-allowed;
 }
-/*获得焦点*/
 .ks-select.a {
   border-color: #4792fb;
   z-index: 2;
@@ -1707,25 +1555,23 @@ textarea.ks-input,
   transform: rotate(180deg);
   color: #333;
 }
-/*焦点 经过*/
 .ks-input input:not(:disabled):hover,
 .ks-input textarea:not(:disabled):hover,
 input.ks-input:not(:disabled):hover,
 .ks-textarea textarea:not(:disabled):hover,
-.ks-input-group > input:not(:disabled):hover,
-.ks-input-group > textarea:not(:disabled):hover,
+ks-input-group > input:not(:disabled):hover,
+ks-input-group > textarea:not(:disabled):hover,
 .ks-select:hover,
 .ks-select.a {
   border-color: #a2cfff;
   border-width: 1px !important;
 }
-/*焦点 点击*/
 .ks-input input:not(:disabled):focus,
 .ks-input textarea:not(:disabled):focus,
 input.ks-input:not(:disabled):focus,
 .ks-textarea textarea:not(:disabled):focus,
-.ks-input-group > input:focus,
-.ks-input-group > textarea:focus,
+ks-input-group > input:focus,
+ks-input-group > textarea:focus,
 .ks-select.a {
   border-color: #4792fb;
   color: #495057 !important;
@@ -1733,7 +1579,6 @@ input.ks-input:not(:disabled):focus,
   position: relative;
   z-index: 9;
 }
-/*普通输入框*/
 .ks-input {
   vertical-align: middle;
   white-space: nowrap;
@@ -1776,7 +1621,6 @@ textarea.ks-input {
 .ks-input > right[icon] ~ input {
   padding-right: 32px;
 }
-/*递增输入框*/
 .ks-input-arrow {
   position: relative;
   display: inline-block;
@@ -1822,11 +1666,9 @@ textarea.ks-input {
 .ks-input-arrow > input:focus ~ [data-digit] {
   display: block;
 }
-/*密码输入框*/
 .ks-password [icon=ishide].a {
   content: '\e66a';
 }
-/*输入框清理图标*/
 .ks-input-clear {
   display: none;
   cursor: pointer;
@@ -1845,7 +1687,6 @@ textarea.ks-input {
 .ks-input-clear.a {
   display: block;
 }
-/*多行输入框 textarea */
 .ks-textarea {
   position: relative;
 }
@@ -1869,7 +1710,6 @@ textarea.ks-input {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.35);
 }
-/*============== 单选、复选、开关 ==============*/
 .ks-checkbox,
 .ks-radio,
 .ks-switch {
@@ -1898,7 +1738,6 @@ textarea.ks-input {
   font-style: normal;
   box-sizing: border-box;
 }
-/*动画效果*/
 .ks-checkbox > i,
 .ks-checkbox > i:before,
 .ks-radio > i,
@@ -1907,7 +1746,6 @@ textarea.ks-input {
 .ks-switch > i:before {
   transition: all 0.2s ease-in-out;
 }
-/*禁用状态*/
 .ks-checkbox > input[disabled] ~ i,
 .ks-radio > input[disabled] ~ i,
 .ks-switch > input[disabled] ~ i {
@@ -1915,7 +1753,6 @@ textarea.ks-input {
   opacity: 0.5;
   color: #ff9292;
 }
-/*radio样式*/
 .ks-radio {
   height: 20px;
   line-height: 20px;
@@ -1941,7 +1778,6 @@ textarea.ks-input {
 .ks-radio > i > em {
   margin: 0 10px 0 6px;
 }
-/*checkbox样式*/
 .ks-checkbox {
   height: 20px;
   line-height: 20px;
@@ -1976,12 +1812,6 @@ textarea.ks-input {
 .ks-checkbox-indeter > i:before {
   content: '\e66d';
   color: #4792fb;
-}
-/*开关样式*/
-.ks-switch {
-  /*2组文本 开 显示第二个*/
-  /*2组文本 开 隐藏第一个 排除唯一*/
-  /*无文字开关*/
 }
 .ks-switch > i {
   position: relative;
@@ -2044,7 +1874,18 @@ textarea.ks-input {
 .ks-switch > input:checked:active ~ i:empty:before {
   margin-left: -26px;
 }
-/*============== 内联卡片 ==============*/
+.ks-switch[color='primary'] > input[type=checkbox]:checked ~ i {
+  background-color: #4792fb;
+}
+.ks-switch[color='success'] > input[type=checkbox]:checked ~ i {
+  background-color: #5ab32d;
+}
+.ks-switch[color='warning'] > input[type=checkbox]:checked ~ i {
+  background-color: #ea981d;
+}
+.ks-switch[color='danger'] > input[type=checkbox]:checked ~ i {
+  background-color: #ff6a5b;
+}
 .ks-card {
   background: #fff;
   border-radius: 5px;
@@ -2073,7 +1914,6 @@ textarea.ks-input {
   font-size: 1rem;
   margin: 0;
 }
-/*介绍*/
 .ks-col:after,
 .ks-card:after,
 .ks-card-c:after,
@@ -2088,7 +1928,6 @@ textarea.ks-input {
   height: 0;
   overflow: hidden;
 }
-/*============== H5标题栏 ==============*/
 .ks-hdbar {
   height: 45px;
   line-height: 45px;
@@ -2108,25 +1947,19 @@ textarea.ks-input {
   text-align: center;
   font-size: 16px;
 }
-/*============== 行 & 列 & 布局 ==============*/
-/*最大高度*/
 .ks-max-h {
   height: 100%;
 }
-/*最大宽度*/
 .ks-max-w {
   width: 100%;
 }
-/*标题*/
 .ks-title {
   color: #6c6c6c;
 }
-/*副标题*/
 .ks-text {
   color: #9a9a9a;
   margin-bottom: 10px;
 }
-/*普通行*/
 .ks-row:after,
 .ks-row-arrow:after {
   content: '';
@@ -2135,11 +1968,9 @@ textarea.ks-input {
   clear: both;
   overflow: hidden;
 }
-/*所有直接子级左浮动*/
 .ks-row > [class*='ks-col'] {
   float: left;
 }
-/*限制行 只有一行文字 固定高度 超出裁切 相对定位 */
 .ks-row-x {
   width: 100%;
   height: 2em;
@@ -2147,7 +1978,6 @@ textarea.ks-input {
   position: relative;
   overflow: hidden;
 }
-/*普通行 带右箭头*/
 .ks-row-arrow {
   position: relative;
   padding-right: 1.4rem;
@@ -2162,7 +1992,6 @@ textarea.ks-input {
   right: 0;
   margin-top: -0.6rem;
 }
-/*相对定位*/
 .ks-pos {
   position: relative;
 }
@@ -2193,17 +2022,14 @@ textarea.ks-input {
   right: 0;
   bottom: 0;
 }
-/*每行增加下边距 排除最后一行*/
 .ks-row:not(:last-child),
 .ks-flex:not(:last-child) {
   margin-bottom: 15px;
 }
-/*flex布局 必要时拆行*/
 .ks-flex {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  /*兼容p用法*/
 }
 .ks-flex.ks-p-sub {
   margin: -10px -10px 5px -20px;
@@ -2241,7 +2067,6 @@ textarea.ks-input {
 .ks-flex.ks-p5-sub:last-of-type {
   margin-bottom: -25px;
 }
-/*弹性布局*/
 .ks-col {
   flex: 1;
   width: auto;
@@ -2288,7 +2113,6 @@ textarea.ks-input {
 .ks-col-12 {
   width: 100%;
 }
-/*栅格 平板*/
 @media (min-width: 576px) {
   .ks-col-1-sm {
     width: 8.33333%;
@@ -2327,7 +2151,6 @@ textarea.ks-input {
     width: 100%;
   }
 }
-/*栅格 PC*/
 @media (min-width: 1024px) {
   .ks-col-1-pc {
     width: 8.33333%;
@@ -2366,7 +2189,6 @@ textarea.ks-input {
     width: 100%;
   }
 }
-/*栅格 高分屏*/
 @media (min-width: 1900px) {
   .ks-col-1-hd {
     width: 8.33333%;
@@ -2405,7 +2227,6 @@ textarea.ks-input {
     width: 100%;
   }
 }
-/*============== 圆角 ==============*/
 .ks-o {
   border-radius: 100%;
   overflow: hidden;
@@ -2431,8 +2252,6 @@ textarea.ks-input {
 .ks-o-7 {
   border-radius: 30px;
 }
-/*============== 常用属性 ==============*/
-/*价格 红色*/
 .ks-price {
   color: #ef1c00;
   font-weight: bold;
@@ -2442,11 +2261,9 @@ textarea.ks-input {
   content: attr(symbol);
   font-size: 0.75em;
 }
-/*symbol属性值表示左边价格类型*/
 .ks-price[line] {
   text-decoration: line-through;
 }
-/*必须属性 占用before给一个红星*/
 *[data-required]:before,
 [required]:before {
   content: '*';
@@ -2455,7 +2272,6 @@ textarea.ks-input {
   font-family: SimSun;
   font-size: 14px;
 }
-/*带下划线的链接*/
 .ks-link,
 .ks-link-line {
   cursor: pointer;
@@ -2464,7 +2280,6 @@ textarea.ks-input {
 .ks-link-line:hover {
   text-decoration: underline;
 }
-/*清除浮动*/
 .ks-clear:after {
   content: '';
   width: 100%;
@@ -2472,15 +2287,12 @@ textarea.ks-input {
   display: block;
   overflow: hidden;
 }
-/*左浮动*/
 .ks-fl {
   float: left;
 }
-/*右浮动*/
 .ks-fr {
   float: right;
 }
-/*文字方向*/
 .ks-tl {
   text-align: left;
 }
@@ -2490,28 +2302,39 @@ textarea.ks-input {
 .ks-tr {
   text-align: right;
 }
-/*非块级元素垂直居中*/
 .ks-middle,
 .ks-middle-sub > * {
   vertical-align: middle;
   display: inline-block;
 }
-/*小圆点*/
-.ks-dot {
+ks-dot {
   width: 6px;
   height: 6px;
   display: inline-block;
   vertical-align: super;
   border-radius: 100%;
 }
-/*加粗*/
+ks-dot[color='primary'] {
+  background-color: #4792fb;
+}
+ks-dot[color='success'] {
+  background-color: #5ab32d;
+}
+ks-dot[color='warning'] {
+  background-color: #ea981d;
+}
+ks-dot[color='danger'] {
+  background-color: #ff6a5b;
+}
+ks-dot[color='red'] {
+  background-color: #f00;
+}
 .ks-fw1 {
   font-weight: 500;
 }
 .ks-fw2 {
   font-weight: bold;
 }
-/*字号*/
 .ks-f0 {
   font-size: 10px;
 }
@@ -2566,7 +2389,6 @@ textarea.ks-input {
 .ks-f17 {
   font-size: 50px;
 }
-/*边线*/
 .ks-border {
   border: #e4e8ec 1px solid;
 }
@@ -2589,7 +2411,6 @@ textarea.ks-input {
 .ks-border-l0 {
   border: none !important;
 }
-/*标题类*/
 .ks-h1,
 .ks-h2,
 .ks-h3,
@@ -2618,7 +2439,6 @@ textarea.ks-input {
 .ks-h6 {
   font-size: 0.75rem;
 }
-/*============== 内边距 -sub后缀表示所有直接子级 ==============*/
 .ks-p {
   padding: 20px;
 }
@@ -2661,7 +2481,6 @@ textarea.ks-input {
 .ks-p5-sub > * {
   padding: 25px;
 }
-/*上*/
 .ks-pt {
   padding-top: 15px;
 }
@@ -2701,7 +2520,6 @@ textarea.ks-input {
 .ks-pt5-sub > *:not(:first-child) {
   padding-top: 25px;
 }
-/*右*/
 .ks-pr {
   padding-right: 15px;
 }
@@ -2741,7 +2559,6 @@ textarea.ks-input {
 .ks-pr5-sub > *:not(:last-child) {
   padding-right: 25px;
 }
-/*下*/
 .ks-pb {
   padding-bottom: 15px;
 }
@@ -2781,7 +2598,6 @@ textarea.ks-input {
 .ks-pb5-sub > *:not(:last-child) {
   padding-bottom: 25px;
 }
-/*左*/
 .ks-pl {
   padding-left: 15px;
 }
@@ -2821,7 +2637,6 @@ textarea.ks-input {
 .ks-pl5-sub > *:not(:first-child) {
   padding-left: 25px;
 }
-/*上下*/
 .ks-ptb {
   padding-top: 15px;
   padding-bottom: 15px;
@@ -2878,7 +2693,6 @@ textarea.ks-input {
   padding-top: 25px;
   padding-bottom: 25px;
 }
-/*左右*/
 .ks-plr {
   padding-left: 15px;
   padding-right: 15px;
@@ -2935,7 +2749,6 @@ textarea.ks-input {
   padding-left: 25px;
   padding-right: 25px;
 }
-/*============== 外边距 -sub后缀表示所有直接子级（上左第一个无边距 右下最后一个没边距） ==============*/
 .ks-m {
   margin: 15px;
 }
@@ -2978,7 +2791,6 @@ textarea.ks-input {
 .ks-m5-sub > * {
   margin: 25px;
 }
-/*上*/
 .ks-mt {
   margin-top: 15px;
 }
@@ -3018,7 +2830,6 @@ textarea.ks-input {
 .ks-mt5-sub > *:not(:first-child) {
   margin-top: 25px;
 }
-/*右*/
 .ks-mr {
   margin-right: 15px;
 }
@@ -3058,7 +2869,6 @@ textarea.ks-input {
 .ks-mr5-sub > *:not(:last-child) {
   margin-right: 25px;
 }
-/*下*/
 .ks-mb {
   margin-bottom: 15px;
 }
@@ -3098,7 +2908,6 @@ textarea.ks-input {
 .ks-mb5-sub > *:not(:last-child) {
   margin-bottom: 25px;
 }
-/*左*/
 .ks-ml {
   margin-left: 15px;
 }
@@ -3138,7 +2947,6 @@ textarea.ks-input {
 .ks-ml5-sub > *:not(:first-child) {
   margin-left: 25px;
 }
-/*上下*/
 .ks-mtb {
   margin-top: 15px;
   margin-bottom: 15px;
@@ -3195,7 +3003,6 @@ textarea.ks-input {
   margin-top: 25px;
   margin-bottom: 25px;
 }
-/*左右*/
 .ks-mlr {
   margin-left: 15px;
   margin-right: 15px;
@@ -3252,314 +3059,29 @@ textarea.ks-input {
   margin-left: 25px;
   margin-right: 25px;
 }
-/*============== 颜色处理 ==============*/
-/* 主色 primary */
-.ks-dot[color='primary'],
-.ks-bg-primary,
-.ks-switch[color='primary'] > input[type=checkbox]:checked ~ i {
+.ks-bg-primary {
   background-color: var(--primary);
 }
 .ks-text-primary {
   color: var(--primary);
 }
-/* 成功 success */
-.ks-dot[color='success'],
-.ks-bg-success,
-.ks-switch[color='success'] > input[type=checkbox]:checked ~ i {
+.ks-bg-success {
   background-color: var(--success);
 }
 .ks-text-success {
   color: var(--success);
 }
-/* 提示 warning */
-.ks-dot[color='warning'],
-.ks-bg-warning,
-.ks-switch[color='warning'] > input[type=checkbox]:checked ~ i {
+.ks-bg-warning {
   background-color: var(--warning);
 }
 .ks-text-warning {
   color: var(--warning);
 }
-/* 错误 danger */
-.ks-dot[color='danger'],
-.ks-bg-danger,
-.ks-switch[color='danger'] > input[type=checkbox]:checked ~ i {
+.ks-bg-danger {
   background-color: var(--danger);
 }
 .ks-text-danger {
   color: var(--danger);
-}
-/* 蓝色 blue */
-.ks-dot[color='blue'],
-.ks-bg-blue,
-.ks-switch[color='blue'] > input[type=checkbox]:checked ~ i {
-  background-color: #4792fb;
-}
-.ks-text-blue {
-  color: #4792fb;
-}
-/* 靛青色 indigo */
-.ks-dot[color='indigo'],
-.ks-bg-indigo,
-.ks-switch[color='indigo'] > input[type=checkbox]:checked ~ i {
-  background-color: #727cf5;
-}
-.ks-text-indigo {
-  color: #727cf5;
-}
-/* 紫色 purple */
-.ks-dot[color='purple'],
-.ks-bg-purple,
-.ks-switch[color='purple'] > input[type=checkbox]:checked ~ i {
-  background-color: #6b5eae;
-}
-.ks-text-purple {
-  color: #6b5eae;
-}
-/* 粉色 pink */
-.ks-dot[color='pink'],
-.ks-bg-pink,
-.ks-switch[color='pink'] > input[type=checkbox]:checked ~ i {
-  background-color: #ff679b;
-}
-.ks-text-pink {
-  color: #ff679b;
-}
-/* 红 red */
-.ks-dot[color='red'],
-.ks-bg-red,
-.ks-switch[color='red'] > input[type=checkbox]:checked ~ i {
-  background-color: #ff381e;
-}
-.ks-text-red {
-  color: #ff381e;
-}
-/* 橙色 orange */
-.ks-dot[color='orange'],
-.ks-bg-orange,
-.ks-switch[color='orange'] > input[type=checkbox]:checked ~ i {
-  background-color: #ff9041;
-}
-.ks-text-orange {
-  color: #ff9041;
-}
-/* 黄色 yellow */
-.ks-dot[color='yellow'],
-.ks-bg-yellow,
-.ks-switch[color='yellow'] > input[type=checkbox]:checked ~ i {
-  background-color: #f9bc0d;
-}
-.ks-text-yellow {
-  color: #f9bc0d;
-}
-/* 绿色 green */
-.ks-dot[color='green'],
-.ks-bg-green,
-.ks-switch[color='green'] > input[type=checkbox]:checked ~ i {
-  background-color: #5abd48;
-}
-.ks-text-green {
-  color: #5abd48;
-}
-/* 天空蓝 teal */
-.ks-dot[color='teal'],
-.ks-bg-teal,
-.ks-switch[color='teal'] > input[type=checkbox]:checked ~ i {
-  background-color: #14d0ef;
-}
-.ks-text-teal {
-  color: #14d0ef;
-}
-/* 青色 cyan */
-.ks-dot[color='cyan'],
-.ks-bg-cyan,
-.ks-switch[color='cyan'] > input[type=checkbox]:checked ~ i {
-  background-color: #00d4c0;
-}
-.ks-text-cyan {
-  color: #00d4c0;
-}
-/* 白色 white */
-.ks-bg-white {
-  background: #fff !important;
-}
-.ks-dot[color='white'] {
-  background-color: #fff;
-  border: #efefef 1px solid;
-}
-.ks-text-white {
-  color: #fff;
-}
-/* 灰色 gray */
-.ks-dot[color='gray'],
-.ks-bg-gray {
-  background-color: #9e9e9e;
-}
-.ks-text-gray {
-  color: #9e9e9e;
-}
-/* 浅白 light */
-.ks-dot[color='light'],
-.ks-bg-light {
-  background-color: #bec3ca;
-}
-.ks-text-light {
-  color: #bec3ca;
-}
-/* 暗色 black */
-.ks-dot[color='black'],
-.ks-bg-black,
-.ks-switch[color='black'] > input[type=checkbox]:checked ~ i {
-  background-color: #474d56;
-}
-.ks-text-black {
-  color: #474d56;
-}
-mark[color='blue']:not([line]),
-.ks-btn:not([line])[color='blue'] {
-  background: #4792fb;
-}
-mark[color='indigo']:not([line]),
-.ks-btn:not([line])[color='indigo'] {
-  background: #727cf5;
-}
-mark[color='purple']:not([line]),
-.ks-btn:not([line])[color='purple'] {
-  background: #6b5eae;
-}
-mark[color='pink']:not([line]),
-.ks-btn:not([line])[color='pink'] {
-  background: #ff679b;
-}
-mark[color='red']:not([line]),
-.ks-btn:not([line])[color='red'] {
-  background: #ff381e;
-}
-mark[color='orange']:not([line]),
-.ks-btn:not([line])[color='orange'] {
-  background: #ff9041;
-}
-mark[color='yellow']:not([line]),
-.ks-btn:not([line])[color='yellow'] {
-  background: #f9bc0d;
-}
-mark[color='green']:not([line]),
-.ks-btn:not([line])[color='green'] {
-  background: #5abd48;
-}
-mark[color='teal']:not([line]),
-.ks-btn:not([line])[color='teal'] {
-  background: #14d0ef;
-}
-mark[color='cyan']:not([line]),
-.ks-btn:not([line])[color='cyan'] {
-  background: #00d4c0;
-}
-.ks-btn[color='white'] {
-  border: #e4e8ec 1px solid;
-  background: #fff;
-  color: #8a8d92;
-}
-mark[color='white']:not([line]) {
-  background: #fff;
-  color: inherit;
-  box-shadow: 0 0 3px #dadada;
-}
-mark[color='gray']:not([line]),
-.ks-btn:not([line])[color='gray'] {
-  background: #9e9e9e;
-}
-mark[color='light']:not([line]),
-.ks-btn:not([line])[color='light'] {
-  background: #bec3ca;
-  color: inherit;
-}
-mark[color='black']:not([line]),
-.ks-btn:not([line])[color='black'] {
-  background: #474d56;
-}
-mark[color='blue'][line],
-.ks-btn[color='blue'][line] {
-  color: #4792fb;
-  border-color: #4792fb;
-  background: #f6faff;
-}
-mark[color='indigo'][line],
-.ks-btn[color='indigo'][line] {
-  color: #727cf5;
-  border-color: #727cf5;
-  background: #f1f2ff;
-}
-mark[color='purple'][line],
-.ks-btn[color='purple'][line] {
-  color: #6b5eae;
-  border-color: #6b5eae;
-  background: #e8e4ff;
-}
-mark[color='pink'][line],
-.ks-btn[color='pink'][line] {
-  color: #ff679b;
-  border-color: #ff97ba;
-  background: #fff2f6;
-}
-mark[color='red'][line],
-.ks-btn[color='red'][line] {
-  color: #ff381e;
-  border-color: #ff5858;
-  background: #fff2f6;
-}
-mark[color='orange'][line],
-.ks-btn[color='orange'][line] {
-  color: #ff9041;
-  border-color: #ffb37c;
-  background: #fff6eb;
-}
-mark[color='yellow'][line],
-.ks-btn[color='yellow'][line] {
-  color: #f9bc0d;
-  border-color: #f9bc0d;
-  background: #fffbf0;
-}
-mark[color='green'][line],
-.ks-btn[color='green'][line] {
-  color: #5abd48;
-  border-color: #5abd48;
-  background: #edffec;
-}
-mark[color='teal'][line],
-.ks-btn[color='teal'][line] {
-  color: #14d0ef;
-  border-color: #14d0ef;
-  background: #dffffc;
-}
-mark[color='cyan'][line],
-.ks-btn[color='cyan'][line] {
-  color: #00d4c0;
-  border-color: #00d4c0;
-  background: #defffc;
-}
-mark[color='white'][line] {
-  color: #acacac;
-  border-color: #f1f1f1;
-  background: #fff;
-}
-mark[color='gray'][line],
-.ks-btn[color='gray'][line] {
-  color: #9e9e9e;
-  border-color: #9e9e9e;
-  background: #f9f9f9;
-}
-mark[color='light'][line],
-.ks-btn[color='light'][line] {
-  color: #bec3ca;
-  border-color: #bec3ca;
-  background: #fff;
-}
-mark[color='black'][line],
-.ks-btn[color='black'][line] {
-  color: #474d56;
-  border-color: #474d56;
-  background: #fff;
 }
 @keyframes spin {
   0% {
@@ -3569,19 +3091,14 @@ mark[color='black'][line],
     transform: rotate(360deg);
   }
 }
-/*============== 输入框组 ==============*/
-.ks-input-group {
+ks-input-group {
   display: inline-table;
   width: 100%;
   border-collapse: separate;
   vertical-align: middle;
   background: #f2f2f2;
-  /*默认所有去圆角*/
-  /*非hover focus的所有子元素默认边线*/
-  /*按钮高度继承*/
-  /*输入框组中 被禁用的input*/
 }
-.ks-input-group > * {
+ks-input-group > * {
   width: 1px;
   display: table-cell !important;
   vertical-align: middle;
@@ -3589,58 +3106,56 @@ mark[color='black'][line],
   white-space: nowrap;
   transition: all 0.2s ease-in-out;
 }
-.ks-input-group > *:not([class*='ks-']) {
+ks-input-group > *:not([class*='ks-']) {
   padding: 0 10px;
 }
-.ks-input-group > input,
-.ks-input-group > .ks-input,
-.ks-input-group > .ks-select {
+ks-input-group > input,
+ks-input-group > .ks-input {
   width: 100%;
   float: left;
 }
-.ks-input-group > *,
-.ks-input-group > .ks-btn,
-.ks-input-group input,
-.ks-input-group > .ks-input,
-.ks-input-group > .ks-input input {
+ks-input-group > *,
+ks-input-group > ks-btn,
+ks-input-group input,
+ks-input-group > .ks-input,
+ks-input-group > .ks-input input {
   border-radius: 0;
 }
-.ks-input-group > .ks-input:not(input) {
+ks-input-group > .ks-input:not(input) {
   border: 0;
 }
-.ks-input-group > .ks-btn {
+ks-input-group > ks-btn {
   border-left: 0;
 }
-.ks-input-group > *:not(input) {
+ks-input-group > *:not(input) {
   border: #e4e8ec 1px solid;
   border-left-width: 0;
   border-right-width: 0;
 }
-.ks-input-group > *:first-child,
-.ks-input-group > *:first-child > input {
+ks-input-group > *:first-child,
+ks-input-group > *:first-child > input {
   border-left-width: 1px;
   border-radius: 3px 0 0 3px;
 }
-.ks-input-group > *:last-child,
-.ks-input-group > *:last-child > input {
+ks-input-group > *:last-child,
+ks-input-group > *:last-child > input {
   border-right-width: 1px;
   border-radius: 0 3px 3px 0;
 }
-.ks-input-group > *:first-child:not(:hover):not(:focus):not(.a):not(input) {
+ks-input-group > *:first-child:not(:hover):not(:focus):not(.a):not(input) {
   border-right-color: transparent;
 }
-.ks-input-group > *:last-child:not(:hover):not(:focus):not(.a):not(input) {
+ks-input-group > *:last-child:not(:hover):not(:focus):not(.a):not(input) {
   border-left-color: transparent;
 }
-.ks-input-group > .ks-btn {
+ks-input-group > ks-btn {
   height: inherit;
   line-height: inherit;
 }
-.ks-input-group input:disabled {
+ks-input-group input:disabled {
   background: #f0f0f0;
   cursor: not-allowed;
 }
-/*============== 浮动提示窗口层 ==============*/
 .ks-body-layer-overflow {
   overflow: hidden;
 }
@@ -3653,7 +3168,7 @@ mark[color='black'][line],
   opacity: 0;
   box-shadow: #444 0 0 5px;
   border-radius: 3px;
-  min-width: 120px;
+  min-width: 360px;
 }
 .ks-layer[pos="7"],
 .ks-layer[pos="8"],
@@ -3661,7 +3176,24 @@ mark[color='black'][line],
   top: inherit;
   border-radius: 7px 7px 0 0;
 }
-/*layer遮罩层*/
+.ks-layer._pos_0 {
+  border-radius: 3px;
+  border: #e4eaf2 1px solid;
+  box-shadow: 0 5px 5px 0 rgba(154, 161, 171, 0.15);
+  position: absolute;
+  min-width: 120px;
+}
+.ks-layer._pos_0 > .ks-layer-content {
+  padding: 0;
+}
+.ks-layer._pos_0 > .ks-layer-title {
+  background: #f2f2f2;
+}
+.ks-layer._pos_00 {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
 .ks-layer-cover {
   background: rgba(0, 0, 0, 0.5);
   opacity: 0;
@@ -3674,7 +3206,6 @@ mark[color='black'][line],
   z-index: 1;
   user-select: none;
 }
-/*layer关闭按钮*/
 .ks-layer-close {
   height: 40px;
   line-height: 40px;
@@ -3692,38 +3223,16 @@ mark[color='black'][line],
 .ks-layer-close:hover {
   color: #4792fb;
 }
-/*layer title*/
 .ks-layer-title {
   padding: 24px;
   color: rgba(0, 0, 0, 0.8);
   font-weight: bold;
   font-size: 16px;
 }
-/*layer body*/
 .ks-layer-content {
   padding: 0 24px 24px;
   overflow-y: auto;
 }
-/*自由定位的layer样式调整 一般用于下拉选择*/
-.ks-layer._pos_0 {
-  border-radius: 3px;
-  border: #e4eaf2 1px solid;
-  box-shadow: 0 5px 5px 0 rgba(154, 161, 171, 0.15);
-  position: absolute;
-}
-._pos_0 > .ks-layer-content {
-  padding: 0;
-}
-._pos_0 > .ks-layer-title {
-  background: #f2f2f2;
-}
-/*从右到左滑出一个全屏（移动端适用）*/
-.ks-layer._pos_00 {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-}
-/*下拉选择*/
 .ks-layer-select {
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
@@ -3731,7 +3240,6 @@ mark[color='black'][line],
 .ks-layer-select .ks-layer-content {
   max-height: 18em;
 }
-/*iframe框架*/
 .ks-layer-iframe {
   overflow: hidden;
   background: #fff;
@@ -3746,28 +3254,26 @@ mark[color='black'][line],
   padding: 0;
   overflow: hidden;
 }
-/*layer底部*/
 .ks-layer-bottom {
   padding: 15px;
   text-align: right;
   border-top: #e4e8ec 1px solid;
 }
-.ks-layer-bottom .ks-btn {
+.ks-layer-bottom ks-btn {
   margin-right: 10px;
 }
-.ks-layer-bottom .ks-btn:not(:last-child) {
+.ks-layer-bottom ks-btn:not(:last-child) {
   background: #fff;
   border: #e4e8ec 1px solid;
   color: #999;
 }
-.ks-layer-bottom .ks-btn:last-child {
+.ks-layer-bottom ks-btn:last-child {
   margin-right: 0;
 }
-/*表单框*/
 .ks-Dialog_form .ks-layer-content {
   min-width: 450px;
+  padding-right: 80px;
 }
-/*toast 提示框*/
 .ks-Dialog_toast.ks-layer {
   background: rgba(0, 0, 0, 0.8);
   color: #eee;
@@ -3776,23 +3282,22 @@ mark[color='black'][line],
   box-shadow: none;
   min-width: 120px;
 }
-.ks-Dialog_toast .ks-layer-close {
+.ks-Dialog_toast.ks-layer .ks-layer-close {
   display: none;
 }
-.ks-Dialog_toast .ks-layer-cover {
+.ks-Dialog_toast.ks-layer .ks-layer-cover {
   opacity: 0.3;
   background: #fff;
 }
-.ks-Dialog_toast .ks-layer-content {
+.ks-Dialog_toast.ks-layer .ks-layer-content {
   padding: 0;
   overflow: hidden;
 }
-.ks-Dialog_toast .ks-layer-content [icon]:before {
+.ks-Dialog_toast.ks-layer .ks-layer-content [icon]:before {
   font-size: 26px;
   margin-right: 10px;
   vertical-align: middle;
 }
-/*确认框*/
 .ks-Dialog_confirm .ks-layer-title {
   padding: 20px 0 0 40px;
   font-size: 16px;
@@ -3814,7 +3319,6 @@ mark[color='black'][line],
   border-top: 0;
   padding: 0 30px 30px;
 }
-/*操作成功、失败*/
 .ks-Dialog_success .ks-layer-content,
 .ks-Dialog_error .ks-layer-content {
   padding: 40px 30px 30px 100px;
@@ -3848,7 +3352,6 @@ mark[color='black'][line],
 .ks-Dialog_html .ks-layer-content {
   max-width: 680px;
 }
-/*新建一个页面层*/
 .ks-layer.openWindow > .ks-layer-content {
   padding: 0;
   position: relative;
@@ -3877,7 +3380,6 @@ mark[color='black'][line],
 
 	}
 */
-/*============== 日历 浮动层 ==============*/
 .ks-calendar {
   font-size: 14px;
   max-width: 320px;
@@ -3959,7 +3461,7 @@ mark[color='black'][line],
   padding: 15px;
   height: auto;
 }
-.ks-calendar-b .ks-btn {
+.ks-calendar-b ks-btn {
   float: right;
   margin-top: 20px;
 }
@@ -4015,14 +3517,12 @@ mark[color='black'][line],
   appearance: none;
   margin: 0;
 }
-/*============== 地区选择 ==============*/
-/*按钮*/
 .ks-area {
   border: #e4e8ec 1px solid;
   cursor: pointer;
   padding: 0 5px;
   overflow: hidden;
-  line-height: 36px;
+  line-height: 36px -2;
   display: table;
 }
 .ks-area span {
@@ -4050,7 +3550,6 @@ mark[color='black'][line],
 .ks-area[maxlevel='4'] span {
   max-width: 25%;
 }
-/*浮动层*/
 .ks-area-layer {
   min-width: 220px;
   height: 320px;
@@ -4062,27 +3561,27 @@ mark[color='black'][line],
 .ks-area-layer .ks-layer-content {
   overflow: hidden;
 }
-.ks-area-layer-btn {
+.ks-area-layer .ks-area-layer-btn {
   border-bottom: #dfdfdf 1px solid;
   padding: 5px 10px;
   background: #f2f2f2;
 }
-.ks-area-layer-btn p {
+.ks-area-layer .ks-area-layer-btn p {
   height: 30px;
   line-height: 30px;
   display: none;
   cursor: pointer;
 }
-.ks-area-layer-btn p:first-of-type {
+.ks-area-layer .ks-area-layer-btn p:first-of-type {
   display: block;
 }
-.ks-area-layer-btn p.a {
+.ks-area-layer .ks-area-layer-btn p.a {
   color: #4792fb;
 }
-.ks-area-layer-btn p:hover {
+.ks-area-layer .ks-area-layer-btn p:hover {
   color: #e60000;
 }
-.ks-area-layer-btn p:before {
+.ks-area-layer .ks-area-layer-btn p:before {
   content: '';
   width: 6px;
   height: 6px;
@@ -4092,20 +3591,19 @@ mark[color='black'][line],
   vertical-align: middle;
   margin-right: 10px;
 }
-.ks-area-layer-tit {
+.ks-area-layer .ks-area-layer-tit {
   color: #999;
   text-align: center;
   border-bottom: #dedede 1px solid;
   padding-bottom: 10px;
 }
-.ks-area-layer-c {
+.ks-area-layer .ks-area-layer-c {
   overflow-y: auto;
 }
-.ks-area-layer-c > ul > li {
+.ks-area-layer .ks-area-layer-c > ks-list > v {
   padding-left: 10px;
   padding-right: 10px;
 }
-/*============== 菜单 ==============*/
 .ks-menu > * {
   padding: 10px;
   display: block;
@@ -4113,7 +3611,6 @@ mark[color='black'][line],
 .ks-menu > .ks-label {
   margin-bottom: 0;
 }
-/*============== 侧边栏 ==============*/
 .ks-sidebar {
   width: 240px;
   background: #06101b;
@@ -4139,7 +3636,6 @@ mark[color='black'][line],
 		.ks-sidebar { width: 100px;}
 	}
 */
-/*============== 凯撒LOGO ==============*/
 /*
 <div class="ksaicon">
 	<div class="ksaicon-amt">
