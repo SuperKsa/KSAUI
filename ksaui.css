@@ -122,6 +122,22 @@ label {
   background: #ededed;
   border-radius: 10px;
 }
+ks-price {
+  color: #ff381e;
+  font-size: 1.4285em;
+  font-weight: bold;
+  display: inline-block;
+}
+ks-price small {
+  font-size: 0.7em;
+  vertical-align: bottom;
+  display: inline-block;
+}
+ks-price unit {
+  font-size: 0.7em;
+  vertical-align: text-bottom;
+  display: inline-block;
+}
 .ks-box {
   background: #fff;
   padding: 15px;
@@ -1449,7 +1465,7 @@ textarea.ks-input,
 ks-input-group > input,
 .ks-select,
 .ks-date,
-.ks-area {
+ks-area {
   vertical-align: middle;
   text-align: left;
   display: inline-block;
@@ -1464,7 +1480,7 @@ ks-input-group textarea::placeholder {
 }
 ks-input-group,
 .ks-input,
-.ks-area,
+ks-area,
 .ks-textarea {
   width: 100%;
 }
@@ -1475,7 +1491,7 @@ ks-input-group > *,
 .ks-input-arrow input,
 .ks-select,
 .ks-date,
-.ks-area {
+ks-area {
   height: 36px;
   line-height: 34px;
 }
@@ -3121,13 +3137,10 @@ ks-input-group > .ks-input,
 ks-input-group > .ks-input input {
   border-radius: 0;
 }
-ks-input-group > .ks-input:not(input) {
+ks-input-group > .ks-input:not(input):not(ks-btn) {
   border: 0;
 }
-ks-input-group > ks-btn {
-  border-left: 0;
-}
-ks-input-group > *:not(input) {
+ks-input-group > *:not(input):not(ks-btn) {
   border: #e4e8ec 1px solid;
   border-left-width: 0;
   border-right-width: 0;
@@ -3155,6 +3168,9 @@ ks-input-group > ks-btn {
 ks-input-group input:disabled {
   background: #f0f0f0;
   cursor: not-allowed;
+}
+ks-input-group .ks-select {
+  min-width: 100px;
 }
 .ks-body-layer-overflow {
   overflow: hidden;
@@ -3517,7 +3533,7 @@ ks-input-group input:disabled {
   appearance: none;
   margin: 0;
 }
-.ks-area {
+ks-area {
   border: #e4e8ec 1px solid;
   cursor: pointer;
   padding: 0 5px;
@@ -3525,7 +3541,7 @@ ks-input-group input:disabled {
   line-height: 36px -2;
   display: table;
 }
-.ks-area span {
+ks-area span {
   float: left;
   padding: 0 3px;
   display: table-cell;
@@ -3535,53 +3551,53 @@ ks-input-group input:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ks-area span:last-child {
+ks-area span:last-child {
   border-right: 0;
 }
-.ks-area[maxlevel='1'] span {
+ks-area[maxlevel='1'] span {
   max-width: 100%;
 }
-.ks-area[maxlevel='2'] span {
+ks-area[maxlevel='2'] span {
   max-width: 50%;
 }
-.ks-area[maxlevel='3'] span {
+ks-area[maxlevel='3'] span {
   max-width: 33.33333%;
 }
-.ks-area[maxlevel='4'] span {
+ks-area[maxlevel='4'] span {
   max-width: 25%;
 }
-.ks-area-layer {
+.ks-area-layer._pos_0 {
   min-width: 220px;
   height: 320px;
 }
-.ks-area-layer .ks-layer-content {
+.ks-area-layer._pos_0 .ks-layer-content {
   position: relative;
   padding: 0;
 }
-.ks-area-layer .ks-layer-content {
+.ks-area-layer._pos_0 .ks-layer-content {
   overflow: hidden;
 }
-.ks-area-layer .ks-area-layer-btn {
+.ks-area-layer._pos_0 .ks-area-layer-btn {
   border-bottom: #dfdfdf 1px solid;
   padding: 5px 10px;
   background: #f2f2f2;
 }
-.ks-area-layer .ks-area-layer-btn p {
+.ks-area-layer._pos_0 .ks-area-layer-btn p {
   height: 30px;
   line-height: 30px;
   display: none;
   cursor: pointer;
 }
-.ks-area-layer .ks-area-layer-btn p:first-of-type {
+.ks-area-layer._pos_0 .ks-area-layer-btn p:first-of-type {
   display: block;
 }
-.ks-area-layer .ks-area-layer-btn p.a {
+.ks-area-layer._pos_0 .ks-area-layer-btn p.a {
   color: #4792fb;
 }
-.ks-area-layer .ks-area-layer-btn p:hover {
+.ks-area-layer._pos_0 .ks-area-layer-btn p:hover {
   color: #e60000;
 }
-.ks-area-layer .ks-area-layer-btn p:before {
+.ks-area-layer._pos_0 .ks-area-layer-btn p:before {
   content: '';
   width: 6px;
   height: 6px;
@@ -3591,16 +3607,16 @@ ks-input-group input:disabled {
   vertical-align: middle;
   margin-right: 10px;
 }
-.ks-area-layer .ks-area-layer-tit {
+.ks-area-layer._pos_0 .ks-area-layer-tit {
   color: #999;
   text-align: center;
   border-bottom: #dedede 1px solid;
   padding-bottom: 10px;
 }
-.ks-area-layer .ks-area-layer-c {
+.ks-area-layer._pos_0 .ks-area-layer-c {
   overflow-y: auto;
 }
-.ks-area-layer .ks-area-layer-c > ks-list > v {
+.ks-area-layer._pos_0 .ks-area-layer-c > ks-list > v {
   padding-left: 10px;
   padding-right: 10px;
 }

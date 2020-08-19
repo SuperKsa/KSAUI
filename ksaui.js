@@ -18,6 +18,8 @@ $.mouseX = 0;
 $.mouseY = 0;
 $.device = 'PC'; //设备类型 PC MOBILE
 $.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
+$.ksauiRenderTree = {};
+
 
 
 (function(){
@@ -36,16 +38,41 @@ $.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
 			$.mouseY = e.y || e.layerY || 0;
 		});
 	}
+
+	//渲染树
 	$(document).ready(function(){
-		$.render();
-		//DOM变化监听
-		window.setTimeout(function(){
-			document.addEventListener('DOMNodeInserted',function(){
-				$.render();
+		function _r(){
+			$.loop($.ksauiRenderTree, function(func, selector){
+				$(selector).map(function(ele){
+					if(!ele._KSAUIRENDER_){
+						ele._KSAUIRENDER_ = {};
+					}
+					if(ele._KSAUIRENDER_[selector]){
+						return;
+					}
+					func.call(ele, ele);
+					ele._KSAUIRENDER_[selector] = true;
+				});
 			});
+		}
+		_r();
+		//演示60ms后 监听DOM变化
+		window.setTimeout(function(){
+			document.addEventListener('DOMNodeInserted', _r);
 		},60);
+		
 	});
 })();
+
+$.render = function(selector, func){
+	if($.isObject(selector) && !func){
+		$.loop(selector, function(val, key){
+			$.ksauiRenderTree[key] = val;
+		});
+	}else{
+		$.ksauiRenderTree[selector] = func;
+	}
+}
 
 /**
  * 移动端 不转页后退事件监听
@@ -93,7 +120,7 @@ $.BackEvent = function(id, showID){
 			var newevn = {};
 			$.loop($this.BackEventData.doms,function(v, k){
 				if(!urlexps[k]){
-					$this.layerHide($(v).attr('key'));
+					$.layerHide($(v).attr('key'));
 				}else{
 					newevn[k] = v;
 				}
@@ -194,15 +221,15 @@ $.layerHideF = function(){
  * 删除弹出层
  * @param {number} Id 弹出层ID
  */
-$.plugin.layerHide = function(Id, Fun){
+$.layerHide = function(Id, Fun){
 	$('body').removeClass('ks-body-layer-overflow');
 	var o;
 	if(!Id){
-		Id = this.layerID;
+		return;
 	}
 	o = $('#ks-layer-'+Id);
 	if(!o.length){
-		return this;
+		return;
 	}
 	var option = $.layerOption[Id] ? $.layerOption[Id] : {};
 	if(Id){
@@ -243,7 +270,6 @@ $.plugin.layerHide = function(Id, Fun){
 			}
 		},90);
 	}
-	return this;
 }
 
 /**
@@ -391,7 +417,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 			//关闭事件 右上角按钮
 			D.find('.ks-layer-close').click(function () {
 				clearTimeout(AutoEvn);
-				D.layerHide();
+				$.layerHide(Id);
 			});
 
 			//底部按钮处理
@@ -400,7 +426,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 					var t = $(this);
 					if (!t.attr('disabled') && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), D) !== false))) {
 						clearTimeout(AutoEvn);
-						D.layerHide();
+						$.layerHide(Id);
 
 					}
 				});
@@ -420,7 +446,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 						if (!t.attr('disabled')) {
 							t.attr('disabled', 1);
 							clearTimeout(AutoEvn);
-							D.layerHide();
+							$.layerHide(Id);
 						}
 					});
 				}
@@ -566,7 +592,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 		//N秒自动关闭
 		if (option.outTime > 0) {
 			AutoEvn = setTimeout(function () {
-				D.layerHide();
+				$.layerHide(Id);
 			}, option.outTime * 1000 + 50);
 		}
 
@@ -734,7 +760,7 @@ $.openWindow = function(option){
  * @param closeFun
  */
 $.close = function(closeFun){
-	this.layerID && this.layerHide('', closeFun);
+	this.layerID && $.layerHide(this.layerID, closeFun);
 }
 
 /**
@@ -1246,7 +1272,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 	}
 	//如果选择窗口存在 则关闭
 	if(btn.data('layer-id')){
-		$this.layerHide(btn.data('layer-id'));
+		$.layerHide(btn.data('layer-id'));
 		btn.removeData('layer-id').removeClass('a');
 		return;
 	}
@@ -1307,14 +1333,14 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				btn.attr('val',val).data('value',valdt);
 				//单选框选择后关闭pop层
 				if(!multiple){
-					layer.layerHide();
+					$.layerHide(layer.layerID);
 				}
 			});
 
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-select', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0]])){
-					layer.layerHide();
+					$.layerHide(layer.layerID);
 				}
 			});
 		},
@@ -1340,7 +1366,7 @@ $.showDate = function(input, format){
 
 
 	if(input.data('layer-id')){
-		$this.layerHide(input.data('layer-id'));
+		$.layerHide(input.data('layer-id'));
 		return;
 	}
 	format = format ? format : (input.attr('format') || 'Y-m-d H:i');
@@ -1475,7 +1501,7 @@ $.showDate = function(input, format){
 					sput();//写值
 					//如果没有时分秒操作栏 则直接关闭当前窗口
 					if(!dom.find('.'+cl.d).length){
-						layer.layerHide();
+						$.layerHide(layer.layerID);
 					}
 					return false;
 				});
@@ -1513,7 +1539,7 @@ $.showDate = function(input, format){
 			//确认按钮
 			dom.find('button').click(function(){
 				sput();//写值
-				layer.layerHide();
+				$.layerHide(layer.layerID);
 				return false;
 			});
 
@@ -1523,12 +1549,12 @@ $.showDate = function(input, format){
 				input.removeAttr('ks-date-show');
 			});
 			input.blur(function(){
-				!$(this).attr('ks-date-show') && layer.layerHide();
+				!$(this).attr('ks-date-show') && $.layerHide(layer.layerID);
 			});
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-showdate', function(e){
 				if(!$.inArray(e.target,[input[0], layer[0]])){
-					layer.layerHide();
+					$.layerHide(layer.layerID);
 				}
 			});
 		},
@@ -1552,7 +1578,7 @@ $.plugin.showMenu = function(obj, content, title){
 	obj = $(obj);
 	if(obj.hasClass('a') && obj.data('layerID')){
 		if($.inArray(EvnType,['click'])){
-			$this.layerHide(obj.data('layerID'));
+			$.layerHide(obj.data('layerID'));
 		}
 		return;
 	}
@@ -1572,7 +1598,7 @@ $.plugin.showMenu = function(obj, content, title){
 					s && clearTimeout(s);
 				},b=function(){
 					s = setTimeout(function(){
-						layer.layerHide();
+						$.layerHide(layer.layerID);
 					},200);
 				};
 				obj.hover(a,b);
@@ -1585,7 +1611,7 @@ $.plugin.showMenu = function(obj, content, title){
 				//监听点击事件 自动关闭
 				$(document).on('click.KSAUI-showMenu'+layer.layerID, function(e){
 					if(!$.inArray(e.target,[obj[0], dom[0]])){
-						layer.layerHide();
+						$.layerHide(layer.layerID);
 					}
 				});
 			}
@@ -1758,7 +1784,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-area', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0], layer.next('[data-layer-key="'+layer.layerID+'"]')[0]])){
-					layer.layerHide();
+					$.layerHide(layer.layerID);
 					btn.removeData('layer-id');
 				}
 			});
@@ -1850,461 +1876,7 @@ $.plugin.checkAll = function(selector){
 	return this;
 }
 
-$.render = function(){
-	
-	var $this = this;
 
-	function moveLabelAttr(tagname, input, appendClass){
-		input = $(input);
-		input.removeClass(appendClass);
-		var attr = 'style title color';
-		var dt = {};
-
-		$.loop(attr.split(' '), function(val){
-			dt[val] = input.attr(val);
-		});
-
-		dt.class = (dt.class ? dt.class : '') +' '+appendClass;
-		input.removeAttr(attr);
-
-		return $this.tag(tagname, dt);
-	}
-	var R = {
-		'ks-radio' : function(t, at){
-			var txt = at.text ? '<em>'+at.text+'</em>' : '';
-			t.attr('type','radio').wrap(moveLabelAttr('label', t, 'ks-radio'));
-
-			t.after('<i>'+txt+'</i>');
-		},
-		'ks-checkbox' : function(t, at){
-			var txt = at.text ? '<em>'+at.text+'</em>' : '';
-			t.attr('type','checkbox').wrap(moveLabelAttr('label', t, 'ks-checkbox'));
-			t.after('<i>'+txt+'</i>');
-			//最大选择数量支持
-			var area = t.parent().parent();
-			if(area.length && area.attr('max')){
-				var max = parseInt(area.attr('max')) || 0;
-				t.change(function () {
-					//域下相同类型的元素
-					var uN = 'input[type="checkbox"][name="' + t.attr('name') + '"]';
-
-					//最大选择数量限制
-					if(max >0){
-						if(area.find(uN+':checked').length == max && t.attr('checked')){
-							area.find(uN+':not(:checked)').attr('disabled', true);
-						}else{
-							area.find(uN+':not(:checked)').attr('disabled', false);
-						}
-					}
-				});
-			}
-		},
-		'ks-checkbox-all' : function(t, at){
-			var f = R['ks-checkbox'];
-			f(t, at);
-			t.checkAll(t.attr('selector'));
-		},
-		'ks-switch' : function(t, at){
-			var val = $.isset(at.checked) ? 1 : 0,
-				txt = at.text || '',
-				name = at.name ? ' name="'+at.name+'"' : '';
-
-			if(txt){
-				txt = txt.split('|');
-				txt = $.isset(txt[1]) ? '<em>'+txt[0]+'</em><em>'+txt[1]+'</em>' : '<em>'+txt[0]+'</em>';
-			}
-			t.attr('type','checkbox').removeAttr('name');
-
-			t.wrap(moveLabelAttr('label', t, 'ks-switch'));
-			t.after('<i>'+txt+'</i><input type="hidden" '+name+' value="'+val+'">');
-
-			//事件绑定
-			t.change(function () {
-				t.nextAll('input[type=hidden]').val(t.attr('checked') ? 1 : 0);
-			});
-
-		},
-		'ks-number' : function(t, at){
-
-			t.attr('type','number').addClass('ks-input');
-			t.wrap(moveLabelAttr('label', t, 'ks-input ks-input-arrow'));
-
-			t.after('<span data-digit="down" icon="sub"></span><span data-digit="up" icon="add"></span>');
-			t.inputNumber();
-		},
-		'ks-select' : function(t, at){
-			if(t[0].tagName != 'SELECT'){
-				return;
-			}
-			//如果控件为展开类型 元素存在open属性
-			if($.isset(at.open)){
-				var obj = $.selectToHtml(t);
-				var ele = $('<div class="ks-select-list">'+obj[2]+'</div>');
-				ele.children().listSelect(function(value){
-					$(t).val(value).trigger('change');
-				});
-				t.after(ele);
-				t.hide();
-				ele.prepend(t);
-				//绑定一个内部事件 让select表单值改变后通知父级
-				t.on('ksachange change',function(){
-					var val =  $(this).val();
-					ele.find('li').attr('selected',false);
-					val = !$.isArray(val) ? [val] : val;
-					$.loop(val, function(v){
-						ele.find('li[value="'+v+'"]').attr('selected',true);
-					});
-				});
-
-			}else{
-				//如果在标签属性data-value给定选中值 则处理到内部
-				t.data('value') && t.val(t.data('value'));
-				t.removeAttr('type');
-				var opt = t.find('option:selected'),
-					tit = (at.text || '请选择');
-				if (opt.length) {
-					if ($.isset(at.multiple)) {
-						tit = opt.text();
-					} else {
-						tit = opt.attr('text') || opt.text();
-					}
-				}
-				t.wrap(moveLabelAttr('div', t, 'ks-select'));
-				t.after('<span class="ks-select-tit" icon="caret-down">' + tit + '</span>');
-
-				t.parent().click(function(){
-					$(this).showSelect(t);
-				});
-				//绑定一个内部事件 让select表单值改变后通知父级
-				t.on('ksachange',function(){
-					var select =  $(this);
-					select.parent().children('.ks-select-tit').html(select.selectText());
-				});
-			}
-		},
-		'ks-date' : function(t, at){
-			t.attr('type', 'text');
-			t.wrap(moveLabelAttr('label', t, 'ks-input'));
-			if(!at.icon && !at.iconleft && !at.iconright){
-				at.iconright = 'date';
-			}
-			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
-			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
-
-			//增加事件
-			t.focus(function () {
-				$this.showDate(t);
-			});
-		},
-		'ks-text' : function(t, at){
-			t.attr('type', 'text');
-			t.wrap(moveLabelAttr('label', t, 'ks-input')).removeAttr('icon');
-			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
-			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
-			if($.isset(at.clear)){
-				var clearbtn = $('<right class="ks-input-clear" icon="clear" style="z-index:99"></right>');
-				t.before(clearbtn);
-				clearbtn.click(function(){
-					t.val('').focus();
-					clearbtn.removeClass('a');
-				});
-				t.keyup(function(){
-					if(t.val().length >0){
-						clearbtn.addClass('a');
-					}else{
-						clearbtn.removeClass('a');
-					}
-				});
-			}
-		},
-		'ks-password' : function(t, at){
-			t.attr('type', 'password');
-			t.wrap(moveLabelAttr('span', t, 'ks-input ks-password')).removeAttr('icon');
-			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
-			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
-
-			if($.isset(at.active)){
-				t.before('<right icon="ishide" _active="1"></right>');
-				t.prevAll('right[_active]').click(function(){
-					var ths = $(this);
-					var input = ths.nextAll('input');
-					if(input.attr('type') =='text'){
-						input.attr('type','password');
-						ths.attr('icon','ishide');
-					}else{
-						input.attr('type','text');
-						ths.attr('icon','isshow');
-					}
-				});
-			}
-		},
-		'ks-textarea' : function(t, at){
-			t.removeAttr('type');
-			t.wrap(moveLabelAttr('div', t, 'ks-textarea'));
-			var maxlength = parseInt(t.attr('maxlength'));
-			if(maxlength){
-				t.after('<div class="ks-textarea-maxtit">字数限制 <span>'+t.val().length+'</span>/'+maxlength+'</div>');
-				t.keyup(function(){
-					var n = t.val().length;
-					if(n > maxlength){
-						t.val(t.val().substr(0,maxlength));
-					}
-					t.next('.ks-textarea-maxtit').children('span').text(t.val().length);
-				});
-			}
-		}
-	};
-	$.loop(R, function(func, k){
-		$('[type="'+k+'"]').each(function(inx, ele){
-			//防止重复渲染
-			if(ele._KSA_RENDER){
-				return;
-			}
-			ele._KSA_RENDER = 1;
-			ele = $(ele);
-			func(ele, ele.attr()||{});
-		});
-	});
-	(function(){
-		var Fd = ['province', 'city', 'area', 'town'];
-		//地区选择按钮
-
-		$('.ks-area').each(function(_, t){
-			//防止重复渲染
-			if(t._KSA_RENDER){
-				return;
-			}
-			t._KSA_RENDER = 1;
-			t = $(t);
-			var datas = t.data();
-			if(!t.find('span').length){
-				var h = '';
-				var name = datas['name'];
-				$.loop(Fd, function(val, k){
-					var v = datas[val];
-					var vname = val+'Name';
-					var tname = val;
-					if(name){
-						tname = name+'['+val+']';
-						vname = name+'['+val+'Name]';
-					}
-					if(v) {
-						v = v.split(':');
-						h += '<span level="'+k+'" tit="'+v[1]+'">' +
-							'<input type="hidden" name="'+tname+'" value="'+v[0]+'">' +
-							'<input type="hidden" name="'+vname+'" value="'+v[1]+'">' +
-							v[1]+
-							'</span>';
-					}
-				});
-				h && t.html(h);
-			}
-			t.click(function(){
-				var obj = $(this);
-				var defDt = {};
-				var datas = obj.data();
-				var maxlevel = obj.data('maxlevel') || 4;
-				$.loop(Fd, function(val, k){
-					var v = datas[val];
-					if(v) {
-						v = v.split(':');
-						defDt[k] = {id: v[0], name: v[1], level:k, field:val};
-					}
-				});
-				obj.area(obj.attr('title'), defDt, function (dt) {
-					if(!dt.isEnd){
-						return;
-					}
-					var h = '';
-					obj.removeData('province city area town');
-
-					$.loop(dt.data,function(val){
-						var name = val.field;
-						var vname = val.field+'Name';
-						if(datas['name']){
-							name = datas['name']+'['+val.field+']';
-							vname = datas['name']+'['+val.field+'Name]';
-						}
-						obj.data(val.field, val.id+':'+val.name);
-						h += '<span level="'+val.level+'" tit="'+val.name+'">' +
-							'<input type="hidden" name="'+name+'" value="'+val.id+'">' +
-							'<input type="hidden" name="'+vname+'" value="'+val.name+'">' +
-							val.name+
-							'</span>';
-					});
-					obj.html(h);
-				}, maxlevel);
-			});
-		});
-	})();
-	$('.ks-area').each(function(_, e){
-		//防止重复渲染
-		if(e._KSA_RENDER){
-			return;
-		}
-		e._KSA_RENDER = 1;
-		R['ks-area']($(e),$(e).attr());
-	});
-
-	$('select.ks-select').each(function(_, e){
-		e = $(e);
-		e.removeClass('ks-select');
-		R['ks-select'](e , e.attr()||{});
-	});
-
-	$('.ks-tab:not([_ksauirender_])').each(function(_, e){
-		$(e).attr('_ksauirender_',1).tab();
-	});
-
-	$('.ks-slide:not([_ksauirender_])').each(function(_, ele){
-		ele = $(ele);
-		var sdt = ele.attr();
-		ele.attr('_ksauirender_',1).slide({
-			auto : sdt.auto,
-			card : sdt.card,
-			control : sdt.control,
-			status : sdt.status,
-		});
-	});
-
-	//title提示文字处理
-	$('*[title]:not([_ksauirender_title_])').each(function(_, ele){
-		ele = $(ele);
-		ele.attr('_ksauirender_title_',1);
-		var tit = ele.attr('title');
-		if(tit) {
-			ele.hover(function(){
-				$.showTip(ele);
-				ele.attr('title','');
-			},function(){
-				ele.attr('title',tit);
-			});
-		}
-	});
-
-
-	//折叠面板
-	$('ks-collapse').each(function(_, ele){
-		if(ele._KSAUIRENDER_collapse){
-			return;
-		}
-		ele._KSAUIRENDER_collapse = true;
-		$(ele).collapse();
-	});
-
-	//表格固定头部
-	$('.ks-table[fixed-height]').map(function(ele){
-		ele = $(ele);
-		var fixedHeight = parseInt(ele.attr('fixed-height')) || 0;
-		if(!fixedHeight){
-			return;
-		}
-		ele.attr('fixed-height','');
-		var thead = ele.children('thead');
-		var allWidth = ele.width(true); //总宽度值
-		var dom = $('<div class="ks-table-fixed-header"><div class="ks-table-header"></div><div class="ks-table-body" style="overflow-y: scroll; max-height:'+fixedHeight+'px"></div></div>');
-
-		var rowCols = ele.children().eq(0).children().children();
-		var rowColsNum = rowCols.length -1;
-
-		var colgroup = '<colgroup>';
-		rowCols.each(function(index, el){
-			if(index === rowColsNum){
-				return;
-			}
-			var w = $(el).width(true) / allWidth * 100;
-			colgroup += '<col style="width:'+w+'%; min-width: '+w+'%">';
-		});
-		colgroup += '</colgroup>';
-		ele.after(dom);
-		dom.find('.ks-table-header').html('<table class="ks-table">'+colgroup+'</table>').find('table').append(thead);
-		dom.find('.ks-table-body').append(ele[0]).find('table').prepend(colgroup);
-
-		var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度
-		var scrollTd = document.createElement('td');
-		scrollTd.style.width = scrollWidth+'px';
-		scrollTd.className = 'ks-td-scroll';
-		dom.find('.ks-table-header > table > thead > tr').append(scrollTd);
-	});
-	//带全选按钮表格 第一列必须是全选表单
-	$('.ks-table:not([_ksaui-table-checkall-render_])').map(function(ele){
-		ele = $(ele);
-		ele.attr('_ksaui-table-checkall-render_',1);
-		var tr = ele.find('tbody > tr');
-
-		var trFirst = tr.eq(0);
-
-		if(trFirst.children('td:first-child').find('.ks-checkbox').length){
-			tr.children('td:first-child').find('.ks-checkbox').on('change','input[type=checkbox]',function(){
-				var t = $(this);
-				var f = t.parents('tr');
-				if(t.attr('checked')){
-					f.addClass('ks-table-tr-checked');
-				}else{
-					f.removeClass('ks-table-tr-checked');
-				}
-			})
-		}
-	});
-
-	//分页初始化
-	$('ks-page').page();
-
-	//表单结构初始化
-	$('ks-form').map(function(dom){
-		if(dom._KSAUIRENDER_form){
-			return;
-		}
-		dom._KSAUIRENDER_form = true;
-		dom = $(dom);
-		var domInline = $.isset(dom.attr('inline')),
-			labelWidth = dom.attr('label-width');
-        dom.find('ks-form-item').map(function(ele){
-            ele = $(ele);
-            var attrs = ele.attr();
-            !domInline && ele.addClass('ks-clear');
-            ele.wrapInner('<ks-form-content></ks-form-content>');
-			attrs.label && ele.prepend('<ks-form-label '+($.isset(attrs.required) ? 'required' : '')+'>'+attrs.label+'</ks-form-label>');
-            attrs.extra && ele.append('<ks-form-extra>'+attrs.extra+'</ks-form-extra>');
-			ele.attr({label:'',extra:'',required:''});
-			if(labelWidth){
-				labelWidth = $.isNumber(labelWidth) ? labelWidth+'px' : labelWidth;
-				ele.find('ks-form-label').width(labelWidth);
-				ele.find('ks-form-content , ks-form-extra').width('calc(100% - '+labelWidth+')');
-			}
-		});
-	});
-	
-	//提交按钮
-	$('ks-btn[submit]').map(function(dom){
-		dom = $(dom);
-		var submits = dom.attr('submit');
-		dom.attr('submit','');
-		var form = submits ? $(submits) : dom.parents('form');
-		if(form.length){
-			dom.click(function(){
-				form.submit();
-			});
-		}
-	});
-
-	//重置按钮
-	$('ks-btn[reset]').map(function(dom){
-		dom = $(dom);
-		var resets = dom.attr('reset');
-		dom.attr('reset','');
-		var form = resets ? $(resets) : dom.parents('form');
-		if(!form.length){
-			form = dom.parents('ks-form');
-		}
-		if(form.length){
-			dom.click(function(){
-				form.find('input:not([type="hidden"]), select, textarea').val('');
-			});
-		}
-	});
-	return this;
-}
 
 
 /**
@@ -2748,12 +2320,11 @@ $.newForm = function(data){
 					}, '', 1);
 				//地区选择
 				} else if (value.type == 'area') {
-					H += $this.tag('p', {
-						'class': 'ks-area',
-						'data-province': value.value.province,
-						'data-city': value.value.city,
-						'data-area': value.value.area,
-						'data-town': value.value.town,
+					H += $this.tag('ks-area', {
+						'province': value.value.province,
+						'city': value.value.city,
+						'area': value.value.area,
+						'town': value.value.town,
 						'maxlevel' : value.value.maxlevel ? maxlevel : 4
 					}, '请选择');
 					if ($.isset(value.value.address)) {
@@ -2776,3 +2347,431 @@ $.newForm = function(data){
 	H += '</ks-form></form>';
 	return H;
 }
+
+
+;(function(){
+	function moveLabelAttr(tagname, input, appendClass){
+		input = $(input);
+		input.removeClass(appendClass);
+		var attr = 'style title color';
+		var dt = {};
+	
+		$.loop(attr.split(' '), function(val){
+			dt[val] = input.attr(val);
+		});
+	
+		dt.class = (dt.class ? dt.class : '') +' '+appendClass;
+		input.removeAttr(attr);
+	
+		return $.tag(tagname, dt);
+	}
+	
+	//自动渲染DOM
+	$.render({
+		'input[type="ks-radio"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			var txt = at.text ? '<em>'+at.text+'</em>' : '';
+			t.attr('type','radio').wrap(moveLabelAttr('label', t, 'ks-radio'));
+	
+			t.after('<i>'+txt+'</i>');
+		},
+		'input[type="ks-checkbox"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			var txt = at.text ? '<em>'+at.text+'</em>' : '';
+			t.attr('type','checkbox').wrap(moveLabelAttr('label', t, 'ks-checkbox'));
+			t.after('<i>'+txt+'</i>');
+			//最大选择数量支持
+			var area = t.parent().parent();
+			if(area.length && area.attr('max')){
+				var max = parseInt(area.attr('max')) || 0;
+				//最大选择数量限制
+				if(max >0){
+					t.change(function () {
+						//域下相同类型的元素
+						var uN = 'input[type="checkbox"][name="' + t.attr('name') + '"]';
+							if(area.find(uN+':checked').length == max && t.attr('checked')){
+								area.find(uN+':not(:checked)').attr('disabled', true);
+							}else{
+								area.find(uN+':not(:checked)').attr('disabled', false);
+							}
+					});
+				}
+			}
+		},
+		'input[type="ks-checkbox-all"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			var txt = at.text ? '<em>'+at.text+'</em>' : '';
+			t.attr('type','checkbox').wrap(moveLabelAttr('label', t, 'ks-checkbox'));
+			t.after('<i>'+txt+'</i>');
+			t.checkAll(t.attr('selector'));
+		},
+		'input[type="ks-switch"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			var val = $.isset(at.checked) ? 1 : 0,
+				txt = at.text || '',
+				name = at.name ? ' name="'+at.name+'"' : '';
+	
+			if(txt){
+				txt = txt.split('|');
+				txt = $.isset(txt[1]) ? '<em>'+txt[0]+'</em><em>'+txt[1]+'</em>' : '<em>'+txt[0]+'</em>';
+			}
+			t.attr('type','checkbox').removeAttr('name');
+	
+			t.wrap(moveLabelAttr('label', t, 'ks-switch'));
+			t.after('<i>'+txt+'</i><input type="hidden" '+name+' value="'+val+'">');
+	
+			//事件绑定
+			t.change(function () {
+				t.nextAll('input[type=hidden]').val(t.attr('checked') ? 1 : 0);
+			});
+	
+		},
+		'input[type="ks-number"]' : function(ele){
+			var t = $(ele);
+			t.attr('type','number').addClass('ks-input');
+			t.wrap(moveLabelAttr('label', t, 'ks-input ks-input-arrow'));
+	
+			t.after('<span data-digit="down" icon="sub"></span><span data-digit="up" icon="add"></span>');
+			t.inputNumber();
+		},
+		'select.ks-select' : function(ele){
+			var t = $(ele), at = t.attr();
+			if(t[0].tagName != 'SELECT'){
+				return;
+			}
+			t.removeClass('ks-select');
+			//如果控件为展开类型 元素存在open属性
+			if($.isset(at.open)){
+				var obj = $.selectToHtml(t);
+				var ele = $('<div class="ks-select-list">'+obj[2]+'</div>');
+				ele.children().listSelect(function(value){
+					$(t).val(value).trigger('change');
+				});
+				t.after(ele);
+				t.hide();
+				ele.prepend(t);
+				//绑定一个内部事件 让select表单值改变后通知父级
+				t.on('ksachange change',function(){
+					var val =  $(this).val();
+					ele.find('li').attr('selected',false);
+					val = !$.isArray(val) ? [val] : val;
+					$.loop(val, function(v){
+						ele.find('li[value="'+v+'"]').attr('selected',true);
+					});
+				});
+	
+			}else{
+				//如果在标签属性data-value给定选中值 则处理到内部
+				t.data('value') && t.val(t.data('value'));
+				t.removeAttr('type');
+				var opt = t.find('option:selected'),
+					tit = (at.text || '请选择');
+				if (opt.length) {
+					if ($.isset(at.multiple)) {
+						tit = opt.text();
+					} else {
+						tit = opt.attr('text') || opt.text();
+					}
+				}
+				t.wrap(moveLabelAttr('div', t, 'ks-select'));
+				t.after('<span class="ks-select-tit" icon="caret-down">' + tit + '</span>');
+	
+				t.parent().click(function(){
+					$(this).showSelect(t);
+				});
+				//绑定一个内部事件 让select表单值改变后通知父级
+				t.on('ksachange',function(){
+					var select =  $(this);
+					select.parent().children('.ks-select-tit').html(select.selectText());
+				});
+			}
+		},
+		'input[type="ks-date"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			t.attr('type', 'text');
+			t.wrap(moveLabelAttr('label', t, 'ks-input'));
+			if(!at.icon && !at.iconleft && !at.iconright){
+				at.iconright = 'date';
+			}
+			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
+			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
+	
+			//增加事件
+			t.focus(function () {
+				$this.showDate(t);
+			});
+		},
+		'input[type="ks-text"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			t.attr('type', 'text');
+			t.wrap(moveLabelAttr('label', t, 'ks-input')).removeAttr('icon');
+			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
+			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
+			if($.isset(at.clear)){
+				var clearbtn = $('<right class="ks-input-clear" icon="clear" style="z-index:99"></right>');
+				t.before(clearbtn);
+				clearbtn.click(function(){
+					t.val('').focus();
+					clearbtn.removeClass('a');
+				});
+				t.keyup(function(){
+					if(t.val().length >0){
+						clearbtn.addClass('a');
+					}else{
+						clearbtn.removeClass('a');
+					}
+				});
+			}
+		},
+		'input[type="ks-password"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			t.attr('type', 'password');
+			t.wrap(moveLabelAttr('span', t, 'ks-input ks-password')).removeAttr('icon');
+			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
+			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
+	
+			if($.isset(at.active)){
+				t.before('<right icon="ishide" _active="1"></right>');
+				t.prevAll('right[_active]').click(function(){
+					var ths = $(this);
+					var input = ths.nextAll('input');
+					if(input.attr('type') =='text'){
+						input.attr('type','password');
+						ths.attr('icon','ishide');
+					}else{
+						input.attr('type','text');
+						ths.attr('icon','isshow');
+					}
+				});
+			}
+		},
+		'textarea[type="ks-textarea"]' : function(ele){
+			var t = $(ele), at = t.attr();
+			t.removeAttr('type');
+			t.wrap(moveLabelAttr('div', t, 'ks-textarea'));
+			var maxlength = parseInt(t.attr('maxlength'));
+			if(maxlength){
+				t.after('<div class="ks-textarea-maxtit">字数限制 <span>'+t.val().length+'</span>/'+maxlength+'</div>');
+				t.keyup(function(){
+					var n = t.val().length;
+					if(n > maxlength){
+						t.val(t.val().substr(0,maxlength));
+					}
+					t.next('.ks-textarea-maxtit').children('span').text(t.val().length);
+				});
+			}
+		},
+		'ks-area' : function(t){
+
+			var Fd = ['province', 'city', 'area', 'town'];
+			t = $(t);
+			var attrs = t.attr();
+			var maxlevel = 0;
+			if(!t.find('span').length){
+				var h = '';
+				var name = attrs.name;
+				$.loop(Fd, function(val, k){
+					var v = attrs[val];
+					var vname = val+'Name';
+					var tname = val;
+					if(name){
+						tname = name+'['+val+']';
+						vname = name+'['+val+'Name]';
+					}
+					if(v) {
+						v = v.split(':');
+						h += '<span level="'+k+'" tit="'+v[1]+'">' +
+							'<input type="hidden" name="'+tname+'" value="'+v[0]+'">' +
+							'<input type="hidden" name="'+vname+'" value="'+v[1]+'">' +
+							v[1]+
+							'</span>';
+					}
+					if($.isset(v)){
+						maxlevel ++;
+					}
+				});
+				h && t.html(h);
+			}
+			t.click(function(){
+				var obj = $(this);
+				var defDt = {};
+				var attrs = obj.attr();
+				
+				$.loop(Fd, function(val, k){
+					var v = attrs[val];
+					if(v) {
+						v = v.split(':');
+						defDt[k] = {id: v[0], name: v[1], level:k, field:val};
+					}
+				});
+				obj.area(attrs.title, defDt, function (dt) {
+					if(!dt.isEnd){
+						return;
+					}
+					var h = '';
+					obj.removeAttr('province city area town');
+	
+					$.loop(dt.data,function(val){
+						var name = val.field;
+						var vname = val.field+'Name';
+						if(attrs.name){
+							name = attrs.name+'['+val.field+']';
+							vname = attrs.name+'['+val.field+'Name]';
+						}
+						obj.attr(val.field, val.id+':'+val.name);
+						h += '<span level="'+val.level+'" tit="'+val.name+'">' +
+							'<input type="hidden" name="'+name+'" value="'+val.id+'">' +
+							'<input type="hidden" name="'+vname+'" value="'+val.name+'">' +
+							val.name+
+							'</span>';
+					});
+					obj.html(h);
+				}, maxlevel, attrs.api);
+			});
+		},
+		'.ks-tab' : function(e){
+			$(e).tab();
+		},
+		'.ks-slide' : function(ele){
+			ele = $(ele);
+			var sdt = ele.attr();
+			ele.attr('_ksauirender_',1).slide({
+				auto : sdt.auto,
+				card : sdt.card,
+				control : sdt.control,
+				status : sdt.status,
+			});
+		},
+		'[title]' : function(ele){//title提示文字处理
+			ele = $(ele);
+			ele.attr('_ksauirender_title_',1);
+			var tit = ele.attr('title');
+			if(tit) {
+				ele.hover(function(){
+					$.showTip(ele);
+					ele.attr('title','');
+				},function(){
+					ele.attr('title',tit);
+				});
+			}
+		},
+		'ks-collapse' : function(ele){//折叠面板
+			$(ele).collapse();
+		},
+		'.ks-table' : function(ele){
+			ele = $(ele);
+			var tr = ele.find('tbody > tr');
+	
+			var trFirst = tr.eq(0);
+	
+			if(trFirst.children('td:first-child').find('.ks-checkbox').length){
+				tr.children('td:first-child').find('.ks-checkbox').on('change','input[type=checkbox]',function(){
+					var t = $(this);
+					var f = t.parents('tr');
+					if(t.attr('checked')){
+						f.addClass('ks-table-tr-checked');
+					}else{
+						f.removeClass('ks-table-tr-checked');
+					}
+				})
+			}
+		},
+		//表格固定头部
+		'.ks-table[fixed-height]' : function(ele){
+			ele = $(ele);
+			var fixedHeight = parseInt(ele.attr('fixed-height')) || 0;
+			if(!fixedHeight){
+				return;
+			}
+			ele.attr('fixed-height','');
+			var thead = ele.children('thead');
+			var allWidth = ele.width(true); //总宽度值
+			var dom = $('<div class="ks-table-fixed-header"><div class="ks-table-header"></div><div class="ks-table-body" style="overflow-y: scroll; max-height:'+fixedHeight+'px"></div></div>');
+	
+			var rowCols = ele.children().eq(0).children().children();
+			var rowColsNum = rowCols.length -1;
+	
+			var colgroup = '<colgroup>';
+			rowCols.each(function(index, el){
+				if(index === rowColsNum){
+					return;
+				}
+				var w = $(el).width(true) / allWidth * 100;
+				colgroup += '<col style="width:'+w+'%; min-width: '+w+'%">';
+			});
+			colgroup += '</colgroup>';
+			ele.after(dom);
+			dom.find('.ks-table-header').html('<table class="ks-table">'+colgroup+'</table>').find('table').append(thead);
+			dom.find('.ks-table-body').append(ele[0]).find('table').prepend(colgroup);
+	
+			var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度
+			var scrollTd = document.createElement('td');
+			scrollTd.style.width = scrollWidth+'px';
+			scrollTd.className = 'ks-td-scroll';
+			dom.find('.ks-table-header > table > thead > tr').append(scrollTd);
+		},
+		//分页初始化
+		'ks-page' : function(ele){
+			$(ele).page();
+		},
+		//表单结构初始化
+		'ks-form' : function(dom){
+			dom = $(dom);
+			var domInline = $.isset(dom.attr('inline')),
+				labelWidth = dom.attr('label-width');
+			dom.find('ks-form-item').map(function(ele){
+				ele = $(ele);
+				var attrs = ele.attr();
+				!domInline && ele.addClass('ks-clear');
+				ele.wrapInner('<ks-form-content></ks-form-content>');
+				attrs.label && ele.prepend('<ks-form-label '+($.isset(attrs.required) ? 'required' : '')+'>'+attrs.label+'</ks-form-label>');
+				attrs.extra && ele.append('<ks-form-extra>'+attrs.extra+'</ks-form-extra>');
+				ele.attr({label:'',extra:'',required:''});
+				if(labelWidth){
+					labelWidth = $.isNumber(labelWidth) ? labelWidth+'px' : labelWidth;
+					ele.find('ks-form-label').width(labelWidth);
+					ele.find('ks-form-content , ks-form-extra').width('calc(100% - '+labelWidth+')');
+				}
+			});
+		},
+		//提交按钮
+		'ks-btn[submit]' : function(dom){
+			dom = $(dom);
+			var submits = dom.attr('submit');
+			dom.attr('submit','');
+			var form = submits ? $(submits) : dom.parents('form');
+			if(form.length){
+				dom.click(function(){
+					form.submit();
+				});
+			}
+		},
+		'ks-btn[reset]' : function(dom){
+			dom = $(dom);
+			var resets = dom.attr('reset');
+			dom.attr('reset','');
+			var form = resets ? $(resets) : dom.parents('form');
+			if(!form.length){
+				form = dom.parents('ks-form');
+			}
+			if(form.length){
+				dom.click(function(){
+					form.find('input:not([type="hidden"]), select, textarea').val('');
+				});
+			}
+		},
+		'ks-price' : function(ele){
+			var txt = ele.innerHTML.trim();
+			txt = txt.replace(/([^0-9\.\,]+)/gi,'<unit>$1</unit>');
+			txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
+
+			if($.isset($(ele).attr('split'))){
+				txt = txt.replace(/([0-9]+)\.?/, function(v){
+					v = v.replace(/([0-9])([0-9]{3})$/g,'$1,$2');
+					return '<strong>'+v+'</strong>';
+				});
+			}
+			ele.innerHTML = txt;
+		}
+	});
+})();

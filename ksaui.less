@@ -96,6 +96,13 @@ label {white-space: nowrap;}
 //滚动条里面轨道
 ::-webkit-scrollbar-track { background: #ededed; border-radius: 10px;}
 
+//货币
+ks-price {
+	color: @red; font-size: 1.4285em; font-weight: bold; display: inline-block;
+	small { font-size: .7em; vertical-align: bottom; display: inline-block;}
+	unit { font-size: .7em; vertical-align: text-bottom; display: inline-block;}
+}
+
 //============== 主框架 白色背景 ==============
 .ks-box { background: #fff; padding: 15px;}
 .ks-box:not(:last-of-type) {margin-bottom: 15px;}
@@ -629,7 +636,7 @@ input[type='number']::-webkit-inner-spin-button {-webkit-appearance: none;appear
 
 //默认高度 边框 背景色
 input.ks-input, textarea.ks-input, .ks-input input, .ks-textarea textarea, ks-input-group > input,
-.ks-select, .ks-date, .ks-area {vertical-align: middle;  text-align:left; display: inline-block; border: @borderColor 1px solid; border-radius:3px; background: #fff;}
+.ks-select, .ks-date, ks-area {vertical-align: middle;  text-align:left; display: inline-block; border: @borderColor 1px solid; border-radius:3px; background: #fff;}
 
 
 
@@ -639,7 +646,7 @@ input.ks-input, textarea.ks-input, .ks-input input, .ks-textarea textarea, ks-in
 //默认宽度100%
 ks-input-group,
 .ks-input,
-.ks-area,
+ks-area,
 .ks-textarea {width: 100%;}
 
 ks-input-group, ks-input-group > *,
@@ -648,7 +655,7 @@ ks-input-group, ks-input-group > *,
 .ks-input-arrow input,
 .ks-select,
 .ks-date,
-.ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
+ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 
 //日期输入框 单行内 输入框 底色 宽度 边框 圆角 内边距
 
@@ -1178,11 +1185,10 @@ ks-input-group {
 	> .ks-input {width: 100%; float: left;}
 	//默认所有去圆角
 	> *, > ks-btn, input, > .ks-input, > .ks-input input {border-radius: 0;}
-	> .ks-input:not(input) { border: 0}
+	> .ks-input:not(input):not(ks-btn) { border: 0}
 
 	//非hover focus的所有子元素默认边线
-	> ks-btn { border-left: 0}
-	> *:not(input) { border: @borderColor 1px solid; border-left-width: 0; border-right-width: 0}
+	> *:not(input):not(ks-btn) { border: @borderColor 1px solid; border-left-width: 0; border-right-width: 0}
 
 	> *:first-child,
 	> *:first-child > input {border-left-width:1px; border-radius: 3px 0 0 3px;}
@@ -1197,6 +1203,7 @@ ks-input-group {
 
 	//输入框组中 被禁用的input
 	input:disabled { background:#f0f0f0; cursor: not-allowed }
+	.ks-select { min-width: 100px;}
 }
 
 
@@ -1354,7 +1361,7 @@ ks-input-group {
 
 //============== 地区选择 ==============
 //按钮
-.ks-area {
+ks-area {
 	border: @borderColor 1px solid; cursor: pointer; padding: 0 5px; overflow: hidden; line-height: @inputHeight -2; display: table;
 	span { float: left; padding: 0 3px; display: table-cell; max-width:25%; white-space: nowrap; table-layout:fixed; overflow: hidden;  text-overflow: ellipsis}
 	span:last-child { border-right: 0}
@@ -1366,7 +1373,7 @@ ks-input-group {
 
 
 //浮动层
-.ks-area-layer { min-width: 220px; height: 320px;
+.ks-area-layer._pos_0 { min-width: 220px; height: 320px;
 	.ks-layer-content {position: relative; padding: 0}
 	.ks-layer-content { overflow: hidden}
 	.ks-area-layer-btn { border-bottom:#dfdfdf 1px solid; padding:5px 10px; background: #f2f2f2;
