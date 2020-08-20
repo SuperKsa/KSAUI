@@ -432,6 +432,9 @@ function debugTime(key){
 			//读取所有标签属性
 			if(!isvalue && !isKey){
 				$.loop(ele.attributes, function(val){
+					if($.inArray(val.name, BooleanArr)){
+						val.value = val.value ==='' ? true  : !!val.value;
+					}
 					attrs[val.name] = val.value;
 				});
 
@@ -439,11 +442,11 @@ function debugTime(key){
 
 				$.loop(key, function(k) {
 					if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
-						attrs[k] = ele[k];
+						attrs[k] = !!ele[k];
 					}else{
 						var attrV = ele.getAttribute(k);
 						if(!$.isNull(attrV)){
-							attrV = attrV === '' && $.inArray(k, BooleanArr) ? k : attrV; //如果属性值为空 则修改值为属性名
+							attrV = attrV === '' && $.inArray(k, BooleanArr) ? true : attrV; //如果属性值为空 则修改值为属性名
 							attrs[k] = attrV;
 						//标签属性值不存在时 从元素dom属性取值
 						}else if (k !== 'style' && $.isNull(attrV) && $.isset(ele[k])) {
@@ -482,6 +485,8 @@ function debugTime(key){
 						} else {
 							ele.setAttribute(k, val);
 						}
+						//触发ele的属性变更事件
+						$(ele).trigger('KSAattrModified', [k, val]);
 						if (k.indexOf('data-') === 0) {
 							dataAttr[k.substr(5)] = val;
 						}
@@ -1953,6 +1958,7 @@ function debugTime(key){
 				ele[event.type]();
 			}else{
 				var e = $.Event(event);
+				e.KSAcallbackArgs = args;
 				ele.dispatchEvent(e);
 			}
 		});
