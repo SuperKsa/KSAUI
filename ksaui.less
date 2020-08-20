@@ -78,7 +78,7 @@ ks-collapse-block { display: block;}
 
 * { word-wrap: break-word; margin: 0; padding: 0; box-sizing:border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color:rgba(0,0,0,0)}
 article, aside, figcaption, figure, footer, header, hgroup, main, nav, section { display: block;}
-body, input, button, select, textarea, pre, code {font-family:inherit; font-size:inherit; font-style:inherit; outline:none; color: inherit}
+body, input, button, select, textarea, pre, code {font-family:"-apple-system","BlinkMacSystemFont","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","sans-serif","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"; font-size:inherit; font-style:inherit; outline:none; color: inherit}
 a, .ks-link, .ks-link-line { text-decoration:none; color: #545454;}
 a:active, a:hover { outline:none; text-decoration: none;}
 
@@ -96,12 +96,27 @@ label {white-space: nowrap;}
 //滚动条里面轨道
 ::-webkit-scrollbar-track { background: #ededed; border-radius: 10px;}
 
-//货币
-ks-price {
-	color: @red; font-size: 1.4285em; font-weight: bold; display: inline-block;
-	small { font-size: .7em; vertical-align: bottom; display: inline-block;}
-	unit { font-size: .7em; vertical-align: text-bottom; display: inline-block;}
-}
+
+
+//============== 清理浮动 ==============
+ks-col:after, ks-card:after, ks-card-content:after, .ks-step:after, ks-col:after { content: ''; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
+
+
+//============== 自定义新元素 ==============
+	// 货币
+	ks-price {
+		color: @red; font-size: 1.4285em; font-weight: bold; display: inline-block;
+		small { font-size: .7em; vertical-align: bottom; display: inline-block;}
+		unit { font-size: .7em; vertical-align: text-bottom; display: inline-block;}
+	}
+	// 卡片
+	ks-card {
+		display: block; background: #fff; border-radius: 3px; border:@borderColor 1px solid;
+		&:hover { box-shadow:  0 0 5px #e8e8e8;}
+		ks-card-title, ks-card-content { padding:15px 20px; display: block;}
+		ks-card-title { font-size: 1.14285em; font-weight: 500; border-bottom: @borderColor 1px solid;}
+	}
+
 
 //============== 主框架 白色背景 ==============
 .ks-box { background: #fff; padding: 15px;}
@@ -413,10 +428,25 @@ ks-form[inline] {
 }
 
 
-row { display: flex; flex-wrap: wrap; align-items: stretch;}
-row:after { content: ''; width: 100%; height: 0; display: block; overflow: hidden}
+ks-row {
+	display: flex; flex-wrap: wrap; align-items: stretch;
+	&[spacing] {display:flex; flex-wrap: wrap; align-items:stretch;}
+	&[spacing='1'] { margin:-2.5px}
+	&[spacing='2'] { margin:-5px}
+	&[spacing='3'] { margin:-10px}
+	&[spacing='4'] { margin:-15px}
+	&[spacing='5'] { margin:-20px}
+	&[spacing='6'] { margin:-25px}
+	
+	&[spacing='1'] > ks-col { padding:2.5px}
+	&[spacing='2'] > ks-col { padding:5px}
+	&[spacing='3'] > ks-col { padding:10px}
+	&[spacing='4'] > ks-col { padding:15px}
+	&[spacing='5'] > ks-col { padding:20px}
+	&[spacing='6'] > ks-col { padding:25px}
+}
 
-column {
+ks-col {
 	float: left; display: block;
 	&[auto] { width:auto; flex:1 0 auto;}
 	&[span='1'] {width:8.33333%;}
@@ -433,27 +463,10 @@ column {
 	&[span='12'] {width:100%;}
 }
 
-row {
-	&[spacing] {display:flex; flex-wrap: wrap; align-items:stretch;}
-	&[spacing='1'] { margin:-2.5px}
-	&[spacing='2'] { margin:-5px}
-	&[spacing='3'] { margin:-10px}
-	&[spacing='4'] { margin:-15px}
-	&[spacing='5'] { margin:-20px}
-	&[spacing='6'] { margin:-25px}
-	
-	&[spacing='1'] column { padding:2.5px}
-	&[spacing='2'] column { padding:5px}
-	&[spacing='3'] column { padding:10px}
-	&[spacing='4'] column { padding:15px}
-	&[spacing='5'] column { padding:20px}
-	&[spacing='6'] column { padding:25px}
-}
-
 
 //栅格 平板
 @media (min-width:576px){
-	column {
+	ks-col {
 		&[sm='1']	{width:8.33333%;}
 		&[sm='2']	{width:16.66667%;}
 		&[sm='3']	{width:25%;}
@@ -471,7 +484,7 @@ row {
 }
 //栅格 PC
 @media (min-width:1024px){
-	column {
+	ks-col {
 		&[pc='1']	{width:8.33333%;}
 		&[pc='2']	{width:16.66667%;}
 		&[pc='3']	{width:25%;}
@@ -489,7 +502,7 @@ row {
 }
 //栅格 高分屏
 @media (min-width:1900px){
-	column {
+	ks-col {
 		&[hd='1']	{width:8.33333%;}
 		&[hd='2']	{width:16.66667%;}
 		&[hd='3']	{width:25%;}
@@ -691,7 +704,8 @@ input.ks-input:not(:disabled):hover,
 .ks-textarea textarea:not(:disabled):hover,
 ks-input-group > input:not(:disabled):hover,
 ks-input-group > textarea:not(:disabled):hover,
-.ks-select:hover, .ks-select.a { border-color: #a2cfff; border-width: 1px !important;}
+.ks-select:hover, .ks-select._focus,
+ks-area:not([disabled]):hover { border-color: #a2cfff; border-width: 1px !important; }
 
 //焦点 点击
 .ks-input input:not(:disabled):focus,
@@ -700,7 +714,8 @@ input.ks-input:not(:disabled):focus,
 .ks-textarea textarea:not(:disabled):focus,
 ks-input-group > input:focus,
 ks-input-group > textarea:focus,
-.ks-select.a { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
+.ks-select._focus,
+ks-area:not([disabled])._focus { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
 
 //普通输入框
 .ks-input {vertical-align:middle; white-space: nowrap; }
@@ -803,15 +818,9 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 	&[color='danger'] > input[type=checkbox]:checked ~ i { background-color: @danger;}
 }
 
-//============== 内联卡片 ==============
-.ks-card { background: #fff; border-radius: 5px; width: 100%; height: auto}
-.ks-card:not(:last-child) { margin-bottom:15px;}
-.ks-card > * { padding:1.1em;}
-.ks-card > .ks-title {font-size:1.14285em; color: #6c6c6c; display: block; width: 100%; height: auto; border-bottom: @borderColor 1px solid; padding: 0.857em 1.1em}
-.ks-card > .ks-title small { color: #838fa1}
-.ks-card > .ks-text {font-size: 1rem; margin: 0} //介绍
 
-.ks-col:after, .ks-card:after, .ks-card-c:after, .ks-step:after, .ks-col-2:after, .ks-col-3:after, .ks-col-4:after{ content: ''; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
+
+
 
 //============== H5标题栏 ==============
 .ks-hdbar { height: 45px; line-height: 45px; font-size: 16px; background: #fff; position: relative}
@@ -832,9 +841,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 
 
 //普通行
-.ks-row:after, .ks-row-arrow:after { content: ''; display: block; width: 100%; clear: both; overflow: hidden;}
-//所有直接子级左浮动
-.ks-row > [class*='ks-col'] { float: left;}
+.ks-row-arrow:after { content: ''; display: block; width: 100%; clear: both; overflow: hidden;}
 //限制行 只有一行文字 固定高度 超出裁切 相对定位 
 .ks-row-x { width: 100%; height: 2em; line-height: 2em; position:relative; overflow: hidden;}
 
@@ -853,92 +860,6 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-pos-3 { left: 0; bottom: 0;}	.ks-pos-4 { right: 0; bottom: 0;}
 
 
-
-//每行增加下边距 排除最后一行
-.ks-row:not(:last-child), .ks-flex:not(:last-child) {margin-bottom: 15px}
-
-//flex布局 必要时拆行
-.ks-flex {
-	display: flex; flex-wrap: wrap; align-items: stretch;
-	//兼容p用法
-	&.ks-p-sub { margin: -10px -10px 5px -20px;}
-	&.ks-p1-sub { margin: -5px -5px 10px -5px;}
-	&.ks-p2-sub { margin: -10px -10px 5px -10px;}
-	&.ks-p3-sub { margin: -15px -15px 0 -15px;}
-	&.ks-p4-sub { margin: -20px -15px 5px -15px;}
-	&.ks-p5-sub { margin: -25px -15px -10px -15px;}
-	&.ks-p-sub:last-of-type {margin-bottom: -10px}
-	&.ks-p1-sub:last-of-type {margin-bottom: -5px}
-	&.ks-p2-sub:last-of-type {margin-bottom: -10px}
-	&.ks-p3-sub:last-of-type {margin-bottom: -15px}
-	&.ks-p4-sub:last-of-type {margin-bottom: -20px}
-	&.ks-p5-sub:last-of-type {margin-bottom: -25px}
-}
-
-
-//弹性布局
-.ks-col {flex:1; width:auto;}
-.ks-col-auto	{width:auto; flex:1 0 auto;}
-.ks-col-1 {width:8.33333%;}
-.ks-col-2	{width:16.66667%;}
-.ks-col-3	{width:25%;}
-.ks-col-4	{width:33.33333%;}
-.ks-col-5	{width:41.66667%;}
-.ks-col-6	{width:50%; }
-.ks-col-7	{width:58.33333%;}
-.ks-col-8	{width:66.66667%;}
-.ks-col-9	{width:75%;}
-.ks-col-10	{width:83.33333%;}
-.ks-col-11, .ks-col-c, .ks-col-txt {width:91.66667%;}
-.ks-col-12	{width:100%;}
-
-
-
-//栅格 平板
-@media (min-width:576px){
-	.ks-col-1-sm	{width:8.33333%;}
-	.ks-col-2-sm	{width:16.66667%;}
-	.ks-col-3-sm	{width:25%;}
-	.ks-col-4-sm	{width:33.33333%;}
-	.ks-col-5-sm	{width:41.66667%;}
-	.ks-col-6-sm	{width:50%; }
-	.ks-col-7-sm	{width:58.33333%;}
-	.ks-col-8-sm	{width:66.66667%;}
-	.ks-col-9-sm	{width:75%;}
-	.ks-col-10-sm	{width:83.33333%;}
-	.ks-col-11-sm	{width:91.66667%;}
-	.ks-col-12-sm	{width:100%;}
-}
-//栅格 PC
-@media (min-width:1024px){
-	.ks-col-1-pc	{width:8.33333%;}
-	.ks-col-2-pc	{width:16.66667%;}
-	.ks-col-3-pc	{width:25%;}
-	.ks-col-4-pc	{width:33.33333%;}
-	.ks-col-5-pc	{width:41.66667%;}
-	.ks-col-6-pc	{width:50%; }
-	.ks-col-7-pc	{width:58.33333%;}
-	.ks-col-8-pc	{width:66.66667%;}
-	.ks-col-9-pc	{width:75%;}
-	.ks-col-10-pc	{width:83.33333%;}
-	.ks-col-11-pc	{width:91.66667%;}
-	.ks-col-12-pc	{width:100%;}
-}
-//栅格 高分屏
-@media (min-width:1900px){
-	.ks-col-1-hd	{width:8.33333%;}
-	.ks-col-2-hd	{width:16.66667%;}
-	.ks-col-3-hd	{width:25%;}
-	.ks-col-4-hd	{width:33.33333%;}
-	.ks-col-5-hd	{width:41.66667%;}
-	.ks-col-6-hd	{width:50%; }
-	.ks-col-7-hd	{width:58.33333%;}
-	.ks-col-8-hd	{width:66.66667%;}
-	.ks-col-9-hd	{width:75%;}
-	.ks-col-10-hd	{width:83.33333%;}
-	.ks-col-11-hd	{width:91.66667%;}
-	.ks-col-12-hd	{width:100%;}
-}
 
 //============== 圆角 ==============
 .ks-o { border-radius: 100%; overflow: hidden}
@@ -1155,17 +1076,17 @@ ks-dot {
 
 
 // 主色 primary 
-.ks-bg-primary { background-color:var(--primary);}
-.ks-text-primary {color:var(--primary);}
+.ks-bg-primary { background-color:@primary;}
+.ks-text-primary {color:@primary;}
 // 成功 success 
-.ks-bg-success { background-color:var(--success);}
-.ks-text-success {color:var(--success);}
+.ks-bg-success { background-color:@success;}
+.ks-text-success {color:@success;}
 // 提示 warning 
-.ks-bg-warning { background-color:var(--warning);}
-.ks-text-warning {color:var(--warning);}
+.ks-bg-warning { background-color:@warning;}
+.ks-text-warning {color:@warning;}
 // 错误 danger 
-.ks-bg-danger { background-color:var(--danger);}
-.ks-text-danger {color:var(--danger);}
+.ks-bg-danger { background-color:@danger;}
+.ks-text-danger {color:@danger;}
 
 //颜色
 .colorRule(@a) {
@@ -1312,7 +1233,7 @@ ks-input-group {
 }
 /*
 	@media (max-width:767px){
-		.ks-layer { display: flex; flex-direction: column; align-content: flex-start}
+		.ks-layer { display: flex; flex-direction: ks-col; align-content: flex-start}
 		.ks-layer[pos="7"], .ks-layer[pos="8"], .ks-layer[pos="9"] { width: 100%; height: 80%;}
 		.ks-layer-title {flex-shrink: 0; flex-grow: 0}
 		.ks-layer-content {height: 100%; max-height: 100%; flex-shrink: 1; flex-grow: 1;}
@@ -1362,8 +1283,10 @@ ks-input-group {
 //============== 地区选择 ==============
 //按钮
 ks-area {
-	border: @borderColor 1px solid; cursor: pointer; padding: 0 5px; overflow: hidden; line-height: @inputHeight -2; display: table;
-	span { float: left; padding: 0 3px; display: table-cell; max-width:25%; white-space: nowrap; table-layout:fixed; overflow: hidden;  text-overflow: ellipsis}
+	//border: @borderColor 1px solid; cursor: pointer; padding: 0 5px; overflow: hidden; line-height: @inputHeight -2; display: table;
+	cursor: pointer; padding:0 10px;
+	&[disabled] { background:#f0f0f0; cursor: not-allowed }
+	span { float: left; padding: 0 3px; white-space: nowrap;}
 	span:last-child { border-right: 0}
 	&[maxlevel='1'] span { max-width: 100%;}
 	&[maxlevel='2'] span { max-width: 50%;}

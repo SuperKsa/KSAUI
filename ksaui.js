@@ -20,6 +20,7 @@ $.device = 'PC'; //设备类型 PC MOBILE
 $.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
 $.ksauiRenderTree = {};
 
+var KSAUIFocusClassName = '_focus';
 
 
 (function(){
@@ -1648,19 +1649,26 @@ $.plugin.showMenu = function(obj, content, title){
  */
 $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 	var btn = $(this[0]);
+	var layerID = 0;
 	if(btn.data('layer-id')){
-		$.layerHide(btn.data('layer-id'));
-		btn.removeData('layer-id');
+		layerID = btn.data('layer-id');
+		_close();
 		return;
 	}
+	
 	tit = tit ? tit : '设置地区信息';
 	var _APIurl = apiUrl ? apiUrl : 'common/area';
 	maxLevel = maxLevel >=0 && maxLevel < 4 ? maxLevel : 4;
 	var Ts = ['选择省份/地区','选择城市','选择区/县','选择城镇','选择街道'];
 	var Fk = ['province', 'city', 'area', 'town'];
 	var level = 0;
-	var layerID = 0;
+	
 	var Dom;
+
+	function _close(layerID){
+		$.layerHide(layerID);
+		btn.removeData('layer-id').removeClass(KSAUIFocusClassName);
+	}
 
 	//获取当前已选择地区数据并组合为JSON 回调给callFun
 	function __callDt(currID, end){
@@ -1696,7 +1704,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			//如果没有地区数据 则直接关闭
 			if(!H){
 				$.layerHide(layerID);
-				btn.removeData('layer-id');
+				btn.removeData('layer-id').removeClass('_focus');
 			}else {
 				H = '<ks-list class="ks-list-select">'+H+'</ks-list>';
 				Dom.find('.ks-area-layer-c').html(H);
@@ -1724,7 +1732,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 					//选择达到最后一级 关闭窗口
 					if (level == maxLevel-1) {
 						$.layerHide(layerID);
-						btn.removeData('layer-id');
+						btn.removeData('layer-id').removeClass('_focus');
 						__callDt(id, 1);
 					} else if (level < maxLevel) {
 						g(id);
@@ -1735,7 +1743,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			}
 		});
 	}
-
+	
 	//底层弹出菜单
 	$.layer({
 		pos : $.device =='MOBILE' ? 8 : btn,
@@ -1749,7 +1757,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 		init : function(layer, id){
 			Dom = layer;
 			layerID = id;
-			btn.data('layer-id',id);
+			btn.data('layer-id',id).addClass('_focus');
 
 			//阻止冒泡
 			layer.click(function(){return false;});
@@ -1785,7 +1793,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			$(document).on('click.KSAUI-area', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0], layer.next('[data-layer-key="'+layer.layerID+'"]')[0]])){
 					$.layerHide(layer.layerID);
-					btn.removeData('layer-id');
+					btn.removeData('layer-id').removeClass('_focus');
 				}
 			});
 		}
@@ -2561,41 +2569,43 @@ $.newForm = function(data){
 				});
 			}
 		},
-		'ks-area' : function(t){
+		'input[type="ks-area"]' : function(t){
 
 			var Fd = ['province', 'city', 'area', 'town'];
 			t = $(t);
+			var disabled = t.attr('disabled');
+			t.attr({'type':'hidden','name':''}).wrap('<ks-area '+(disabled ? 'disabled' : '')+'></ks-area>');
+
 			var attrs = t.attr();
 			var maxlevel = 0;
-			if(!t.find('span').length){
-				var h = '';
-				var name = attrs.name;
-				$.loop(Fd, function(val, k){
-					var v = attrs[val];
-					var vname = val+'Name';
-					var tname = val;
-					if(name){
-						tname = name+'['+val+']';
-						vname = name+'['+val+'Name]';
-					}
-					if(v) {
-						v = v.split(':');
-						h += '<span level="'+k+'" tit="'+v[1]+'">' +
-							'<input type="hidden" name="'+tname+'" value="'+v[0]+'">' +
-							'<input type="hidden" name="'+vname+'" value="'+v[1]+'">' +
-							v[1]+
-							'</span>';
-					}
-					if($.isset(v)){
-						maxlevel ++;
-					}
-				});
-				h && t.html(h);
-			}
-			t.click(function(){
+			var h = '';
+			var name = attrs.name;
+			
+			$.loop(Fd, function(val, k){
+				var v = attrs[val];
+				var tname = name ? name+'['+val+']' : val;
+				if(v) {
+					v = v.split(':');
+					h += '<span level="'+k+'">' +
+						'<input type="hidden" name="'+tname+'[id]" value="'+v[0]+'">' +
+						'<input type="hidden" name="'+tname+'[name]" value="'+v[1]+'">' +
+						v[1]+
+						'</span>';
+				}
+				if($.isset(v)){
+					maxlevel ++;
+				}
+			});
+			t.after(h);
+			t.parent().click(function(){
 				var obj = $(this);
+				var input = obj.children('input[type="hidden"]');
+				var attrs = input.attr();
+				//禁用后不做任何操作
+				if(attrs.disabled || obj.attr('disabled')){
+					return;
+				}
 				var defDt = {};
-				var attrs = obj.attr();
 				
 				$.loop(Fd, function(val, k){
 					var v = attrs[val];
@@ -2608,26 +2618,28 @@ $.newForm = function(data){
 					if(!dt.isEnd){
 						return;
 					}
-					var h = '';
 					obj.removeAttr('province city area town');
-	
+
+					var valueAttr = {};
+					var span = obj.children('span[level]');
 					$.loop(dt.data,function(val){
-						var name = val.field;
-						var vname = val.field+'Name';
-						if(attrs.name){
-							name = attrs.name+'['+val.field+']';
-							vname = attrs.name+'['+val.field+'Name]';
-						}
-						obj.attr(val.field, val.id+':'+val.name);
-						h += '<span level="'+val.level+'" tit="'+val.name+'">' +
-							'<input type="hidden" name="'+name+'" value="'+val.id+'">' +
-							'<input type="hidden" name="'+vname+'" value="'+val.name+'">' +
-							val.name+
-							'</span>';
+						var tname = name ? name+'['+val.field+']' : val.field;
+						valueAttr[val.field] = val.id+':'+val.name;
+						obj.children('span[level="'+val.level+'"]').html(val.name+'<input type="hidden" name="'+tname+'[id]" value="'+val.id+'"><input type="hidden" name="'+tname+'[name]" value="'+val.name+'">');
 					});
-					obj.html(h);
+					input.attr(valueAttr);
 				}, maxlevel, attrs.api);
 			});
+
+			//监听属性变化事件
+			t.on('KSAattrModified', function(e){
+				var arg = e.KSAcallbackArgs;
+				if(arg[0] === 'disabled' && arg[1] != disabled){
+					disabled = arg[1];
+					t.parent().attr('disabled', disabled);
+				}
+			});
+			
 		},
 		'.ks-tab' : function(e){
 			$(e).tab();
@@ -2641,19 +2653,6 @@ $.newForm = function(data){
 				control : sdt.control,
 				status : sdt.status,
 			});
-		},
-		'[title]' : function(ele){//title提示文字处理
-			ele = $(ele);
-			ele.attr('_ksauirender_title_',1);
-			var tit = ele.attr('title');
-			if(tit) {
-				ele.hover(function(){
-					$.showTip(ele);
-					ele.attr('title','');
-				},function(){
-					ele.attr('title',tit);
-				});
-			}
 		},
 		'ks-collapse' : function(ele){//折叠面板
 			$(ele).collapse();
@@ -2746,6 +2745,7 @@ $.newForm = function(data){
 				});
 			}
 		},
+		//重置按钮
 		'ks-btn[reset]' : function(dom){
 			dom = $(dom);
 			var resets = dom.attr('reset');
@@ -2760,6 +2760,7 @@ $.newForm = function(data){
 				});
 			}
 		},
+		//价格标签
 		'ks-price' : function(ele){
 			var txt = ele.innerHTML.trim();
 			txt = txt.replace(/([^0-9\.\,]+)/gi,'<unit>$1</unit>');
@@ -2772,6 +2773,34 @@ $.newForm = function(data){
 				});
 			}
 			ele.innerHTML = txt;
+		},
+		'ks-card' : function(ele){
+			ele = $(ele);
+			var attrs = ele.attr();
+			//如果没有定义content则包裹
+			if(!ele.children('ks-card-content').length){
+				ele.wrapInner('<ks-card-content></ks-card-content>');
+			}
+			//title存在 则附加title
+			if(!ele.children('ks-card-title').length && attrs.title){
+				ele.prepend('<ks-card-title '+(attrs.icon ? 'icon="'+attrs.icon+'"' : '')+'>'+attrs.title+'</ks-card-title>').attr('title icon','');
+			}
 		}
 	});
+
+	//title必须在最后渲染
+	$.render('[title]', function(ele){//title提示文字处理
+		ele = $(ele);
+		ele.attr('_ksauirender_title_',1);
+		var tit = ele.attr('title');
+		if(tit) {
+			ele.hover(function(){
+				$.showTip(ele);
+				ele.attr('title','');
+			},function(){
+				ele.attr('title',tit);
+			});
+		}
+	});
+
 })();
