@@ -485,12 +485,12 @@ function debugTime(key){
 						} else {
 							ele.setAttribute(k, val);
 						}
-						//触发ele的属性变更事件
-						$(ele).trigger('KSAattrModified', [k, val]);
 						if (k.indexOf('data-') === 0) {
 							dataAttr[k.substr(5)] = val;
 						}
 					});
+					//触发ele的属性变更事件
+					$(ele).trigger('ksaEventAttr');
 				});
 			}
 			if(!$.isEmpty(dataAttr)){
@@ -3880,7 +3880,7 @@ function debugTime(key){
 
 	$.loop(('input blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
 		K[name] = function(func, fn) {
-			return this.on(name, null, func, fn);
+			return arguments.length > 0 ? this.on(name, null, func, fn) : this.trigger(name);
 		};
 	});
 	//插件钩子 $.plugin.xxx = xxx;

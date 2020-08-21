@@ -649,7 +649,7 @@ input[type='number']::-webkit-inner-spin-button {-webkit-appearance: none;appear
 
 //默认高度 边框 背景色
 input.ks-input, textarea.ks-input, .ks-input input, .ks-textarea textarea, ks-input-group > input,
-.ks-select, .ks-date, ks-area {vertical-align: middle;  text-align:left; display: inline-block; border: @borderColor 1px solid; border-radius:3px; background: #fff;}
+.ks-select-title, .ks-date, ks-area {vertical-align: middle;  text-align:left; display: inline-block; border: @borderColor 1px solid; border-radius:3px; background: #fff;}
 
 
 
@@ -666,7 +666,7 @@ ks-input-group, ks-input-group > *,
 .ks-input,
 .ks-input > input,
 .ks-input-arrow input,
-.ks-select,
+.ks-select-title,
 .ks-date,
 ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 
@@ -678,44 +678,18 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 
 //下拉选择框
 .ks-select {
-	display: inline-block; position:relative; background:#fff;  cursor: pointer; overflow: hidden; min-width: 140px;
+	display: inline-block; 
 	select { display: none}
-	.ks-select-tit {
-		display: block; position: relative; padding:0 25px 0 10px; height: 100%; overflow: hidden;
-		&:before {transition:all 0.2s ease-in-out; }
-		&:before {font-size: 14px; position: absolute; right:0; top:0; width: 20px; text-align: center;}
+	.ks-select-title {
+		display: block; position: relative; padding:0 25px 0 10px; height: 100%; overflow: hidden; background:#fff;  cursor: pointer; min-width: 140px;
+		&:before {transition:all 0.2s ease-in-out; font-size: 14px; position: absolute; right:0; top:0; width: 20px; text-align: center;}
+		&[_focus]:before {transform:rotate(180deg); color:#333;}
 		//第一个span后面的span 添加分割斜杠
 		> span:first-child ~ span:before { content:'/'; margin: 0 3px; color: #999;}
 	}
-	
-	&.disabled,
-	&.disabled button {background:#dedede; color:#999; cursor:not-allowed; }
-	//获得焦点
-	&.a { border-color: @primary; z-index: 2}
-	&.a span {color: #495057}
-	&.a .ks-select-tit:before {transform:rotate(180deg); color:#333;}
 }
 
 
-//焦点 经过
-.ks-input input:not(:disabled):hover,
-.ks-input textarea:not(:disabled):hover,
-input.ks-input:not(:disabled):hover,
-.ks-textarea textarea:not(:disabled):hover,
-ks-input-group > input:not(:disabled):hover,
-ks-input-group > textarea:not(:disabled):hover,
-.ks-select:hover, .ks-select._focus,
-ks-area:not([disabled]):hover { border-color: #a2cfff; border-width: 1px !important; }
-
-//焦点 点击
-.ks-input input:not(:disabled):focus,
-.ks-input textarea:not(:disabled):focus,
-input.ks-input:not(:disabled):focus,
-.ks-textarea textarea:not(:disabled):focus,
-ks-input-group > input:focus,
-ks-input-group > textarea:focus,
-.ks-select._focus,
-ks-area:not([disabled])._focus { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
 
 //普通输入框
 .ks-input {vertical-align:middle; white-space: nowrap; }
@@ -819,7 +793,35 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 }
 
 
+//============== 表单焦点状态 ==============
+//hover 经过
+.ks-input input:not(:disabled):hover,
+.ks-input textarea:not(:disabled):hover,
+input.ks-input:not(:disabled):hover,
+.ks-textarea textarea:not(:disabled):hover,
+ks-input-group > input:not(:disabled):hover,
+ks-input-group > textarea:not(:disabled):hover,
+.ks-select-title:hover,
+ks-area:not([disabled]):hover { border-color: #a2cfff; border-width: 1px !important; }
 
+//focus 获得焦点
+.ks-input input:not(:disabled):focus,
+.ks-input textarea:not(:disabled):focus,
+input.ks-input:not(:disabled):focus,
+.ks-textarea textarea:not(:disabled):focus,
+ks-input-group > input:focus,
+ks-input-group > textarea:focus,
+.ks-select-title[_focus],
+ks-area:not([disabled])[_focus] { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
+
+//被禁用 disabled
+[disabled] ~ .ks-select-title {
+	cursor: not-allowed; background-color: #f0f0f0;
+}
+[disabled] ~ .ks-list-select { opacity: .75;}
+[disabled] ~ .ks-list-select v {
+	cursor: not-allowed;
+}
 
 
 //============== H5标题栏 ==============

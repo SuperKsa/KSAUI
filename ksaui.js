@@ -1088,8 +1088,11 @@ $.plugin.collapse = function(){
 $.plugin.listSelect = function(callFun){
 	var $this = this;
 	var m = $.isset($this.attr('multiple'));
+	
 	$this.find('v').click(function(e) {
-
+		if($this.attr('disabled')){
+			return;
+		}
 		var T = $(this);
 		//如果当前已选择或禁用状态则不做任何响应
 		if (T.hasClass('ks-select-optgroup-title') || (!m && T.attr('selected')) || T.attr('disabled')) {
@@ -1265,18 +1268,22 @@ $.plugin.selectText = function(){
  */
 $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 	var $this = this;
-	var btn = $(this[0]);
-
+	var btn = $(this[0]), layerID;
 	//触发按钮被禁用时不响应
-	if(btn.attr('disabled') || btn.hasClass('_disabled')){
+	if(btn.attr('disabled')){
 		return;
 	}
+	function _close(){
+		layerID && $.layerHide(layerID);
+		btn.removeData('layer-id').attr(KSAUIFocusClassName,'');
+	}
+
 	//如果选择窗口存在 则关闭
 	if(btn.data('layer-id')){
-		$.layerHide(btn.data('layer-id'));
-		btn.removeData('layer-id').removeClass('a');
+		_close();
 		return;
 	}
+	
 	var htmlObj = $.selectToHtml(data, multiple);
 	multiple = htmlObj[1];
 	var select = htmlObj[0];
@@ -1291,7 +1298,8 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 			if(!layer.layerID){
 				return;
 			}
-			btn.data('layer-id',layer.layerID).addClass('a');
+			layerID = layer.layerID;
+			btn.data('layer-id',layerID).attr(KSAUIFocusClassName, true);
 			var d = layer.find('.ks-layer-content');
 			//自动定位到已选择区域
 			if(d.find('v[selected]').length){
@@ -1320,35 +1328,29 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				}
 				//触发按钮输出text
 				if(txt){
-					//KSA渲染的btn写值
-					if(btn.find('.ks-select-tit').length){
-						btn.find('.ks-select-tit').html(txt);
-						//btn对象是input
-					}else if($.inArray(btn[0].tagName, ['INPUT','TEXTAREA'])){
+					//btn对象是input
+					if($.inArray(btn[0].tagName, ['INPUT','TEXTAREA'])){
 						btn.val(txt);
-						//btn对象是其他标签
+					//btn对象是其他标签
 					}else{
 						btn.html(txt);
 					}
 				}
-				btn.attr('val',val).data('value',valdt);
+				btn.data('value',valdt);
 				//单选框选择后关闭pop层
 				if(!multiple){
-					$.layerHide(layer.layerID);
+					_close();
 				}
 			});
 
 			//监听点击事件 自动关闭
 			$(document).on('click.KSAUI-select', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0]])){
-					$.layerHide(layer.layerID);
+					_close();
 				}
 			});
 		},
-		close : function(){
-			btn.removeData('layer-id').removeClass('a');
-			$(document).off('click.KSAUI-select');
-		}
+		close : _close
 	}, layerOption, {class:'ks-layer-select'});
 
 	htmlObj = null;
@@ -1704,7 +1706,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			//如果没有地区数据 则直接关闭
 			if(!H){
 				$.layerHide(layerID);
-				btn.removeData('layer-id').removeClass('_focus');
+				btn.removeData('layer-id').attr(KSAUIFocusClassName,'');
 			}else {
 				H = '<ks-list class="ks-list-select">'+H+'</ks-list>';
 				Dom.find('.ks-area-layer-c').html(H);
@@ -1732,7 +1734,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 					//选择达到最后一级 关闭窗口
 					if (level == maxLevel-1) {
 						$.layerHide(layerID);
-						btn.removeData('layer-id').removeClass('_focus');
+						btn.removeData('layer-id').attr(KSAUIFocusClassName,true);
 						__callDt(id, 1);
 					} else if (level < maxLevel) {
 						g(id);
@@ -1757,7 +1759,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 		init : function(layer, id){
 			Dom = layer;
 			layerID = id;
-			btn.data('layer-id',id).addClass('_focus');
+			btn.data('layer-id',id).attr(KSAUIFocusClassName,true);
 
 			//阻止冒泡
 			layer.click(function(){return false;});
@@ -1793,7 +1795,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			$(document).on('click.KSAUI-area', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0], layer.next('[data-layer-key="'+layer.layerID+'"]')[0]])){
 					$.layerHide(layer.layerID);
-					btn.removeData('layer-id').removeClass('_focus');
+					btn.removeData('layer-id').attr(KSAUIFocusClassName,'');
 				}
 			});
 		}
@@ -2455,8 +2457,7 @@ $.newForm = function(data){
 				ele.children().listSelect(function(value){
 					$(t).val(value).trigger('change');
 				});
-				t.after(ele);
-				t.hide();
+				t.after(ele).hide();
 				ele.prepend(t);
 				//绑定一个内部事件 让select表单值改变后通知父级
 				t.on('ksachange change',function(){
@@ -2467,7 +2468,6 @@ $.newForm = function(data){
 						ele.find('li[value="'+v+'"]').attr('selected',true);
 					});
 				});
-	
 			}else{
 				//如果在标签属性data-value给定选中值 则处理到内部
 				t.data('value') && t.val(t.data('value'));
@@ -2482,17 +2482,20 @@ $.newForm = function(data){
 					}
 				}
 				t.wrap(moveLabelAttr('div', t, 'ks-select'));
-				t.after('<span class="ks-select-tit" icon="caret-down">' + tit + '</span>');
-	
-				t.parent().click(function(){
+				t.after('<span class="ks-select-title" icon="caret-down">' + tit + '</span>');
+				t.next('.ks-select-title').click(function(){
 					$(this).showSelect(t);
 				});
 				//绑定一个内部事件 让select表单值改变后通知父级
 				t.on('ksachange',function(){
 					var select =  $(this);
-					select.parent().children('.ks-select-tit').html(select.selectText());
+					select.parent().children('.ks-select-title').html(select.selectText());
 				});
 			}
+			//监听属性禁用变化事件
+			t.on('ksaEventAttr', function(){
+				t.next().attr('disabled', $(this).attr('disabled'));
+			});
 		},
 		'input[type="ks-date"]' : function(ele){
 			var t = $(ele), at = t.attr();
@@ -2506,7 +2509,7 @@ $.newForm = function(data){
 	
 			//增加事件
 			t.focus(function () {
-				$this.showDate(t);
+				$.showDate(t);
 			});
 		},
 		'input[type="ks-text"]' : function(ele){
@@ -2573,8 +2576,7 @@ $.newForm = function(data){
 
 			var Fd = ['province', 'city', 'area', 'town'];
 			t = $(t);
-			var disabled = t.attr('disabled');
-			t.attr({'type':'hidden','name':''}).wrap('<ks-area '+(disabled ? 'disabled' : '')+'></ks-area>');
+			t.attr({'type':'hidden','name':''}).wrap('<ks-area '+(t.attr('disabled') ? 'disabled' : '')+'></ks-area>');
 
 			var attrs = t.attr();
 			var maxlevel = 0;
@@ -2630,14 +2632,10 @@ $.newForm = function(data){
 					input.attr(valueAttr);
 				}, maxlevel, attrs.api);
 			});
-
-			//监听属性变化事件
-			t.on('KSAattrModified', function(e){
-				var arg = e.KSAcallbackArgs;
-				if(arg[0] === 'disabled' && arg[1] != disabled){
-					disabled = arg[1];
-					t.parent().attr('disabled', disabled);
-				}
+			
+			//监听属性禁用变化事件
+			t.on('ksaEventAttr', function(){
+				t.parent().attr('disabled', $(this).attr('disabled'));
 			});
 			
 		},
@@ -2719,6 +2717,10 @@ $.newForm = function(data){
 			var domInline = $.isset(dom.attr('inline')),
 				labelWidth = dom.attr('label-width');
 			dom.find('ks-form-item').map(function(ele){
+				if(ele._ksa_render_ks_form_item){
+					return ;
+				}
+				ele._ksa_render_ks_form_item = 1;
 				ele = $(ele);
 				var attrs = ele.attr();
 				!domInline && ele.addClass('ks-clear');
@@ -2726,6 +2728,7 @@ $.newForm = function(data){
 				attrs.label && ele.prepend('<ks-form-label '+($.isset(attrs.required) ? 'required' : '')+'>'+attrs.label+'</ks-form-label>');
 				attrs.extra && ele.append('<ks-form-extra>'+attrs.extra+'</ks-form-extra>');
 				ele.attr({label:'',extra:'',required:''});
+				
 				if(labelWidth){
 					labelWidth = $.isNumber(labelWidth) ? labelWidth+'px' : labelWidth;
 					ele.find('ks-form-label').width(labelWidth);

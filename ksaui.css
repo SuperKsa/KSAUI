@@ -1487,7 +1487,7 @@ textarea.ks-input,
 .ks-input input,
 .ks-textarea textarea,
 ks-input-group > input,
-.ks-select,
+.ks-select-title,
 .ks-date,
 ks-area {
   vertical-align: middle;
@@ -1513,7 +1513,7 @@ ks-input-group > *,
 .ks-input,
 .ks-input > input,
 .ks-input-arrow input,
-.ks-select,
+.ks-select-title,
 .ks-date,
 ks-area {
   height: 36px;
@@ -1546,26 +1546,22 @@ ks-area {
 }
 .ks-select {
   display: inline-block;
-  position: relative;
-  background: #fff;
-  cursor: pointer;
-  overflow: hidden;
-  min-width: 140px;
 }
 .ks-select select {
   display: none;
 }
-.ks-select .ks-select-tit {
+.ks-select .ks-select-title {
   display: block;
   position: relative;
   padding: 0 25px 0 10px;
   height: 100%;
   overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  min-width: 140px;
 }
-.ks-select .ks-select-tit:before {
+.ks-select .ks-select-title:before {
   transition: all 0.2s ease-in-out;
-}
-.ks-select .ks-select-tit:before {
   font-size: 14px;
   position: absolute;
   right: 0;
@@ -1573,53 +1569,14 @@ ks-area {
   width: 20px;
   text-align: center;
 }
-.ks-select .ks-select-tit > span:first-child ~ span:before {
-  content: '/';
-  margin: 0 3px;
-  color: #999;
-}
-.ks-select.disabled,
-.ks-select.disabled button {
-  background: #dedede;
-  color: #999;
-  cursor: not-allowed;
-}
-.ks-select.a {
-  border-color: #4792fb;
-  z-index: 2;
-}
-.ks-select.a span {
-  color: #495057;
-}
-.ks-select.a .ks-select-tit:before {
+.ks-select .ks-select-title[_focus]:before {
   transform: rotate(180deg);
   color: #333;
 }
-.ks-input input:not(:disabled):hover,
-.ks-input textarea:not(:disabled):hover,
-input.ks-input:not(:disabled):hover,
-.ks-textarea textarea:not(:disabled):hover,
-ks-input-group > input:not(:disabled):hover,
-ks-input-group > textarea:not(:disabled):hover,
-.ks-select:hover,
-.ks-select._focus,
-ks-area:not([disabled]):hover {
-  border-color: #a2cfff;
-  border-width: 1px !important;
-}
-.ks-input input:not(:disabled):focus,
-.ks-input textarea:not(:disabled):focus,
-input.ks-input:not(:disabled):focus,
-.ks-textarea textarea:not(:disabled):focus,
-ks-input-group > input:focus,
-ks-input-group > textarea:focus,
-.ks-select._focus,
-ks-area:not([disabled])._focus {
-  border-color: #4792fb;
-  color: #495057 !important;
-  box-shadow: 0 0 0 2px rgba(45, 140, 240, 0.2);
-  position: relative;
-  z-index: 9;
+.ks-select .ks-select-title > span:first-child ~ span:before {
+  content: '/';
+  margin: 0 3px;
+  color: #999;
 }
 .ks-input {
   vertical-align: middle;
@@ -1927,6 +1884,41 @@ textarea.ks-input {
 }
 .ks-switch[color='danger'] > input[type=checkbox]:checked ~ i {
   background-color: #ff6a5b;
+}
+.ks-input input:not(:disabled):hover,
+.ks-input textarea:not(:disabled):hover,
+input.ks-input:not(:disabled):hover,
+.ks-textarea textarea:not(:disabled):hover,
+ks-input-group > input:not(:disabled):hover,
+ks-input-group > textarea:not(:disabled):hover,
+.ks-select-title:hover,
+ks-area:not([disabled]):hover {
+  border-color: #a2cfff;
+  border-width: 1px !important;
+}
+.ks-input input:not(:disabled):focus,
+.ks-input textarea:not(:disabled):focus,
+input.ks-input:not(:disabled):focus,
+.ks-textarea textarea:not(:disabled):focus,
+ks-input-group > input:focus,
+ks-input-group > textarea:focus,
+.ks-select-title[_focus],
+ks-area:not([disabled])[_focus] {
+  border-color: #4792fb;
+  color: #495057 !important;
+  box-shadow: 0 0 0 2px rgba(45, 140, 240, 0.2);
+  position: relative;
+  z-index: 9;
+}
+[disabled] ~ .ks-select-title {
+  cursor: not-allowed;
+  background-color: #f0f0f0;
+}
+[disabled] ~ .ks-list-select {
+  opacity: 0.75;
+}
+[disabled] ~ .ks-list-select v {
+  cursor: not-allowed;
 }
 .ks-hdbar {
   height: 45px;
