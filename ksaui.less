@@ -1129,15 +1129,12 @@ ks-dot {
 .ks-bg-white { background-color: #fff;}
 .ks-text-white {color:#fff;}
 
-//颜色
-.colorRule(@a) {
-	background : @a;
-}
-
+//============== 动画 ==============
 @keyframes spin {
 	0% {transform:rotate(0deg);}
 	100% {transform:rotate(360deg);}
 }
+
 //============== 输入框组 ==============
 ks-input-group {
 	display: inline-table; width:100%; border-collapse:separate; vertical-align:middle; background: #f2f2f2;
@@ -1172,14 +1169,13 @@ ks-input-group {
 //============== 浮动提示窗口层 ==============
 .ks-body-layer-overflow { overflow: hidden}
 .ks-layer {
-	position: absolute; top: 0; left: 0; font-size: 14px; background:#fff; opacity:0; box-shadow: #444 0 0 5px; border-radius: 3px; min-width:360px;
+	position: fixed; top: 0; left: 0; font-size: 14px; background:#fff; opacity:0; box-shadow: #444 0 0 5px; border-radius: 3px; min-width:360px;
 	//从底部弹出
 	&[pos="7"],
 	&[pos="8"],
 	&[pos="9"] { top: inherit; border-radius:7px 7px 0 0}
-
 	//自由定位的layer样式调整 一般用于下拉选择
-	&._pos_0 { border-radius: 3px; border: #e4eaf2 1px solid; box-shadow: 0 5px 5px 0 rgba(154,161,171,.15); position: absolute; min-width: 120px;}
+	&._pos_0 { border-radius: 3px; border: #e4eaf2 1px solid; box-shadow: 0 5px 5px 0 rgba(154,161,171,.17); position: absolute; min-width: 120px;}
 	&._pos_0 > .ks-layer-content { padding: 0;}
 	&._pos_0 > .ks-layer-title { background: #f2f2f2;}
 	//从右到左滑出一个全屏（移动端适用）
@@ -1187,7 +1183,7 @@ ks-input-group {
 }
 
 //layer遮罩层
-.ks-layer-cover { background:rgba(0,0,0,0.5); opacity:0; width:100%; height:100%; position: absolute; left:0; top:0; bottom:0; z-index:1; user-select: none}
+.ks-layer-cover { background:rgba(0,0,0,0.5); opacity:0; width:100%; height:100%; position: fixed; left:0; top:0; bottom:0; z-index:1; user-select: none}
 
 //layer关闭按钮
 .ks-layer-close {
