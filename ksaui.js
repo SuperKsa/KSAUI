@@ -1,13 +1,15 @@
-/**
+/*
  * KSAUI 前端UI组件库 V1.0
  *
  * 目前版本还处于开发中，请勿保存并用于生产环境！
- *
- * ---------------------------------------
+ *  * ---------------------------------------
  * 待正式发布版本后，源代码将会公开开源
- *
- * Author : ksaos.com && cr180.com(Mr Wu -  ChenJun)
- * Update : 2020年7月29日
+ * 
+ * @Author: cr180(cr180.com & ksaOS.com)
+ * @Date: 2017-06-12 01:24:09
+ * @LastEditors: CR180
+ * @LastEditTime: 2020-08-23 17:25:34
+ * @Description: file content
  */
 
 $.ZINDEX = 999;
@@ -51,8 +53,8 @@ var KSAUIFocusClassName = '_focus';
 					if(ele._KSAUIRENDER_[selector]){
 						return;
 					}
-					func.call(ele, ele);
 					ele._KSAUIRENDER_[selector] = true;
+					func.call(ele, ele);
 				});
 			});
 		}
@@ -299,7 +301,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 	}
 
 	option = $.arrayMerge({
-		el : $.layerEL || '', //弹窗位置被限制在哪个元素中
+		el : $.layerEL || 'body', //弹窗位置被限制在哪个元素中
 		title : null, //弹窗标题
 		content : null, //弹窗内容
 		class : '', //附加class 可以自定义样式
@@ -322,6 +324,9 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 		height : null, //内容区固定高度
 	},option);
 
+	var EL = $(option.el || 'body');
+	//EL尺寸与位置
+	var ELSize = {W:EL.width(), H:EL.height(), L:EL.offset().left, T:EL.offset().top};
 
 	//手机端默认监听后退事件
 	if(option.backEvent === null && $.device =='MOBILE'){
@@ -345,15 +350,8 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 		option.class += ' ks-layer-iframe';
 		option.content = '<iframe src="'+option.iframe+'" width="100%" height="100%"></iframe>';
 	}
+	
 
-	var elSize = {W:$.W, H:$.H, L:0, T:0};
-	//如果指定了layer覆盖的对象范围 则处理
-	if(option.el){
-		option.el = $(option.el);
-		elSize = {W:option.el.width(), H:option.el.height(), L:option.el.offset().left, T:option.el.offset().top};
-		elSize.W = elSize.W > $.W ? $.W : elSize.W;
-		elSize.H = elSize.H > $.H ? $.H : elSize.H;
-	}
 	function __run() {
 
 		//层级序号自增
@@ -433,7 +431,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 				});
 			}
 
-			$('body').append(D);
+			$(EL).append(D);
 
 
 			//遮罩层点击关闭事件
@@ -491,7 +489,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 			//百分比值支持
 			if ($.isString(opw) && opw.indexOf('%')) {
 				opw = parseFloat(opw);
-				opw = elSize.W * opw / 100;
+				opw = ELSize.W * opw / 100;
 			}
 			D.css('width', opw);
 		}
@@ -500,7 +498,6 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 		var css = {margin: '100px 0 0 0', left: 0, top: 0};
 
 		function P() {
-
 			var pos = option.pos;
 			var w = D.width(true), h = D.height(true);
 			if ($.inArray(pos, ['00',1, 2, 3, 4, 5, 6, 7, 8, 9])) {
@@ -513,18 +510,18 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 				}
 				//X轴居中
 				if ($.inArray(pos, [2, 5, 8])) {
-					css.left = (elSize.W - w) / 2;
+					css.left = (ELSize.W - w) / 2;
 					if (pos == 5) {
 						css.transform = 'scale(0)';
 					}
 				}
 				//X轴居右
 				if ($.inArray(pos, [3, 6, 9])) {
-					css.left = elSize.W - w;
+					css.left = ELSize.W - w;
 				}
 				//Y轴居中
 				if ($.inArray(pos, [4, 5, 6])) {
-					css.top = (elSize.H - h) / 2;
+					css.top = (ELSize.H - h) / 2;
 				}
 				//Y轴底部
 				if ($.inArray(pos, [7, 8, 9])) {
@@ -533,7 +530,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 						css.bottom = '0';
 						css.margin = '0 0 ' + (0 - h) + 'px 0';
 					} else {
-						css.top = elSize.H - h;
+						css.top = ELSize.H - h;
 						css.margin = h + 'px 0 0';
 					}
 				}
@@ -544,21 +541,22 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 					css.margin = '0 0 0 100%';
 				}
 				//坐标加上祖先容器偏移值（如果有）
-				css.left += elSize.L;
-				css.top += elSize.T;
-				//如果定位不是既定位置 则认为是一个选择器 自适应定位
+				//css.left += ELSize.L;
+				//css.top += ELSize.T;
+				
+			//如果定位不是既定位置 则认为是一个选择器 自适应定位
 			} else {
 				var to = $(pos);
 				var toh = to.height(true);
 				css.left = to.offset().left;
 				css.top = to.offset().top + toh;
-				if (elSize.W > 0 && css.left > elSize.W - D.width(true)) {
+				if (ELSize.W > 0 && css.left > ELSize.W - D.width(true)) {
 					css.left = css.left - D.width(true) + to.width(true);
 				}
 
 				//如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
 				var sh = $(document).scrollTop();//卷去高度
-				if (elSize.H >0 && elSize.H - (css.top - sh) < D.height(true)) {
+				if (ELSize.H >0 && ELSize.H - (css.top - sh) < D.height(true)) {
 					css.margin = '-100px 0 0';
 					css.top = css.top - D.height(true) - toh;
 				}
@@ -570,7 +568,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 
 		setTimeout(function () {
 			if(!$.isset(option.bodyOver) || option.bodyOver){
-				$('body').addClass('ks-body-layer-overflow');
+				$(EL).addClass('ks-body-layer-overflow');
 			}
 			D.addClass('_ksaui_layer_open_').css({
 				margin: 0,
@@ -581,7 +579,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 			D.next('[data-layer-key="' + Id + '"]').show().css({opacity: 1});
 
 			//后退事件监听
-			option.backEvent && D.BackEvent('KsaLayer'+Id, '#ks-layer-'+Id);
+			option.backEvent && $.BackEvent('KsaLayer'+Id, '#ks-layer-'+Id);
 			//初始化回调
 			!cacheID && typeof (option.init) == 'function' && option.init(D, Id);
 			//show回调函数
@@ -747,7 +745,7 @@ $.openWindow = function(option){
 
 	return this.layer($.arrayMerge(option, {
 		title : h,
-		content : '<div class="layer-loading"><i icon="loading"></i>加载中</div>',
+		content : option.content || '<div class="layer-loading"><i icon="loading"></i>加载中</div>',
 		width : '100%',
 		height : '100%',
 		maxHeight : false,
@@ -1089,7 +1087,7 @@ $.plugin.listSelect = function(callFun){
 	var $this = this;
 	var m = $.isset($this.attr('multiple'));
 	
-	$this.find('v').click(function(e) {
+	$this.find('ks-list-item').click(function(e) {
 		if($this.attr('disabled')){
 			return;
 		}
@@ -1110,7 +1108,7 @@ $.plugin.listSelect = function(callFun){
 			T.attr('selected',true).siblings().removeAttr('selected');
 		}
 		var txtM = {};
-		$this.find('v[selected]').each(function (_, l) {
+		$this.find('ks-list-item[selected]').each(function (_, l) {
 			l = $(l);
 			txtM[l.attr('value')] = T.attr('_text') || T.attr('text') || T.text();
 		});
@@ -1208,7 +1206,7 @@ $.selectToHtml = function(element, multiple){
 				if(!$.isObject(value) && !$.isArray(value)){
 					value = {value:key, text:value, selected: _isSelected(key)}
 				}
-				h += $.tag('v', {selected:value.selected ? 'selected' : '' ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
+				h += $.tag('ks-list-item', {selected:value.selected ? 'selected' : '' ,disabled:value.disabled, icon:value.icon, style:value.style, title:value.title, value:value.value, n:value.n, _text:value.showtitle || value.text}, value.text);
 			}
 		});
 		return h;
@@ -1302,8 +1300,8 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 			btn.data('layer-id',layerID).attr(KSAUIFocusClassName, true);
 			var d = layer.find('.ks-layer-content');
 			//自动定位到已选择区域
-			if(d.find('v[selected]').length){
-				d.scrollTop(d.find('v[selected]').eq(0).offset().top - d.offset().top - d.find('v').eq(0).height());
+			if(d.find('ks-list-item[selected]').length){
+				d.scrollTop(d.find('ks-list-item[selected]').eq(0).offset().top - d.offset().top - d.find('ks-list-item').eq(0).height());
 			}
 			//选项点击事件
 			$(d.find('.ks-list-select')).listSelect(function(val, txt, valdt, T, e){
@@ -1312,7 +1310,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				if(multiple){
 					select && select.find('option').eq(T.attr('n')).attr('selected', T.attr('selected') ? true : false);
 					txt = '';
-					d.find('v[selected]').each(function (i,l) {
+					d.find('ks-list-item[selected]').each(function (i,l) {
 						l = $(l);
 						txt += '<span>'+l.attr('_text')+'</span>';
 					});
@@ -1697,7 +1695,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 		$.API(_APIurl,{id:upID, level:level},function(data){
 			var H = '';
 			$.loop(data,function (val) {
-				H += $.tag('v',{
+				H += $.tag('ks-list-item',{
 					upid : upID,
 					val : val.id,
 					selected : (currID && currID == val.id ? 'selected' : null)
@@ -1716,7 +1714,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 					var o = Dom.find('.ks-area-layer-c');
 					o.height(h-Dom.find('.ks-area-layer-btn').height(true));
 
-					var p = o.find('v[selected]');
+					var p = o.find('ks-list-item[selected]');
 					if(p.length){
 						o.scrollTop(p.index() * p.height(true));
 					}else{
@@ -1887,116 +1885,6 @@ $.plugin.checkAll = function(selector){
 }
 
 
-
-
-/**
- * 分页器渲染
- * 通过选择器使用
- * @returns {$.plugin}
- */
-$.plugin.page = function(){
-	if(!this.length){
-		return this;
-	}
-	this.map(function(ele){
-		if(ele._KsaUIRenderPage){
-			return;
-		}
-		function pgTo(val){
-			if(ele.attr('disabled')  || val == ele[0].value){
-				return;
-			}
-			if(val ==='prev'){
-				val = ele[0].value - 1;
-				val = val < 1 ? 1 : val;
-			}else if(val === 'next'){
-				val = ele[0].value + 1;
-				val = val > total ? total : val;
-			}
-			val = parseInt(val);
-			
-			ele.children('ks-page-next').attr('disabled', val === total);
-			ele.children('ks-page-last').attr('disabled', val > total- pageNum / 2);
-			ele.children('ks-page-prev').attr('disabled', val ===1);
-			ele.children('ks-page-first').attr('disabled', val < pageNum / 2);
-
-			ele.attr('current', val);
-			ele[0].value = val;
-			var startPg = val - ((pageNum - 1) / 2);
-			var endPg = total - pageNum+1;
-			startPg = startPg < 1 ? 1 : (startPg > endPg ? endPg : startPg);
-			ele.children('a').map(function (a) {
-				$(a).attr('value', startPg).text(startPg);
-				startPg++;
-			});
-			ele.children('a[value="'+val+'"]').addClass('a').siblings('a').removeClass('a');
-			ele.find('.ks-input-group > input').val(val);
-			ele.trigger('change');
-		}
-
-		ele._KsaUIRenderPage = true;
-		ele = $(ele);
-		var total = parseInt(ele.attr('total') || 0);
-		if(!total){
-			return;
-		}
-		var current = parseInt(ele.attr('current') || 1);
-		var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
-
-		//给当前ele添加value属性值
-		ele[0].value = current;
-		var href = ele.attr('href');
-		var pgcode = '';
-		(function(){
-			var start = Math.ceil(current - ((pageNum - 1) / 2));
-			start = start < 1 ? 1 : start;
-			var mx = Math.min(total+1, start+pageNum);
-			if(mx <=2){
-				return;
-			}
-			for(var i = start; i < mx; i++) {
-				var txt = i;
-				var val = i;
-				var attr = ' value="' + val + '"';
-				if (href) {
-					attr += ' href="' + href.replace('{{page}}', val) + '"';
-				}
-				if (val === current) {
-					attr += ' class="a"';
-				}
-				pgcode += '<a ' + attr + '>' + txt + '</a>';
-			}
-		})();
-		if(!pgcode){
-			return;
-		}
-		var H = '<ks-page-first icon="first_page" value="1"></ks-page-first>';
-		H += '<ks-page-prev icon="arrow_left" value="prev"></ks-page-prev>';
-		H += pgcode;
-		H += '<ks-page-next icon="arrow_right" value="next"></ks-page-next>';
-		H += '<ks-page-last icon="last_page" value="'+total+'"></ks-page-last>';
-		if($.isset(ele.attr('quick'))){
-			H += '<ks-input-group><i>转</i><input type="text" value="'+current+'"><i>页</i></ks-input-group>';
-		}
-		ele.html(H);
-
-		ele.children('*:not(ks-input-group)').click(function(){
-			var el = $(this);
-			if(el.attr('disabled')){
-				return;
-			}
-			pgTo(el.attr('value'));
-		});
-		ele.find('ks-input-group > input').keyup(function(e){
-			if(e.keyCode === 13){
-				pgTo(this.value);
-			}
-		}).focus(function(){
-			$(this).select();
-		});
-	});
-	return this;
-}
 
 /**
  * 幻灯轮播
@@ -2493,7 +2381,7 @@ $.newForm = function(data){
 				});
 			}
 			//监听属性禁用变化事件
-			t.on('ksaEventAttr', function(){
+			t.DOMchange('attr.disabled', function(){
 				t.next().attr('disabled', $(this).attr('disabled'));
 			});
 		},
@@ -2634,7 +2522,7 @@ $.newForm = function(data){
 			});
 			
 			//监听属性禁用变化事件
-			t.on('ksaEventAttr', function(){
+			t.DOMchange('attr.disabled', function(){
 				t.parent().attr('disabled', $(this).attr('disabled'));
 			});
 			
@@ -2709,7 +2597,93 @@ $.newForm = function(data){
 		},
 		//分页初始化
 		'ks-page' : function(ele){
-			$(ele).page();
+			function _pgTo(val, isInit){
+				if(ele.attr('disabled')  || val == ele[0].value){
+					return;
+				}
+				if(val ==='prev'){
+					val = ele[0].value - 1;
+					val = val < 1 ? 1 : val;
+				}else if(val === 'next'){
+					val = ele[0].value + 1;
+					val = val > total ? total : val;
+				}
+				val = parseInt(val);
+							
+				ele.children('ks-page-prev').attr('disabled', val ===1);
+				ele.children('ks-page-first').attr('disabled', val < pageNum / 2);
+	
+				ele.children('ks-page-next').attr('disabled', val === total);
+				ele.children('ks-page-last').attr('disabled', val > total- pageNum / 2);
+	
+				ele.attr('current', val);
+				ele[0].value = val;
+				var startPg = val - ((pageNum - 1) / 2);
+				var endPg = total - pageNum+1;
+				startPg = startPg < 1 ? 1 : (startPg > endPg ? endPg : startPg);
+				ele.children('a').map(function (a) {
+					$(a).attr('value', startPg).text(startPg);
+					startPg++;
+				});
+				ele.children('a[value="'+val+'"]').addClass('a').siblings('a').removeClass('a');
+				ele.find('.ks-input-group > input').val(val);
+				!isInit && ele.trigger('change');
+			}
+	
+			ele = $(ele);
+			var total = parseInt(ele.attr('total') || 0);
+			if(!total){
+				return;
+			}
+			var current = parseInt(ele.attr('current') || 1);
+			var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
+	
+			//给当前ele添加value属性值
+			//ele[0].value = current;
+			var href = ele.attr('href');
+			var pgcode = '';
+			(function(){
+				var start = Math.ceil(current - ((pageNum - 1) / 2));
+				start = start < 1 ? 1 : start;
+				var mx = Math.min(total+1, start+pageNum);
+				if(mx <=2){
+					return;
+				}
+				for(var i = start; i < mx; i++) {
+					var txt = i;
+					var val = i;
+					var attr = ' value="' + val + '"';
+					if (href) {
+						attr += ' href="' + href.replace('{{page}}', val) + '"';
+					}
+					pgcode += '<a ' + attr + '>' + txt + '</a>';
+				}
+			})();
+			if(!pgcode){
+				return;
+			}
+			var H = '<ks-page-first icon="first_page" value="1"></ks-page-first><ks-page-prev icon="arrow_left" value="prev"></ks-page-prev>';
+			H += pgcode;
+			H += '<ks-page-next icon="arrow_right" value="next"></ks-page-next><ks-page-last icon="last_page" value="'+total+'"></ks-page-last>';
+			if($.isset(ele.attr('quick'))){
+				H += '<ks-input-group><i>转</i><input type="text" value="'+current+'"><i>页</i></ks-input-group>';
+			}
+			ele.html(H);
+			_pgTo(current, true);
+			ele.children('*:not(ks-input-group)').click(function(){
+				var el = $(this);
+				if(el.attr('disabled')){
+					return;
+				}
+				_pgTo(el.attr('value'));
+			});
+			ele.find('ks-input-group > input').keyup(function(e){
+				if(e.keyCode === 13){
+					_pgTo(this.value);
+				}
+			}).focus(function(){
+				$(this).select();
+			});
 		},
 		//表单结构初始化
 		'ks-form' : function(dom){
@@ -2788,6 +2762,82 @@ $.newForm = function(data){
 			if(!ele.children('ks-card-title').length && attrs.title){
 				ele.prepend('<ks-card-title '+(attrs.icon ? 'icon="'+attrs.icon+'"' : '')+'>'+attrs.title+'</ks-card-title>').attr('title icon','');
 			}
+		},
+		'ks-avatar' : function(ele){
+			function _updt(el){
+				el = $(el);
+				var attr = el.attr();
+				el.attr('username src','');
+				
+				var code = '', username = attr.username && !attr.src ? attr.username : null;
+				var size = attr.size;
+				if(username){
+					code = '<span class="ks-avatar-name"></span>';
+				}else if(attr.src){
+					code = ('<img src="'+attr.src+'">');
+				}else{
+					code = '<i icon="user"></i>';
+				}
+				el[0].innerHTML = code;
+				if(username){
+					var unameEl = el.children('.ks-avatar-name');
+					unameEl.text(username);
+					//监听name表单变化
+					var w = unameEl.width(true), pw = unameEl.parent().width(true);
+					var scale = Math.min(  (size ==='mini' ? 0.75 : 1) , (pw-6)/w);
+					unameEl.css('transform','scale('+scale+') translateX(-50%)');
+				}
+				
+			}
+			_updt(ele);
+			$(ele).DOMchange('attr.src attr.size attr.text', function(v){
+				_updt(this);
+			});
+		},
+		'ks-alert' : function(ele){
+			var ele = $(ele), attrs = ele.attr(), isClose = $.isset(attrs.close);
+			var prehtml = '';
+			if(attrs.title){
+				prehtml += '<ks-alert-title>'+attrs.title+'</ks-alert-title>';
+			}
+			if(isClose){
+				prehtml += '<ks-alert-close icon="close"></ks-alert-close>';
+			}
+			ele.prepend(prehtml);
+			ele.attr('title','');
+			if(isClose){
+				ele.children('ks-alert-close').click(function(){
+					ele.css('opacity','0');
+					window.setTimeout(function(){
+						ele.remove();
+					},300);
+				});
+			}
+		},
+		'ks' : function(ele){
+			ele = $(ele);
+			//显示底部导航对应的内容区
+			function _navbarContentShow(el, key){
+				el.parent('ks-navbar').prev('ks-content').children('ks-navbar-content[key="'+key+'"]').show().siblings('ks-navbar-content').hide();
+			}
+			ele.find('ks-body > ks-navbar > ks-navbar-item[key]').each(function(i, el){
+				var attrs = $.attrs(el);
+				el = $(el);
+				if(attrs.active){
+					_navbarContentShow(el, attrs.key);
+				}
+				el.click(function(){
+					$(this).attr('active', true)
+				}).DOMchange('attr.active', function(){
+					var el = $(this);
+					if(el.attr('active')){
+						//去掉同辈活动状态
+						el.siblings().attr('active','');
+						//更新content
+						_navbarContentShow(el, attrs.key);
+					}
+				});
+			});
 		}
 	});
 

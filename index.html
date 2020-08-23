@@ -133,7 +133,7 @@
 <div id="mvvm"></div>
 <script>
     var KTPL;
-    (function(){
+    (function(){return;
         console.time('KSA');
         KTPL = $.tpl({
             data:sdt,
@@ -154,8 +154,46 @@
 */
     })()
 </script>
-
+<div id="window" style="width:300px; height: 600px; position: relative; overflow: hidden; background: #eee; margin: 100px;"></div>
 <script>
+    //$.layerEL = '#window';
+    $.openWindow({
+        el : '#window', //弹出的框架限制在ks标签内
+        title : '我的',
+        backEvent : true, //接管浏览器返回事件
+        content : '<div class="ks-p4">'+
+        '<div class="ks-mb3 ks-tc">'+
+            '<ks-avatar small="big" username="User"></ks-avatar>'+
+        '</div>'+
+        '<ks-list>'+
+                '<ks-list-item icon="arrow_right">'+
+                    '帐户余额'+
+                    '<small>888.00元</small>'+
+                '</ks-list-item>'+
+                '<ks-list-item icon="arrow_right">'+
+                    '收货地址'+
+                    '<small style="width:100%; line-height: normal;">李大毛 12345678901<br>北京市东城区东北大巷吉林街123号</small>'+
+                '</ks-list-item>'+
+                '<ks-list-item icon="arrow_right">'+
+                    '系统设置'+
+                    '<small>更多设置</small>'+
+                '</ks-list-item>'+
+                '<ks-list-item>'+
+                    '系统更新 <ks-dot color="red"></ks-dot>'+
+                    '<small>有更新</small>'+
+                '</ks-list-item>'+
+                '<ks-list-item>'+
+                    '客服电话'+
+                    '<small>400-0000-0000</small>'+
+                '</ks-list-item>'+
+                '<ks-list-item>'+
+                    '关于我们'+
+                    '<small>隐私政策</small>'+
+                '</ks-list-item>'+
+            '</ks-list>'+
+        '</div>'
+    })
+    
     /*
     (function(template){
         var tpl = {
