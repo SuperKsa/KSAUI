@@ -256,6 +256,41 @@ function debugTime(key){
 	}, false);
 
 	/**
+	 * 监听dom变化（仅在KSA语法中有效）
+	 */
+	K.DOMchange = function(action, Callback){
+		this.map(function(ele){
+			var isBindEvent = ele.KSADOMchangeEvent ? true : false;
+			if(!ele.KSADOMchangeEvent){
+				ele.KSADOMchangeEvent = {};
+			}
+			$.loop($.explode(' ', action, ''), function(ac){
+				ac = ac.toLowerCase();
+				if(!ele.KSADOMchangeEvent[ac]){
+					ele.KSADOMchangeEvent[ac] = [];
+				}
+				ele.KSADOMchangeEvent[ac].push(Callback);
+			});
+			//如果已经绑定过事件，则不再绑定
+			if(isBindEvent){
+				return;
+			}
+			$(ele).on('KSADOMchange', function(e){
+				var ths = this, Arg = e.KSAcallbackArgs;
+				Arg[0] = Arg[0].toLowerCase();
+				//Arg参数 1=动作 2=新值 3=旧值
+				if(!this.KSADOMchangeEvent || !this.KSADOMchangeEvent[Arg[0]]){
+					return;
+				}
+				$.loop(this.KSADOMchangeEvent[Arg[0]], function(fun){
+					fun.apply(ths, [Arg[1],Arg[2]]);
+				});
+			});
+		});
+		return this;
+	}
+
+	/**
 	 * 克隆一个元素
 	 * 与jQuery用法相同
 	 * @param {boolean} withs 是否需要克隆子元素
@@ -393,6 +428,33 @@ function debugTime(key){
 
 		return false;
 	}
+	var ElementAttrBooleanArr = ['active','checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
+
+	/**
+	 * 检查指定属性是否为DOM元素的原生DOM属性
+	 * @param {*} attr 
+	 */
+	$.isAttrBoolean = function(attr){
+		return attr && $.inArray(attr, ElementAttrBooleanArr);
+	}
+	/**
+	 * 读取指定元素所有attr属性值
+	 * @param {*} ele 
+	 */
+	$.attrs = function(ele){
+		if(!ele || !ele.attributes){
+			return;
+		}
+		var attrs = {};
+		$.loop(ele.attributes, function(val){
+			var v = val.value;
+			if($.inArray(val.name, ElementAttrBooleanArr)){
+				v = v ==='' ? true  : !!v;
+			}
+			attrs[val.name] = v;
+		});
+		return attrs;
+	}
 
 	/**
 	 * attr操作
@@ -421,7 +483,6 @@ function debugTime(key){
 		if(!keyIsobj){
 			key = $.explode(' ', key, '');
 		}
-		var BooleanArr = ['checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
 		var dataAttr = {};//需要变更的-data属性
 		if(md =='get'){
 			var ele = this[0];
@@ -431,26 +492,25 @@ function debugTime(key){
 			var attrs = {};
 			//读取所有标签属性
 			if(!isvalue && !isKey){
-				$.loop(ele.attributes, function(val){
-					if($.inArray(val.name, BooleanArr)){
-						val.value = val.value ==='' ? true  : !!val.value;
-					}
-					attrs[val.name] = val.value;
-				});
-
+				attrs = $.attrs(ele);
 			}else{
-
 				$.loop(key, function(k) {
-					if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
-						attrs[k] = !!ele[k];
+					var isVboolean = $.isAttrBoolean(k);
+					if(isVboolean){
+						//布尔值属性先从元素attr中读取
+						var v = ele.getAttribute(k);
+						if(!$.isNull(v)){
+							attrs[k] = $.inArray(v, ['','true', k]) ? true : false;
+						//元素attr不存在时 从自带属性读取
+						}else if($.isset(ele[k])){
+							attrs[k] = !!ele[k];
+						}
 					}else{
 						var attrV = ele.getAttribute(k);
 						if(!$.isNull(attrV)){
-							attrV = attrV === '' && $.inArray(k, BooleanArr) ? true : attrV; //如果属性值为空 则修改值为属性名
+							attrV = attrV === '' ? k : attrV; //如果属性值为空 则修改值为属性名
 							attrs[k] = attrV;
 						//标签属性值不存在时 从元素dom属性取值
-						}else if (k !== 'style' && $.isNull(attrV) && $.isset(ele[k])) {
-							attrs[k] = ele[k];
 						}
 					}
 				});
@@ -462,7 +522,6 @@ function debugTime(key){
 			}
 		//写入模式
 		}else if(md =='set') {
-
 			var sets;
 			if (keyIsobj) {
 				sets = key;
@@ -474,23 +533,36 @@ function debugTime(key){
 			}
 			if (sets) {
 				this.map(function (ele) {
+					var oldAttrs = $.attrs(ele);
+					var isUpdate;
 					$.loop(sets, function (val, k) {
-						//元素属性支持布尔值
-						if ($.inArray(k, BooleanArr)) {
-							ele[k] = val;
-							val = val ? k : (!val ? null : val);
+						val = val === '' ? null : val;
+						var isAttrBoolean = $.isAttrBoolean(k);
+						var isEleAttr = $.isset(ele[k]);
+						if(isAttrBoolean){
+							val = val ? true : false;
 						}
-						if (val === '' || val === null) {
-							ele.removeAttribute(k);
-						} else {
-							ele.setAttribute(k, val);
-						}
-						if (k.indexOf('data-') === 0) {
-							dataAttr[k.substr(5)] = val;
+						//新旧值不同才更新
+						if(!$.isset(oldAttrs[k]) || val !== oldAttrs[k]){
+							//如果属性值是布尔值
+							if (isAttrBoolean) {
+								if(isEleAttr){
+									ele[k] = val;
+								}
+								(val ? ele.setAttribute(k, k) : ele.removeAttribute(k));
+							}else{
+								(!$.isNull(val) ? ele.setAttribute(k, val) : ele.removeAttribute(k));
+							}
+							$(ele).trigger('KSADOMchange', ['attr.'+k, val, oldAttrs[k]]);
+
+							if (k.indexOf('data-') === 0) {
+								dataAttr[k.substr(5)] = val;
+							}
+							isUpdate = 1;
 						}
 					});
 					//触发ele的属性变更事件
-					$(ele).trigger('ksaEventAttr');
+					isUpdate && $(ele).trigger('KSADOMchange',['attr']);
 				});
 			}
 			if(!$.isEmpty(dataAttr)){
@@ -501,13 +573,15 @@ function debugTime(key){
 		}else if(md == 'del'){
 
 			this.map(function (ele) {
+				var attrs = $.attrs(ele);
 				$.loop(key, function(k){
-					if($.isset(ele[k]) && $.inArray(k, BooleanArr)){
+					if($.isAttrBoolean(k) && $.isset(ele[k])){
 						ele[k] = false;
 					}else if (k.indexOf('data-') === 0) {
 						dataAttr[k.substr(5)] = null;
 					}
 					ele.removeAttribute(k);
+					$.isset(attrs[k]) && $(ele).trigger('KSADOMchange', ['attr.'+k]);
 				});
 			});
 			if(!$.isEmpty(dataAttr)){
@@ -569,13 +643,18 @@ function debugTime(key){
 					});
 				}
 				$.loop(setData, function(v, k){
+					v = v === '' ? null : v;
 					var sk = 'data-'+k;
 					if(!$.isObject(v)){
-						if(v ==='' || v === null){
+						//值为null则删除
+						if($.isNull(v)){
 							ele.removeAttribute(sk);
 							$.isset(_Attrs[k]) && delete _Attrs[k];
-						}else{
+							$(ele).trigger('KSADOMchange', ['data.'+k]);
+						//值不同才更新
+						}else if(_Attrs[k] !== v){
 							ele.setAttribute(sk, v);
+							$(ele).trigger('KSADOMchange', ['data.'+k, v, _Attrs[k]]);
 							_Attrs[k] = v;
 						}
 					}else{
@@ -626,8 +705,12 @@ function debugTime(key){
 				var _Attrs = ele._KSAOS_COM_ELE_DATA;
 				if(_Attrs){
 					$.loop(key, function(k){
-						delete _Attrs[k];
-						ele.removeAttribute('data-'+k);
+						if($.isset(_Attrs[k])){
+							$(ele).trigger('KSADOMchange', ['data.'+k, undefined, _Attrs[k]]);
+							ele.removeAttribute('data-'+k);
+							delete _Attrs[k];
+						}
+						
 					});
 				}
 			});
@@ -655,7 +738,9 @@ function debugTime(key){
 	 */
 	K.empty = function(){
 		this.map(function(ele){
+			var h = ele.innerHTML;
 			ele.innerHTML = '';
+			$(ele).trigger('KSADOMchange', ['html', '', h]);
 		});
 		return this;
 	}
@@ -667,8 +752,8 @@ function debugTime(key){
 	 * @returns {K|[]}
 	 */
 	K.val = function(value){
+		//写入值
 		if($.isset(value) && value !== null){
-
 			this.map(function(ele, index){
 				if($.inArray(ele.tagName, ['INPUT','SELECT','TEXTAREA'])) {
 					if($.isFunction(value)) {
@@ -681,6 +766,7 @@ function debugTime(key){
 						}
 						value = value.call(ele, index, oldvalue);
 					}
+					//所有选中状态必须经过attr函数 否则无法完成变更事件触发
 					switch (ele.tagName) {
 						case 'INPUT':
 							var tp = ele.getAttribute('type');
@@ -689,13 +775,13 @@ function debugTime(key){
 							if(tp ==='checkbox'){
 								var val = $(ele).attr('value');
 								if($.isset(val)){
-									ele.checked = $.isArray(value) ? $.inArray(val, value) : val == value;
+									$(ele).attr('checked', $.isArray(value) ? $.inArray(val, value) : val == value);
 								}else{
-									ele.checked = $.isObject(value) ? $.isEmpty(value) : !!value;
+									$(ele).attr('checked', $.isObject(value) ? $.isEmpty(value) : !!value);
 								}
 								
 							}else if(tp ==='radio'){
-								ele.checked = $(ele).attr('value') == value;
+								$(ele).attr('checked',  $(ele).attr('value') == value);
 							}else{
 								ele.value = value;
 							}
@@ -717,6 +803,7 @@ function debugTime(key){
 							break;
 						default:
 					}
+					$(ele).trigger('KSADOMchange', ['val', value]);
 				}
 			});
 			return this;
@@ -767,14 +854,18 @@ function debugTime(key){
 		if($.isset(value)){
 			this.map(function(ele, index){
 				if (ele.nodeType === 1 || ele.nodeType === 11 || ele.nodeType === 9) {
-					ele.textContent = $.isFunction(value) ? value.call(ele, index, ele.textContent) : value;
+					var oldtxt = ele.textContent;
+					if(oldtxt != value){
+						ele.textContent = $.isFunction(value) ? value.call(ele, index, oldtxt) : value;
+						$(ele).trigger('KSADOMchange', ['html', value, oldtxt]);
+					}
 				}
 			});
 			return this;
 		}else {
 			var t = [];
 			this.map(function (ele) {
-				t.push(ele.textContent);
+				t.push(ele.textContent || '');
 			});
 			return t.join("\n");
 		}
@@ -805,12 +896,13 @@ function debugTime(key){
 		if($.isset(value)){
 			this.map(function(ele, index){
 				$(ele).empty().append($.isFunction(value) ? value.call(ele, index, ele.innerHTML) : value);
+				$(ele).trigger('KSADOMchange', ['html']);
 			});
 			return this;
 		}else{
 			var t = [], i=0;
 			this.map(function(ele){
-				t[i] = ele.innerHTML || value.innerText;
+				t[i] = ele.innerHTML || ele.textContent || '';
 				i ++;
 			});
 			return t.join("\n");
@@ -885,7 +977,10 @@ function debugTime(key){
 	 */
 	K.remove = function(){
 		this.map(function(ele){
-			ele.parentNode && ele.parentNode.removeChild(ele);
+			if(ele.parentNode){
+				ele.parentNode.removeChild(ele);
+				$(ele).trigger('KSADOMchange', ['remove']);
+			}
 		});
 		return this;
 	}
@@ -898,7 +993,10 @@ function debugTime(key){
 	 */
 	K.after = function (html) {
 		return tempDom.call(this, html, function(ele, node){
-			ele.parentNode && ele.parentNode.insertBefore(node, ele.nextSibling);
+			if(ele.parentNode){
+				ele.parentNode.insertBefore(node, ele.nextSibling);
+				$(ele).trigger('KSADOMchange', ['after']);
+			}
 		}, true);
 	}
 
@@ -910,7 +1008,10 @@ function debugTime(key){
 	 */
 	K.before = function (html) {
 		return tempDom.call(this, html, function(ele, node){
-			ele.parentNode && ele.parentNode.insertBefore(node, ele);
+			if(ele.parentNode){
+				ele.parentNode.insertBefore(node, ele);
+				$(ele).trigger('KSADOMchange', ['before']);
+			}
 		});
 	}
 
@@ -926,6 +1027,7 @@ function debugTime(key){
 				return;
 			}
 			ele.appendChild(node);
+			$(ele).trigger('KSADOMchange', ['append']);
 		});
 	}
 
@@ -938,6 +1040,7 @@ function debugTime(key){
 	K.prepend = function (html) {
 		return tempDom.call(this, html, function(ele, node){
 			ele.insertBefore(node, ele.firstChild);
+			$(ele).trigger('KSADOMchange', ['prepend']);
 		}, true);
 	}
 
@@ -951,7 +1054,6 @@ function debugTime(key){
 		this.map(function(e, index){
 			var dom = $.dom($.isFunction(html) ? html.call(e, index) : html);
 			$(e).after(dom);
-
 			$(dom).html(e);
 		});
 
@@ -1015,10 +1117,7 @@ function debugTime(key){
 				return size;
 			}
 		}else{
-			val = $.isNumber(val) ? val+'px' : val;
-			this.map(function(e){
-				e.style.height = val;
-			});
+			this.css('height', $.isNumber(val) ? val+'px' : val);
 			return this;
 		}
 	}
@@ -1048,10 +1147,7 @@ function debugTime(key){
 			}
 
 		}else{
-			val = $.isNumber(val) ? val+'px' : val;
-			this.map(function(e){
-				e.style.width = val;
-			});
+			this.css('width', $.isNumber(val) ? val+'px' : val);
 			return this;
 		}
 	}
@@ -1089,6 +1185,7 @@ function debugTime(key){
 	K.show = function(){
 		this.map(function(e){
 			e.style.display = "block";
+			$(e).trigger('KSADOMchange', ['show']);
 		});
 		return this;
 	}
@@ -1101,6 +1198,7 @@ function debugTime(key){
 	K.hide = function(){
 		this.map(function(e){
 			e.style.display = "none";
+			$(e).trigger('KSADOMchange', ['hide']);
 		});
 		return this;
 	}
@@ -1282,9 +1380,16 @@ function debugTime(key){
 			style = style.length ? $.implode('; ',style) : '';
 			if(sets) {
 				this.map(function (e) {
+					var isEdit;
 					$.loop(sets, function(v, k){
-						e.style[k] = v;
+						if(e.style[k] != v){
+							var oldv = e.style[k];
+							e.style[k] = v;
+							$(e).trigger('KSADOMchange', ['css.'+k, v, oldv]);
+							isEdit = 1;
+						}
 					});
+					isEdit && $(e).trigger('KSADOMchange', ['css']);
 				});
 				return this;
 			}else{
@@ -1366,7 +1471,7 @@ function debugTime(key){
 	 * @param callback
 	 * @returns {[]}
 	 */
-	K.map = function(elements, callback){
+	$.map = K.map = function(elements, callback){
 		var isThis = false;
 		if(!callback && $.isFunction(elements)){
 			callback = elements;
@@ -1391,7 +1496,7 @@ function debugTime(key){
 	 * 取集合范围
 	 * @returns {*[]}
 	 */
-	$.slice = function(){
+	$.slice = K.slice = function(){
 		var arr = $();
 		$.loop([].slice.apply(this, arguments), function(e){
 			arr.push(e);
