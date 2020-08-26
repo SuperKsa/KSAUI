@@ -518,7 +518,6 @@ function debugTime(key){
 					}else{
 						var attrV = ele.getAttribute(k);
 						if(!$.isNull(attrV)){
-							attrV = attrV === '' ? k : attrV; //如果属性值为空 则修改值为属性名
 							attrs[k] = attrV;
 						//标签属性值不存在时 从元素dom属性取值
 						}
