@@ -1,0 +1,285 @@
+/* \.(.*?): 替换为 [icon=$1]:  */
+@font-face {
+    font-family: 'ksaui';  /* project id 1671843 */
+    src: url('//at.alicdn.com/t/font_1671843_z4ulg4zq6nm.eot');
+    src: url('//at.alicdn.com/t/font_1671843_z4ulg4zq6nm.eot?#iefix') format('embedded-opentype'),
+    url('//at.alicdn.com/t/font_1671843_z4ulg4zq6nm.woff2') format('woff2'),
+    url('//at.alicdn.com/t/font_1671843_z4ulg4zq6nm.woff') format('woff'),
+    url('//at.alicdn.com/t/font_1671843_z4ulg4zq6nm.ttf') format('truetype'),
+    url('//at.alicdn.com/t/font_1671843_z4ulg4zq6nm.svg#ksaui') format('svg');
+  }
+
+*[icon]:before,*[icon]:after {font-family: "ksaui"; font-style: normal; font-weight: normal; display:inline;}
+[icon=loading]:before { display: inline-block; animation:spin 1s infinite linear; line-height: normal; border-radius: 100%;}
+[icon]:not(:empty):before {margin-right: 3px}
+/*============================================*/
+
+[checkbox-indeter]:before {
+    content: "\e66d";
+}
+
+[icon=clear]:before {
+    content: "\e66c";
+}
+
+[icon=ishide]:before {
+    content: "\e66a";
+}
+
+[icon=isshow]:before {
+    content: "\e66b";
+}
+
+[icon=account]:before {
+    content: "\e669";
+}
+
+[icon=password-1]:before {
+    content: "\e667";
+}
+
+[icon=password]:before {
+    content: "\e668";
+}
+
+
+[icon=wancheng]:before {
+    content: "\e666";
+}
+
+[icon=daifahuo]:before {
+    content: "\e661";
+}
+
+[icon=daishouhuo]:before {
+    content: "\e662";
+}
+
+[icon=daifukuan]:before {
+    content: "\e663";
+}
+
+[icon=tuikuan]:before {
+    content: "\e664";
+}
+
+[icon=pingjia]:before {
+    content: "\e665";
+}
+
+
+[icon=back]:before {
+    content: "\e660";
+}
+
+[icon=date]:before {
+    content: "\e972";
+}
+
+[icon=filter]:before {
+    content: "\e65f";
+}
+
+[icon=caret-down]:before {
+    content: "\e65b";
+}
+
+[icon=caret-left]:before {
+    content: "\e65c";
+}
+
+[icon=caret-right]:before {
+    content: "\e65d";
+}
+
+[icon=caret-up]:before {
+    content: "\e65e";
+}
+
+[icon=praise]:before {
+    content: "\e659";
+}
+
+[icon=view]:before {
+    content: "\e65a";
+}
+
+[icon=code]:before {
+    content: "\e6b8";
+}
+
+[icon=send]:before {
+    content: "\e60c";
+}
+
+[icon=system]:before {
+    content: "\e60d";
+}
+
+[icon=article]:before {
+    content: "\e60e";
+}
+
+[icon=refresh]:before {
+    content: "\e60b";
+}
+
+[icon=add]:before {
+    content: "\e60a";
+}
+
+[icon=sub]:before {
+    content: "\e658";
+}
+
+[icon=ksaos]:before {
+    content: "\e653";
+}
+
+[icon=dot]:before {
+    content: "\e651";
+}
+
+[icon=hook]:before {
+    content: "\e652";
+}
+
+[icon=mobile]:before {
+    content: "\e650";
+}
+
+[icon=service]:before {
+    content: "\e609";
+}
+
+[icon=angle-right]:before {
+    content: "\e608";
+}
+
+[icon=success]:before {
+    content: "\e64f";
+}
+
+[icon=error]:before {
+    content: "\e64e";
+}
+
+[icon=alipay]:before {
+    content: "\e606";
+}
+
+[icon=wechat]:before {
+    content: "\e607";
+}
+
+[icon=post]:before {
+    content: "\e64b";
+}
+
+[icon=home]:before {
+    content: "\e64c";
+}
+
+[icon=user]:before {
+    content: "\e64d";
+}
+
+[icon=loading]:before {
+    content: "\e604";
+}
+
+[icon=calendar]:before {
+    content: "\e64a";
+}
+
+[icon=close]:before {
+    content: "\e603";
+}
+
+[icon=check-cir]:before {
+    content: "\e600";
+}
+
+[icon=first_page]:before {
+    content: "\e742";
+}
+
+[icon=visibility]:before {
+    content: "\e98d";
+}
+
+[icon=info]:before {
+    content: "\e7a4";
+}
+
+[icon=arrow_down]:before {
+    content: "\e7a9";
+}
+
+[icon=arrow_left]:before {
+    content: "\e7aa";
+}
+
+[icon=arrow_up]:before {
+    content: "\e7b2";
+}
+
+[icon=cloud_upload]:before {
+    content: "\e6b9";
+}
+
+[icon=last_page]:before {
+    content: "\e7be";
+}
+
+[icon=search]:before {
+    content: "\e8c2";
+}
+
+[icon=arrow_right]:before {
+    content: "\e7da";
+}
+
+[icon=delete]:before {
+    content: "\e6de";
+}
+
+[icon=shop]:before {
+    content: "\e8e5";
+}
+
+[icon=check]:before {
+    content: "\e601";
+}
+
+[icon=check-checked]:before {
+    content: "\e602";
+}
+
+[icon=check_circle]:before {
+    content: "\e599";
+}
+
+[icon=lorry]:before {
+    content: "\e7ed";
+}
+
+[icon=edit]:before {
+    content: "\e6fe";
+}
+
+[icon=emot-low]:before {
+    content: "\e806";
+}
+
+[icon=emot-happy]:before {
+    content: "\e80a";
+}
+
+[icon=arrow_drop_down]:before {
+    content: "\e630";
+}
+
+[icon=arrow_drop_up]:before {
+    content: "\e633";
+}

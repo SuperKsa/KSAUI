@@ -192,38 +192,39 @@ ks-alert {
 	ks-alert-title { display: block; width: 100%; margin-bottom: 5px; font-weight: 600;}
 }
 //============== TAB选项卡 ==============
-.ks-tab {
-	width:100%; height: auto;
-.ks-tab-title {
+ks-tab,
+ks-tab-title,
+ks-tab-content,
+ks-tab-item,
+ks-tab-touch-content {display: block; width: 100%; height: auto;}
+ks-tab-touch-content {overflow: hidden}
+
+ks-tab {
+	display: block;
+
+	ks-tab-content {transition:all 0.1s ease-in-out;}
+	.ks-tab-item:not(:first-of-type) { display: none}
+
+	ks-tab-title {
 		width: 100%; height: 40px; line-height: 40px; position: relative;
-		ul { float: left;}
-		li { float: left; padding: 0 10px; min-width: 60px; user-select: none; text-align: center;  margin-right: 10px; cursor: pointer; position: relative}
-		li a { display: block; float: left; color: inherit}
-		li[active], li[active] a { color: #495057}
-		li:after { content: ''; height: 4px; width:0; position: absolute; left:50%; bottom: 0; background: transparent; border-radius: 4px; transition: all 0.3s}
-		li:hover:after { background: #ccc;}
-		li:hover:after, li[active]:after {margin-left: -20px; width: 40px;}
-		li[active]:after { background: @primary;}
-		li:last-of-type { margin-right: 0}
+		ks-tab-title-status,
+		ks-tab-title-item:hover:after {
+			height: 4px; width:40px; position: absolute; left:30px; bottom: 0; background: @primary; border-radius: 4px; transition: all 0.3s; margin:0 0 0 -20px; z-index: 10;
+		}
+		ks-tab-title-item {
+			float: left; padding: 0 10px; min-width: 60px; user-select: none; text-align: center;  margin-right: 10px; cursor: pointer; position: relative;
+			&[active], &[active] a { color: #495057}
+			&:last-of-type { margin-right: 0}
+			&:hover:after { content:''; background: #ccc; left: 50%; z-index: 1}
+		}
 	}
 
 
 
-	.ks-tab-content {
-		display:block; width:100%; overflow: hidden; transition:all 0.1s ease-in-out;
-		&._move {transition:none}
-	}
-
-	.ks-tab-item {
-		&:not(:first-of-type) { display: none}
-	}
-	ks-tab-touch-content { display: block; width: 100%; height: auto; overflow: hidden}
-	&[touch] > ks-tab-touch-content > .ks-tab-content > .ks-tab-item{
+	&[touch] > ks-tab-touch-content > ks-tab-content > ks-tab-item{
 		float: left; display: block;
 	}
 }
-
-
 
 
 
@@ -1372,6 +1373,15 @@ ks-area {
 .ks-sidebar { width: 240px; background: #06101b; position: absolute; left: 0; top: 0; bottom: 0; z-index: 999}
 .ks-sidebar, .ks-sidebar a { color: rgba(255,255,255,.5)}
 .ks-sidebar .ks-menu > .ks-label { color: rgba(255,255,255,.9)}
+
+
+
+//============== 附加效果 ==============
+//去掉动画
+.ks-no-transition {transition:none !important;}
+//默认动画 线性3ms
+.ks-transition {transition:all 0.2s ease-in-out;}
+
 /*
 	@media (max-width: 1000px) {
 		.ks-sidebar { width: 200px;}

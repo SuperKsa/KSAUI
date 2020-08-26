@@ -1982,7 +1982,7 @@ function debugTime(key){
 				cx = ex-X;
 				cy = ey - Y; //得到xy终点坐标
 				//滑动距离必须超过10个像素时才触发
-				if(!action && (Math.abs(cx) >=20 || Math.abs(cy) >=20)) {
+				if(!action && (Math.abs(cx) >8 || Math.abs(cy) >8)) {
 					var ages = $.rightTriangleAge(cx, cy);
 					//滑动角度判断 15度以内为左右滑动
 					if (ages.scale < 15) {
