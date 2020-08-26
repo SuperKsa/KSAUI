@@ -96,11 +96,8 @@ label {white-space: nowrap;}
 //滚动条里面轨道
 ::-webkit-scrollbar-track { background: #ededed; border-radius: 10px;}
 
-
-
 //============== 清理浮动 ==============
 ks-col:after, ks-card:after, ks-card-content:after, .ks-step:after, ks-col:after, ks-layout:after, ks-alert:after { content: ''; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
-
 
 //============== 自定义新元素 ==============
 	// 货币
@@ -195,26 +192,42 @@ ks-alert {
 	ks-alert-title { display: block; width: 100%; margin-bottom: 5px; font-weight: 600;}
 }
 //============== TAB选项卡 ==============
-.ks-tab {}
-.ks-tab-title { 
-	width: 100%; height: 40px; line-height: 40px; position: relative;
-	ul { float: left;}
-	li { float: left; padding: 0 10px; min-width: 60px; user-select: none; text-align: center;  margin-right: 10px; cursor: pointer; position: relative}
-	li a { display: block; float: left; color: inherit}
-	li.a, li.a a { color: #495057}
-	li:after { content: ''; height: 4px; width:0; position: absolute; left:50%; bottom: 0; background: transparent; border-radius: 4px; transition: all 0.3s}
-	li:hover:after { background: #ccc;}
-	li:hover:after, li.a:after {margin-left: -20px; width: 40px;}
-	li.a:after { background: @primary;}
-	li:last-of-type { margin-right: 0}
+.ks-tab {
+	width:100%; height: auto;
+.ks-tab-title {
+		width: 100%; height: 40px; line-height: 40px; position: relative;
+		ul { float: left;}
+		li { float: left; padding: 0 10px; min-width: 60px; user-select: none; text-align: center;  margin-right: 10px; cursor: pointer; position: relative}
+		li a { display: block; float: left; color: inherit}
+		li[active], li[active] a { color: #495057}
+		li:after { content: ''; height: 4px; width:0; position: absolute; left:50%; bottom: 0; background: transparent; border-radius: 4px; transition: all 0.3s}
+		li:hover:after { background: #ccc;}
+		li:hover:after, li[active]:after {margin-left: -20px; width: 40px;}
+		li[active]:after { background: @primary;}
+		li:last-of-type { margin-right: 0}
+	}
+
+
+
+	.ks-tab-content {
+		display:block; width:100%; overflow: hidden; transition:all 0.1s ease-in-out;
+		&._move {transition:none}
+	}
+
+	.ks-tab-item {
+		&:not(:first-of-type) { display: none}
+	}
+	ks-tab-touch-content { display: block; width: 100%; height: auto; overflow: hidden}
+	&[touch] > ks-tab-touch-content > .ks-tab-content > .ks-tab-item{
+		float: left; display: block;
+	}
 }
 
 
-.ks-tab-title[data-tab-block] ul {display: flex}
-.ks-tab-title[data-tab-block] li {flex: 1; margin: 0}
 
-.ks-tab .ks-tab-item { display: none;}
-.ks-tab .ks-tab-item:first-of-type { display: block}
+
+
+
 
 //============== 分页样式处理 ==============
 ks-page {

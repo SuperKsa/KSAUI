@@ -326,7 +326,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 
 	var EL = $(option.el || 'body');
 	//EL尺寸与位置
-	var ELSize = {W:EL.width(), H:EL.height(), L:EL.offset().left, T:EL.offset().top};
+	var ELSize = {W:EL.width(true), H:EL.height(true), L:EL.offset().left, T:EL.offset().top};
 
 	//手机端默认监听后退事件
 	if(option.backEvent === null && $.device =='MOBILE'){
@@ -433,7 +433,6 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 
 			$(EL).append(D);
 
-
 			//遮罩层点击关闭事件
 			if(option.cover) {
 				var cover = $('<div class="ks-layer-cover" data-layer-key="' + Id + '" style="z-index: ' + (Id - 1) + '"></div>');
@@ -497,7 +496,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 		//CSS定位动画
 		var css = {margin: '100px 0 0 0', left: 0, top: 0};
 
-		function P() {
+		(function(){
 			var pos = option.pos;
 			var w = D.width(true), h = D.height(true);
 			if ($.inArray(pos, ['00',1, 2, 3, 4, 5, 6, 7, 8, 9])) {
@@ -562,9 +561,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 				}
 			}
 			D.css(css);
-		}
-
-		P();
+		})();
 
 		setTimeout(function () {
 			if(!$.isset(option.bodyOver) || option.bodyOver){
@@ -2839,6 +2836,56 @@ $.newForm = function(data){
 				});
 			});
 		}
+	});
+
+	$.render('.ks-tab', function(ele){
+		ele = $(ele);
+
+		var isTouch = $.isset(ele.attr('touch'));
+		var contentBox = ele.children('.ks-tab-content');
+		var eleWidth = contentBox.width(true);
+		var Item = contentBox.children('.ks-tab-item');
+		ele.find('.ks-tab-title li').click(function(){
+			var o = $(this);
+			var index = o.index();
+			Item.eq(index).show().siblings().hide();
+			o.addClass('a').siblings().removeClass('a');
+		});
+
+		var moveX = 0, currIndex = ele.find('.ks-tab-title li[active]').index();
+		currIndex = currIndex == -1 ? 0 : currIndex;
+
+		function _play(N){
+			ele.find('.ks-tab-title li').eq(N).attr('active',true).siblings().attr('active','');
+			moveX = (0- eleWidth * N);
+			isTouch ? contentBox.removeClass('_move').css({transform:'translateX(' + moveX + 'px)'}) : Item.eq(N).show().siblings().hide();
+		}
+		_play(currIndex);
+
+		if(isTouch){
+			contentBox.wrap('<ks-tab-touch-content></ks-tab-touch-content>')
+			contentBox.width(Item.length * eleWidth);
+			Item.width(eleWidth);
+		}
+
+		ele.children('ks-tab-touch-content').touch(function(){
+
+		},function(evn, touch){
+			if(touch.action === 'left' || touch.action ==='right'){
+				contentBox.addClass('_move').css({transform:'translateX(' + (moveX + touch.moveX) + 'px)'})
+			}
+		}, function(evn, touch){
+			//横向移动距离超过10%才触发 x
+			if(currIndex < Item.length-1 && touch.action =='left'){
+				currIndex ++;
+				_play(currIndex);
+			}else if(currIndex >0 && touch.action =='right'){
+				currIndex --;
+				_play(currIndex);
+			}else{
+				contentBox.removeClass('_move').css({transform:'translateX(' + moveX+ 'px)'})
+			}
+		},'X');
 	});
 
 	//title必须在最后渲染

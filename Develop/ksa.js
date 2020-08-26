@@ -39,13 +39,23 @@ function debugTime(key){
 	 */
 	function eventAddstopPropagation(events){
 		if(events) {
-			events.stopPropagation = function () {
+			events.stop = function(){
+				this.stopPropagation();
 				this.preventDefault();
-				this.returnValue = false;
+			}/*
+			events.stopPropagation = function () {
+				//this.preventDefault();
 				this.cancelBubble = true;
-				window.event.returnValue = false;
 				window.event.cancelBubble = true;
+				this.returnValue = false;
+				window.event.returnValue = false;
 			}
+			events.startPropagation = function () {
+				this.cancelBubble = false;
+				window.event.cancelBubble = false;
+				this.returnValue = true;
+				window.event.returnValue = true;
+			}*/
 		}
 		return events;
 	}
@@ -1821,8 +1831,7 @@ function debugTime(key){
 							//回调函数并获取返回值，若返回值为false则阻止冒泡
 							//this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
 							if(callback.apply((selector ? e.target : ele), arguments) === false){
-								e.preventDefault();
-								e.stopPropagation();
+								e.stop();
 							}
 						}
 				};
@@ -1925,7 +1934,7 @@ function debugTime(key){
 					x = (e.targetTouches ? e.targetTouches[0].pageX : e.pageX) || 0;
 					y = (e.targetTouches ? e.targetTouches[0].pageY : e.pageY) || 0;
 				}
-				e.stopPropagation();
+				e.stop();
 				S = setTimeout(function () {
 					fun.call(e.target, e);
 				}, 400);
@@ -1941,27 +1950,31 @@ function debugTime(key){
 		});
 		return this;
 	}
+
 	/**
 	 * 触摸过程回调
 	 * @param startFun 触摸开始回调函数
 	 * @param moveFun 触摸过程回调函数
 	 * @param endFun 触摸结束回调函数
-	 * @returns {K}
+	 * @param path 触摸方向控制 X=仅横向 Y=仅纵向 null=不控制
+	 * @returns {*}
 	 */
-	K.touch = function(startFun, moveFun, endFun){
-		var X=0, Y=0, action, Run;
-		this.on('touchstart touchmove touchend mousedown mousemove mouseup mouseout', function(e){
-
-			e.stopPropagation();
+	K.touch = function(startFun, moveFun, endFun, path){
+		var X=0, Y=0, action, isRun, moveTime;
+		var touchNames = 'ontouchstart' in document.documentElement ? 'touchstart touchmove touchend' : 'mousedown mousemove mouseup';
+		var startEvent;
+		this.on(touchNames, function(e){
+			startEvent = e;
 			var ex = 0, ey = 0, cx=0, cy=0;
 			//鼠标或手指按下
 			if($.inArray(e.type, ['touchstart','mousedown'])) {
 				X = ex = (e.targetTouches ? e.targetTouches[0].pageX : e.pageX) || 0;
 				Y = ey = (e.targetTouches ? e.targetTouches[0].pageY : e.pageY) || 0;
 				startFun && startFun.call('', e, {currentX:ex, currentY:ey, startX:X, startY:Y});
-				Run = true;
-				//鼠标或手指在元素上移动
-			}else if(Run && $.inArray(e.type,['touchmove','mousemove'])){
+				isRun = true;
+				moveTime = e.timeStamp;
+			//鼠标或手指在元素上移动
+			}else if(isRun && $.inArray(e.type,['touchmove','mousemove'])){
 				ex = (e.targetTouches ? e.targetTouches[0].pageX : e.pageX) || 0;
 				ey = (e.targetTouches ? e.targetTouches[0].pageY : e.pageY) || 0;
 
@@ -1975,27 +1988,53 @@ function debugTime(key){
 					if (ages.scale < 15) {
 						action = cx > 0 ? 'right' : 'left';
 					} else{
-						action = cy > 0 ? 'down' : 'top';
+						action = cy > 0 ? 'down' : 'up';
 					}
 				}
 				//动作存在 回调
 				if (action) {
 					moveFun && moveFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y});
 				}
+				//阻止冒泡
+				if(!path || (path==='X' && $.inArray(action,['left','right'])) || path==='Y' && $.inArray(action,['up','down'])){
+					return false;
+				}
+
 			//鼠标或手指在元素上释放（离开）
-			}else if(Run){
+			}else if(isRun){
 				ex = (e.changedTouches ? e.changedTouches[0].pageX : e.pageX) || 0;
 				ey = (e.changedTouches ? e.changedTouches[0].pageY : e.pageY) || 0;
 				cx = ex - X;
 				cy = ey - Y; //得到xy终点坐标
-				//计算三角形位置与角度
-				var ages = $.rightTriangleAge(cx, cy);
-				endFun && endFun.call('', e, {action:action, moveX:cx, moveY:cy, currentX:ex, currentY:ey, startX:X, startY:Y, scaleX:(Math.abs(cx) /$(this).width(true)*100), scaleY:(Math.abs(cy) /$(this).height(true)*100)});
+				var mTime = e.timeStamp - moveTime;//整个触摸过程的时间
+				var isX = $.inArray(action,['left','right']),
+					isY = $.inArray(action,['up','down']);
+				var scaleX = (Math.abs(cx) / $(this).width(true) * 100), //横向移动比例
+					scaleY = (Math.abs(cy) / $(this).height(true) * 100); //纵向移动比例
+				//如果触摸时间超过800ms 移动比例必须超过50%才算一个动作
+				if(mTime >= 800 && ((isX && scaleX <50) || (isY && scaleY <50))){
+					action = '';
+				}
+				if(!path || (path==='X' && isX) || path==='Y' && isY) {
+					endFun && endFun.call('', e, {
+						action: action,
+						moveX: cx,
+						moveY: cy,
+						currentX: ex,
+						currentY: ey,
+						startX: X,
+						startY: Y,
+						scaleX: scaleX,
+						scaleY: scaleY
+					});
+				}
+
 
 				X=0;
 				Y=0;
 				action = null;
-				Run = null;
+				isRun = null;
+
 			}
 		});
 		return this;
@@ -2009,7 +2048,7 @@ function debugTime(key){
 	$.Event = function(name){
 		var events
 		try{
-			events = new Event(name, {bubbles:true, cancelable:false});
+			events = new Event(name, {bubbles:true, cancelable:true});
 		}catch (e) {
 			events = document.createEvent('Events');
 			events.initEvent(name, true, true);
@@ -3082,7 +3121,6 @@ function debugTime(key){
 								exp = null;
 							}
 						}
-
 
 						//遍历子节点
 						if (ele.childNodes && ele.childNodes.length) {
