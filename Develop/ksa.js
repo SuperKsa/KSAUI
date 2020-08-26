@@ -438,6 +438,48 @@ function debugTime(key){
 
 		return false;
 	}
+
+
+	K.prop = function(key, value){
+		key = $.explode(' ', key, '');
+		//删除或更新
+		if($.isset(value)){
+			value = value ==='' ? null : value;
+			this.map(function(ele){
+				$.loop(key, function(k){
+					//移除模式
+					if(value === null){
+						delete ele[k];
+						//更改模式
+					}else if($.isset(value)){
+						var old = ele[k];
+						if(old !== value){
+							ele[k] = value;
+							$(ele).trigger('KSADOMchange',['attr.'+k]);
+						}
+					}
+				});
+			});
+			return this;
+		//读取模式
+		}else{
+			var ele = this[0];
+			if(!ele){
+				return;
+			}
+			var dt = {};
+			$.loop(key, function(k){
+				dt[key] = ele[key];
+			});
+			if(key.length === 1){
+				return dt[key[0]];
+			}else{
+				return dt;
+			}
+		}
+	};
+
+
 	var ElementAttrBooleanArr = ['active','checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
 
 	/**
@@ -459,12 +501,74 @@ function debugTime(key){
 		$.loop(ele.attributes, function(val){
 			var v = val.value;
 			if($.inArray(val.name, ElementAttrBooleanArr)){
+				v = $.inArray(val.name, ['checked','selected']) ? ele[val.name] : v;
 				v = v ==='' ? true  : !!v;
 			}
 			attrs[val.name] = v;
 		});
 		return attrs;
 	}
+
+	/**
+	 * 设置元素原生属性与标签属性
+	 * @param key 属性名
+	 * @param value 属性值
+	 * @param isCustom 是否为自定义属性
+	 * @returns {EleAttrPropUped|boolean}
+	 * @constructor
+	 */
+	function EleAttrPropUped(key, value, isCustom){
+		var isValue = $.isset(value);
+		value = !!value;
+		if(!isValue){
+			var ele = this[0];
+			if(!ele){
+				return;
+			}
+			var val = ele.getAttribute(key);
+			if($.isNull(val)){
+				val = ele[key];
+			}
+			val = val ==='' ? true : val;
+			return $.inArray(val, ['false','undefined','null']) ? false : !!val;
+		}else if($.isset(value)){
+			this.map(function(ele){
+				var old = ele[key];
+				if(old === value){
+					return;
+				}
+				if(value){
+					ele[key] = value;
+					ele.setAttribute(key, key);
+				}else{
+					if(isCustom){
+						delete ele[key];
+					}else{
+						ele[key] = false;
+					}
+					ele.removeAttribute(key);
+				}
+				$(ele).trigger('KSADOMchange',['attr.'+key, value, old]);
+			});
+			return this;
+		}
+	}
+
+	K.checked = function(value){
+		return EleAttrPropUped.call(this, 'checked', value);
+	}
+
+	K.selected = function(value){
+		return EleAttrPropUped.call(this, 'selected', value);
+	}
+
+	K.disabled = function(value){
+		return EleAttrPropUped.call(this, 'disabled', value);
+	}
+	K.active = function(value){
+		return EleAttrPropUped.call(this, 'active', value, 1);
+	}
+
 
 	/**
 	 * attr操作
@@ -505,22 +609,9 @@ function debugTime(key){
 				attrs = $.attrs(ele);
 			}else{
 				$.loop(key, function(k) {
-					var isVboolean = $.isAttrBoolean(k);
-					if(isVboolean){
-						//布尔值属性先从元素attr中读取
-						var v = ele.getAttribute(k);
-						if(!$.isNull(v)){
-							attrs[k] = $.inArray(v, ['','true', k]) ? true : false;
-						//元素attr不存在时 从自带属性读取
-						}else if($.isset(ele[k])){
-							attrs[k] = !!ele[k];
-						}
-					}else{
-						var attrV = ele.getAttribute(k);
-						if(!$.isNull(attrV)){
-							attrs[k] = attrV;
-						//标签属性值不存在时 从元素dom属性取值
-						}
+					var attrV = ele.getAttribute(k);
+					if(!$.isNull(attrV)){
+						attrs[k] = attrV;
 					}
 				});
 			}
@@ -545,25 +636,10 @@ function debugTime(key){
 					var oldAttrs = $.attrs(ele);
 					var isUpdate;
 					$.loop(sets, function (val, k) {
-						val = val === '' ? null : val;
-						var isAttrBoolean = $.isAttrBoolean(k);
-						var isEleAttr = $.isset(ele[k]);
-						if(isAttrBoolean){
-							val = val ? true : false;
-						}
 						//新旧值不同才更新
 						if(!$.isset(oldAttrs[k]) || val !== oldAttrs[k]){
-							//如果属性值是布尔值
-							if (isAttrBoolean) {
-								if(isEleAttr){
-									ele[k] = val;
-								}
-								(val ? ele.setAttribute(k, k) : ele.removeAttribute(k));
-							}else{
-								(!$.isNull(val) ? ele.setAttribute(k, val) : ele.removeAttribute(k));
-							}
+							val === '' || $.isNull(val) ? ele.removeAttribute(k) : ele.setAttribute(k, val);
 							$(ele).trigger('KSADOMchange', ['attr.'+k, val, oldAttrs[k]]);
-
 							if (k.indexOf('data-') === 0) {
 								dataAttr[k.substr(5)] = val;
 							}
@@ -689,7 +765,7 @@ function debugTime(key){
 					if(!$.isset(v)){
 						v = ele.getAttribute('data-'+k);
 					}
-					if($.isset(v)) {
+					if(!$.isNull(v)) {
 						getdt[k] = v;
 					}
 				});
@@ -784,13 +860,13 @@ function debugTime(key){
 							if(tp ==='checkbox'){
 								var val = $(ele).attr('value');
 								if($.isset(val)){
-									$(ele).attr('checked', $.isArray(value) ? $.inArray(val, value) : val == value);
+									$(ele).checked($.isArray(value) ? $.inArray(val, value) : val == value);
 								}else{
-									$(ele).attr('checked', $.isObject(value) ? $.isEmpty(value) : !!value);
+									$(ele).checked($.isObject(value) ? $.isEmpty(value) : !!value);
 								}
 								
 							}else if(tp ==='radio'){
-								$(ele).attr('checked',  $(ele).attr('value') == value);
+								$(ele).checked($(ele).attr('value') == value);
 							}else{
 								ele.value = value;
 							}
@@ -824,6 +900,7 @@ function debugTime(key){
 			if(!ele){
 				return;
 			}
+
 			var tg = ele.tagName;
 			switch (tg) {
 				case 'INPUT':
@@ -936,7 +1013,7 @@ function debugTime(key){
 				if(type ==='file'){
 					formData[name] = el[0].files.length ? el[0].files[0] : '';
 				}else if($.isArray(type,['radio','checkbox'])){
-					if(el.attr('checked')){
+					if(el.checked()){
 						formData[name] = val;
 					}
 				}else{
@@ -2112,26 +2189,11 @@ function debugTime(key){
 	 * 表单submit事件
 	 */
 	K.submit = function(callFun){
-		this.map(function(ele){
-			var evn = ele.onsubmit;
-			var result = false;
-			$(ele).addEvent('formEvent', function (e) {
-				if(callFun){
-					if(callFun.apply(this, e) === false){
-						evn = null;
-					}
-				}
-
-				if(evn){
-					result = evn.apply(this, e);
-				}
-
-			}, false, 1, 1);
-
-			if(result !== false){
-				ele.submit();
-			}
-		});
+		if(callFun){
+			return this.on('submit', callFun);
+		}else{
+			return this.trigger('submit');
+		}
 	}
 
 	/**
