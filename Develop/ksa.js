@@ -483,13 +483,6 @@ function debugTime(key){
 	var ElementAttrBooleanArr = ['active','checked','selected','async','autofocus','autoplay','controls','defer','disabled','hidden','ismap','loop','multiple','open','readonly','required','scoped'];
 
 	/**
-	 * 检查指定属性是否为DOM元素的原生DOM属性
-	 * @param {*} attr 
-	 */
-	$.isAttrBoolean = function(attr){
-		return attr && $.inArray(attr, ElementAttrBooleanArr);
-	}
-	/**
 	 * 读取指定元素所有attr属性值
 	 * @param {*} ele 
 	 */
@@ -660,9 +653,7 @@ function debugTime(key){
 			this.map(function (ele) {
 				var attrs = $.attrs(ele);
 				$.loop(key, function(k){
-					if($.isAttrBoolean(k) && $.isset(ele[k])){
-						ele[k] = false;
-					}else if (k.indexOf('data-') === 0) {
+					if (k.indexOf('data-') === 0) {
 						dataAttr[k.substr(5)] = null;
 					}
 					ele.removeAttribute(k);
