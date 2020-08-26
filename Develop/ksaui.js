@@ -22,8 +22,6 @@ $.device = 'PC'; //设备类型 PC MOBILE
 $.deviceView = 0; //横屏竖屏 0=横屏 1=竖屏
 $.ksauiRenderTree = {};
 
-var KSAUIFocusClassName = '_focus';
-
 
 (function(){
 	$.W = window.innerWidth;
@@ -423,7 +421,7 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 			if (option.btn) {
 				D.find('.ks-layer-bottom ks-btn').click(function () {
 					var t = $(this);
-					if (!t.attr('disabled') && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), D) !== false))) {
+					if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), D) !== false))) {
 						clearTimeout(AutoEvn);
 						$.layerHide(Id);
 
@@ -441,8 +439,8 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 				if (option.cover.event) {
 					cover.on(option.cover.event, function () {
 						var t = $(this);
-						if (!t.attr('disabled')) {
-							t.attr('disabled', 1);
+						if (!t.disabled()) {
+							t.disabled(1);
 							clearTimeout(AutoEvn);
 							$.layerHide(Id);
 						}
@@ -896,7 +894,7 @@ $.plugin.formSubmit = function(callFun){
 		obj = $(obj);
 		var btn = obj.find('button[type=submit]');
 		var btnTxt = btn.html();
-		btn.addClass('btn-load').attr('disabled',true).text(btnTxt);
+		btn.addClass('btn-load').disabled(true).text(btnTxt);
 		var formData = obj.formData(true);
 		if(obj.attr('id')){
 			formData.append('FORMID', obj.attr('id'));
@@ -905,14 +903,14 @@ $.plugin.formSubmit = function(callFun){
 			if(typeof callFun == 'function'){
 				callFun(dt);
 			}
-			btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
+			btn.removeClass('btn-load').disabled(false).html(btnTxt);
 		},function(){
-			btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
+			btn.removeClass('btn-load').disabled(false).html(btnTxt);
 		},'json',1);
 
 		//30秒后解除提交按钮限制
 		setTimeout(function(){
-			btn.removeClass('btn-load').attr('disabled',false).html(btnTxt);
+			btn.removeClass('btn-load').disabled(false).html(btnTxt);
 		},30*1000);
 	});
 
@@ -1039,42 +1037,6 @@ $.plugin.inputNumber = function(callFun){
 }
 
 /**
- * 折叠面板
- * 必须按照文档方式组成dom
- * @param isAc 是否自动关闭相邻列表 默认是
- */
-$.plugin.collapse = function(){
-	this.children().map(function(ele){
-		ele = $(ele);
-		var attr = ele.attr();
-		ele.wrapInner('<ks-collapse-block></ks-collapse-block>').wrapInner('<ks-collapse-content></ks-collapse-content>');
-		ele.prepend('<ks-collapse-title>'+(attr.label || '')+'</ks-collapse-title>')
-
-		var Pt = ele.parent(), isAccordion = $.isset(Pt.attr('accordion'));
-		var content = ele.children('ks-collapse-content');
-		//如果默认打开，必须赋予实际高度值以完成css3动画
-		if($.isset(attr.open)){
-			content.height(content.children('ks-collapse-block').height(true, true));
-		}
-		ele.children('ks-collapse-title').click(function(){
-			var maxH = content.children('ks-collapse-block').height(true, true);
-			if(ele.attr('open')){
-				content.height(0);
-				ele.attr('open','');
-			}else{
-				content.height(maxH);
-				ele.attr('open',1);
-				var acList = isAccordion ? ele.siblings() : !!0;//手风琴面板同辈
-				if(acList){
-					acList.attr('open','');
-					acList.children('ks-collapse-content').height(0);
-				}
-			}
-		});
-	});
-}
-
-/**
  * 初始化选择列表
  * dom结构 <ul class="ks-list"><li value="选项1-值" text="选项名称(可选)">选项1</li></ul>
  * 必须通过KSUI('xx')选择器调用
@@ -1082,27 +1044,27 @@ $.plugin.collapse = function(){
  */
 $.plugin.listSelect = function(callFun){
 	var $this = this;
-	var m = $.isset($this.attr('multiple'));
-	
+	var isMultiple = $.isset($this.attr('multiple'));
+
 	$this.find('ks-list-item').click(function(e) {
-		if($this.attr('disabled')){
+		if($this.disabled()){
 			return;
 		}
 		var T = $(this);
 		//如果当前已选择或禁用状态则不做任何响应
-		if (T.hasClass('ks-select-optgroup-title') || (!m && T.attr('selected')) || T.attr('disabled')) {
+		if (T.hasClass('ks-select-optgroup-title') || (!isMultiple && T.selected()) || T.disabled()) {
 			return false;
 		}
 
 		//多选下拉菜单
-		if(m){
-			if(T.attr('selected')){
-				T.attr('selected', false);
+		if(isMultiple){
+			if(T.selected()){
+				T.selected(false);
 			}else{
-				T.attr('selected',true);
+				T.selected(true);
 			}
 		}else{
-			T.attr('selected',true).siblings().removeAttr('selected');
+			T.selected(true).siblings().selected(false);
 		}
 		var txtM = {};
 		$this.find('ks-list-item[selected]').each(function (_, l) {
@@ -1155,7 +1117,7 @@ $.selectToHtml = function(element, multiple){
 		data = element;
 	}else{
 		select = $(element);
-		multiple = select.attr('multiple');
+		multiple = select.prop('multiple');
 		defvalue = select.val();
 		data = option2json(select);
 	}
@@ -1176,7 +1138,7 @@ $.selectToHtml = function(element, multiple){
 				text : t.text() || '',
 				showtitle : attr.showtitle || '',
 				selected : _isSelected(attr.value) ? true : '',
-				disabled : t.attr('disabled') || '',
+				disabled : t.disabled() || '',
 				icon : attr.icon || '',
 				style : attr.style || '',
 				n : Nums
@@ -1262,15 +1224,14 @@ $.plugin.selectText = function(){
  * @param {json} layerOption layer配置参数
  */
 $.plugin.showSelect = function(data, callFun, multiple, layerOption){
-	var $this = this;
 	var btn = $(this[0]), layerID;
 	//触发按钮被禁用时不响应
-	if(btn.attr('disabled')){
+	if(btn.disabled()){
 		return;
 	}
 	function _close(){
 		layerID && $.layerHide(layerID);
-		btn.removeData('layer-id').attr(KSAUIFocusClassName,'');
+		btn.removeData('layer-id').active(false);
 	}
 
 	//如果选择窗口存在 则关闭
@@ -1294,7 +1255,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				return;
 			}
 			layerID = layer.layerID;
-			btn.data('layer-id',layerID).attr(KSAUIFocusClassName, true);
+			btn.data('layer-id',layerID).active(true);
 			var d = layer.find('.ks-layer-content');
 			//自动定位到已选择区域
 			if(d.find('ks-list-item[selected]').length){
@@ -1305,7 +1266,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				e.stopPropagation();//阻止冒泡
 				//多选下拉菜单
 				if(multiple){
-					select && select.find('option').eq(T.attr('n')).attr('selected', T.attr('selected') ? true : false);
+					select && select.find('option').eq(T.attr('n')).selected(T.selected() ? true : false);
 					txt = '';
 					d.find('ks-list-item[selected]').each(function (i,l) {
 						l = $(l);
@@ -1328,7 +1289,7 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 						btn.val(txt);
 					//btn对象是其他标签
 					}else{
-						btn.html(txt);
+						btn.children('.ks-select-title').html(txt);
 					}
 				}
 				btn.data('value',valdt);
@@ -1664,7 +1625,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 
 	function _close(layerID){
 		$.layerHide(layerID);
-		btn.removeData('layer-id').removeClass(KSAUIFocusClassName);
+		btn.removeData('layer-id').active(false);
 	}
 
 	//获取当前已选择地区数据并组合为JSON 回调给callFun
@@ -1701,7 +1662,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			//如果没有地区数据 则直接关闭
 			if(!H){
 				$.layerHide(layerID);
-				btn.removeData('layer-id').attr(KSAUIFocusClassName,'');
+				btn.removeData('layer-id').active(false);
 			}else {
 				H = '<ks-list class="ks-list-select">'+H+'</ks-list>';
 				Dom.find('.ks-area-layer-c').html(H);
@@ -1721,7 +1682,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 				//列表选项 点击事件
 				Dom.find('.ks-list-select').listSelect(function (val, txt, valdata, t, e) {
 					var id = t.attr('val');
-					t.attr('selected',true).siblings().removeAttr('selected');
+					t.selected(true).siblings().removeAttr('selected');
 					var bt = Dom.find('.ks-area-layer-btn').find('p').eq(level);
 					bt.text(txt).attr({upid:t.attr('upid'),'val':id, 'field':Fk[level]}).show();
 					bt.next().attr('upid',id).html('<span class="ks-text-gray">'+Ts[level+1]+'</span>').show();
@@ -1729,7 +1690,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 					//选择达到最后一级 关闭窗口
 					if (level == maxLevel-1) {
 						$.layerHide(layerID);
-						btn.removeData('layer-id').attr(KSAUIFocusClassName,true);
+						btn.removeData('layer-id').active(true);
 						__callDt(id, 1);
 					} else if (level < maxLevel) {
 						g(id);
@@ -1754,7 +1715,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 		init : function(layer, id){
 			Dom = layer;
 			layerID = id;
-			btn.data('layer-id',id).attr(KSAUIFocusClassName,true);
+			btn.data('layer-id',id).active(true);
 
 			//阻止冒泡
 			layer.click(function(){return false;});
@@ -1790,7 +1751,7 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 			$(document).on('click.KSAUI-area', function(e){
 				if(!$.inArray(e.target,[btn[0], layer[0], layer.next('[data-layer-key="'+layer.layerID+'"]')[0]])){
 					$.layerHide(layer.layerID);
-					btn.removeData('layer-id').attr(KSAUIFocusClassName,'');
+					btn.removeData('layer-id').active(false);
 				}
 			});
 		}
@@ -1828,58 +1789,6 @@ $.showTip = function(obj, txt, click){
 	});
 }
 
-
-/**
- * 全选事件触发
- * @param t
- */
-$.plugin.checkAll = function(selector){
-	var t = this;
-
-	var name = t.attr('name');
-	//如果没有name则不处理
-	if(!name){
-		return this;
-	}
-
-	selector = $(selector || t.parent()[0].form || t.parent().parent());
-	t.removeAttr('name');
-	var tParent = t.parent();
-	var inputs = 'input[type="checkbox"][name="' + name + '"]';
-	var checkboxObj = selector.find(inputs),
-		checkboxNum = checkboxObj.length,
-		indeterName = 'ks-checkbox-indeter';
-	//全选事件绑定
-	t.change(function () {
-		//域下相同类型的元素
-		if (t.attr('checked')) {
-			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && checkboxObj.attr('checked', true).trigger('change');
-		} else {
-			//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-			name && checkboxObj.attr('checked', false).trigger('change');
-		}
-		tParent.removeClass(indeterName)
-	});
-
-	checkboxObj.change(function(){
-		var st = false;
-		var selectedNum = selector.find(inputs+':selected').length;
-		if(selectedNum >= checkboxNum){
-			st = true;
-			tParent.removeClass(indeterName);
-		}else if(selectedNum > 0){
-			st = false;
-			tParent.addClass(indeterName);
-		}else if(!selectedNum){
-			st = false;
-			tParent.removeClass(indeterName);
-		}
-
-		t.attr('checked', st);
-	})
-	return this;
-}
 
 
 
@@ -2269,6 +2178,9 @@ $.newForm = function(data){
 			t.attr('type','radio').wrap(moveLabelAttr('label', t, 'ks-radio'));
 	
 			t.after('<i>'+txt+'</i>');
+			t.change(function () {
+				$(this).trigger('KSADOMchange',['attr.checked', this.checked]);
+			});
 		},
 		'input[type="ks-checkbox"]' : function(ele){
 			var t = $(ele), at = t.attr();
@@ -2280,29 +2192,72 @@ $.newForm = function(data){
 			if(area.length && area.attr('max')){
 				var max = parseInt(area.attr('max')) || 0;
 				//最大选择数量限制
-				if(max >0){
+				if(max >0) {
 					t.change(function () {
 						//域下相同类型的元素
 						var uN = 'input[type="checkbox"][name="' + t.attr('name') + '"]';
-							if(area.find(uN+':checked').length == max && t.attr('checked')){
-								area.find(uN+':not(:checked)').attr('disabled', true);
-							}else{
-								area.find(uN+':not(:checked)').attr('disabled', false);
-							}
+						if (area.find(uN + ':checked').length == max && t.checked()) {
+							area.find(uN + ':not(:checked)').disabled(true);
+						} else {
+							area.find(uN + ':not(:checked)').disabled(false);
+						}
 					});
 				}
 			}
+			t.change(function () {
+				$(this).trigger('KSADOMchange',['attr.checked', this.checked]);
+			});
 		},
 		'input[type="ks-checkbox-all"]' : function(ele){
 			var t = $(ele), at = t.attr();
 			var txt = at.text ? '<em>'+at.text+'</em>' : '';
-			t.attr('type','checkbox').wrap(moveLabelAttr('label', t, 'ks-checkbox'));
+			t.attr({'type':'checkbox','ischeckall':1}).wrap(moveLabelAttr('label', t, 'ks-checkbox'));
 			t.after('<i>'+txt+'</i>');
-			t.checkAll(t.attr('selector'));
+
+
+			var name = t.attr('name');
+			//如果没有name则不处理
+			if(!name){
+				return this;
+			}
+
+			var selector = $(t.attr('selector') || t.parent()[0].form || t.parent().parent());
+			var tParent = t.parent();
+			var inputs = 'input[type="checkbox"][name="' + name + '"]:not([ischeckall])';
+			var checkboxObj = selector.find(inputs),
+				checkboxNum = checkboxObj.length,
+				indeterName = 'ks-checkbox-indeter';
+			//全选事件绑定
+			t.change(function () {
+				//域下相同类型的元素
+				if (this.checked) {
+					//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
+					name && checkboxObj.checked(true);
+				} else {
+					//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
+					name && checkboxObj.checked(false);
+				}
+				tParent.removeClass(indeterName);
+			});
+			checkboxObj.change(function(){
+				var st = false;
+				var selectedNum = selector.find(inputs+':checked').length;
+				if(selectedNum >= checkboxNum){
+					st = true;
+					tParent.removeClass(indeterName);
+				}else if(selectedNum > 0){
+					st = false;
+					tParent.addClass(indeterName);
+				}else if(!selectedNum){
+					st = false;
+					tParent.removeClass(indeterName);
+				}
+				t.checked(st);
+			})
 		},
 		'input[type="ks-switch"]' : function(ele){
 			var t = $(ele), at = t.attr();
-			var val = $.isset(at.checked) ? 1 : 0,
+			var val = t.checked() ? 1 : 0,
 				txt = at.text || '',
 				name = at.name ? ' name="'+at.name+'"' : '';
 	
@@ -2317,9 +2272,9 @@ $.newForm = function(data){
 	
 			//事件绑定
 			t.change(function () {
-				t.nextAll('input[type=hidden]').val(t.attr('checked') ? 1 : 0);
+				var cked = this.checked;
+				$(this).trigger('KSADOMchange',['attr.checked', cked]).nextAll('input[type=hidden]').val(cked ? 1 : 0)
 			});
-	
 		},
 		'input[type="ks-number"]' : function(ele){
 			var t = $(ele);
@@ -2340,22 +2295,20 @@ $.newForm = function(data){
 				var obj = $.selectToHtml(t);
 				var ele = $('<div class="ks-select-list">'+obj[2]+'</div>');
 				ele.children().listSelect(function(value){
-					$(t).val(value).trigger('change');
+					$(t).val(Object.keys(arguments[2])).trigger('change');
 				});
 				t.after(ele).hide();
 				ele.prepend(t);
 				//绑定一个内部事件 让select表单值改变后通知父级
-				t.on('ksachange change',function(){
+				t.DOMchange('val',function(){
 					var val =  $(this).val();
-					ele.find('li').attr('selected',false);
+					ele.find('ks-list-item').selected(false);
 					val = !$.isArray(val) ? [val] : val;
 					$.loop(val, function(v){
-						ele.find('li[value="'+v+'"]').attr('selected',true);
+						ele.find('ks-list-item[value="'+v+'"]').selected(true);
 					});
 				});
 			}else{
-				//如果在标签属性data-value给定选中值 则处理到内部
-				t.data('value') && t.val(t.data('value'));
 				t.removeAttr('type');
 				var opt = t.find('option:selected'),
 					tit = (at.text || '请选择');
@@ -2368,19 +2321,21 @@ $.newForm = function(data){
 				}
 				t.wrap(moveLabelAttr('div', t, 'ks-select'));
 				t.after('<span class="ks-select-title" icon="caret-down">' + tit + '</span>');
-				t.next('.ks-select-title').click(function(){
+				t.parent().click(function(){
 					$(this).showSelect(t);
 				});
 				//绑定一个内部事件 让select表单值改变后通知父级
-				t.on('ksachange',function(){
+				t.DOMchange('val',function(){
 					var select =  $(this);
 					select.parent().children('.ks-select-title').html(select.selectText());
 				});
 			}
 			//监听属性禁用变化事件
 			t.DOMchange('attr.disabled', function(){
-				t.next().attr('disabled', $(this).attr('disabled'));
+				t.next().disabled($(this).disabled());
 			});
+			//如果在标签属性data-value给定选中值 则处理到内部
+			t.data('value') && t.val($.explode(' ', t.data('value'),''));
 		},
 		'input[type="ks-date"]' : function(ele){
 			var t = $(ele), at = t.attr();
@@ -2425,10 +2380,9 @@ $.newForm = function(data){
 			t.wrap(moveLabelAttr('span', t, 'ks-input ks-password')).removeAttr('icon');
 			(at.icon || at.iconleft) && t.before('<left icon="'+(at.icon || at.iconleft)+'"></left>');
 			at.iconright && t.before('<right icon="'+at.iconright+'"></right>');
-	
-			if($.isset(at.active)){
-				t.before('<right icon="ishide" _active="1"></right>');
-				t.prevAll('right[_active]').click(function(){
+			if(t.active()){
+				t.before('<right icon="ishide" active></right>');
+				t.prevAll('right[active]').click(function(){
 					var ths = $(this);
 					var input = ths.nextAll('input');
 					if(input.attr('type') =='text'){
@@ -2442,7 +2396,7 @@ $.newForm = function(data){
 			}
 		},
 		'textarea[type="ks-textarea"]' : function(ele){
-			var t = $(ele), at = t.attr();
+			var t = $(ele);
 			t.removeAttr('type');
 			t.wrap(moveLabelAttr('div', t, 'ks-textarea'));
 			var maxlength = parseInt(t.attr('maxlength'));
@@ -2461,7 +2415,7 @@ $.newForm = function(data){
 
 			var Fd = ['province', 'city', 'area', 'town'];
 			t = $(t);
-			t.attr({'type':'hidden','name':''}).wrap('<ks-area '+(t.attr('disabled') ? 'disabled' : '')+'></ks-area>');
+			t.attr({'type':'hidden','name':''}).wrap('<ks-area '+(t.disabled() ? 'disabled' : '')+'></ks-area>');
 
 			var attrs = t.attr();
 			var maxlevel = 0;
@@ -2489,7 +2443,7 @@ $.newForm = function(data){
 				var input = obj.children('input[type="hidden"]');
 				var attrs = input.attr();
 				//禁用后不做任何操作
-				if(attrs.disabled || obj.attr('disabled')){
+				if(attrs.disabled || obj.disabled()){
 					return;
 				}
 				var defDt = {};
@@ -2508,7 +2462,6 @@ $.newForm = function(data){
 					obj.removeAttr('province city area town');
 
 					var valueAttr = {};
-					var span = obj.children('span[level]');
 					$.loop(dt.data,function(val){
 						var tname = name ? name+'['+val.field+']' : val.field;
 						valueAttr[val.field] = val.id+':'+val.name;
@@ -2520,7 +2473,7 @@ $.newForm = function(data){
 			
 			//监听属性禁用变化事件
 			t.DOMchange('attr.disabled', function(){
-				t.parent().attr('disabled', $(this).attr('disabled'));
+				t.parent().disabled($(this).disabled());
 			});
 			
 		},
@@ -2538,19 +2491,47 @@ $.newForm = function(data){
 			});
 		},
 		'ks-collapse' : function(ele){//折叠面板
-			$(ele).collapse();
+
+			$(ele).children().map(function(el){
+				el = $(el);
+				var attr = el.attr();
+				el.wrapInner('<ks-collapse-block></ks-collapse-block>').wrapInner('<ks-collapse-content></ks-collapse-content>');
+				el.prepend('<ks-collapse-title>'+(attr.label || '')+'</ks-collapse-title>')
+
+				var Pt = el.parent(), isAccordion = $.isset(Pt.attr('accordion'));
+				var content = el.children('ks-collapse-content');
+				//如果默认打开，必须赋予实际高度值以完成css3动画
+				if(el.active()){
+					content.height(content.children('ks-collapse-block').height(true, true));
+				}
+				el.children('ks-collapse-title').click(function(){
+					var maxH = content.children('ks-collapse-block').height(true, true);
+					if(el.active()){
+						content.height(0);
+						el.active(false);
+					}else{
+						content.height(maxH);
+						el.active(true);
+						var acList = isAccordion ? el.siblings() : !!0;//手风琴面板同辈
+						if(acList){
+							acList.active(false);
+							acList.children('ks-collapse-content').height(0);
+						}
+					}
+				});
+			});
 		},
 		'.ks-table' : function(ele){
 			ele = $(ele);
 			var tr = ele.find('tbody > tr');
 	
 			var trFirst = tr.eq(0);
-	
 			if(trFirst.children('td:first-child').find('.ks-checkbox').length){
-				tr.children('td:first-child').find('.ks-checkbox').on('change','input[type=checkbox]',function(){
+				tr.children('td:first-child').find('input[type=checkbox]').DOMchange('attr.checked',function(){
 					var t = $(this);
 					var f = t.parents('tr');
-					if(t.attr('checked')){
+
+					if(t.checked()){
 						f.addClass('ks-table-tr-checked');
 					}else{
 						f.removeClass('ks-table-tr-checked');
@@ -2595,7 +2576,7 @@ $.newForm = function(data){
 		//分页初始化
 		'ks-page' : function(ele){
 			function _pgTo(val, isInit){
-				if(ele.attr('disabled')  || val == ele[0].value){
+				if(ele.disabled()  || val == ele[0].value){
 					return;
 				}
 				if(val ==='prev'){
@@ -2607,11 +2588,11 @@ $.newForm = function(data){
 				}
 				val = parseInt(val);
 							
-				ele.children('ks-page-prev').attr('disabled', val ===1);
-				ele.children('ks-page-first').attr('disabled', val < pageNum / 2);
+				ele.children('ks-page-prev').disabled(val ===1);
+				ele.children('ks-page-first').disabled(val < pageNum / 2);
 	
-				ele.children('ks-page-next').attr('disabled', val === total);
-				ele.children('ks-page-last').attr('disabled', val > total- pageNum / 2);
+				ele.children('ks-page-next').disabled(val === total);
+				ele.children('ks-page-last').disabled(val > total- pageNum / 2);
 	
 				ele.attr('current', val);
 				ele[0].value = val;
@@ -2669,7 +2650,7 @@ $.newForm = function(data){
 			_pgTo(current, true);
 			ele.children('*:not(ks-input-group)').click(function(){
 				var el = $(this);
-				if(el.attr('disabled')){
+				if(el.disabled()){
 					return;
 				}
 				_pgTo(el.attr('value'));
@@ -2713,6 +2694,7 @@ $.newForm = function(data){
 			var submits = dom.attr('submit');
 			dom.attr('submit','');
 			var form = submits ? $(submits) : dom.parents('form');
+
 			if(form.length){
 				dom.click(function(){
 					form.submit();
@@ -2820,16 +2802,16 @@ $.newForm = function(data){
 			ele.find('ks-body > ks-navbar > ks-navbar-item[key]').each(function(i, el){
 				var attrs = $.attrs(el);
 				el = $(el);
-				if(attrs.active){
+				if(el.active()){
 					_navbarContentShow(el, attrs.key);
 				}
 				el.click(function(){
-					$(this).attr('active', true)
+					$(this).active(true)
 				}).DOMchange('attr.active', function(){
 					var el = $(this);
-					if(el.attr('active')){
+					if(el.active()){
 						//去掉同辈活动状态
-						el.siblings().attr('active','');
+						el.siblings().active();
 						//更新content
 						_navbarContentShow(el, attrs.key);
 					}
@@ -2865,8 +2847,6 @@ $.newForm = function(data){
 		var eleWidth = contentBox.width(true);
 
 
-
-
 		var moveX = 0, currIndex = ele.find('ks-tab-title-item[active]').index();
 		currIndex = currIndex == -1 ? 0 : currIndex;
 
@@ -2878,7 +2858,7 @@ $.newForm = function(data){
 		function _play(N){
 			N = parseInt(N);
 			var titleItem = title.find('ks-tab-title-item').eq(N);
-			titleItem.attr('active',true).siblings().attr('active','');
+			titleItem.active(true).siblings().active(false);
 			moveX = (0- eleWidth * N);
 			isTouch ? contentBox.removeClass('ks-no-transition').css({transform:'translateX(' + moveX + 'px)'}) : item.eq(N).show().siblings().hide();
 			_titleStatus(N);
