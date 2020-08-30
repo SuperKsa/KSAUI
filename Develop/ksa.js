@@ -518,6 +518,9 @@ function debugTime(key){
 			if(!ele){
 				return;
 			}
+			if(ele.tagName ==='INPUT' && $.inArray(key, ['checked'])){
+				return ele[key];
+			}
 			var val = ele.getAttribute(key);
 			if($.isNull(val)){
 				val = ele[key];

@@ -758,8 +758,9 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 
 
 	select { display: none}
+	select:disabled ~ .ks-select-title { cursor: not-allowed; opacity: .7}
 	.ks-select-title {
-		display: block; position: relative; padding:0 25px 0 10px; height: 100%; overflow: hidden; background:none;  cursor: pointer; min-width: 140px;
+		display: block; position: relative; padding:0 25px 0 10px; height: 100%; overflow: hidden; background:none;  cursor: pointer; min-width: 80px;
 		&:before {transition:all 0.2s ease-in-out; font-size: 14px; position: absolute; right:0; top:0; width: 20px; text-align: center;}
 		//第一个span后面的span 添加分割斜杠
 		> span:first-child ~ span:before { content:'/'; margin: 0 3px; color: #999;}
@@ -767,7 +768,7 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 	&[active] .ks-select-title:before {transform:rotate(180deg); color:#333;}
 }
 
-
+select:disabled ~ .ks-list-select { cursor: not-allowed; opacity: .7}
 
 //普通输入框
 .ks-input {vertical-align:middle; white-space: nowrap; }
@@ -1237,7 +1238,6 @@ ks-input-group {
 .ks-layer-bottom {
 	padding:15px; text-align: right; border-top: @borderColor 1px solid;
 	ks-btn { margin-right: 10px;}
-	ks-btn:not(:last-child) { background: #fff; border: @borderColor 1px solid; color: #999}
 	ks-btn:last-child { margin-right: 0;}
 }
 

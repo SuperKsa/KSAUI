@@ -1146,7 +1146,7 @@ $.selectToHtml = function(element, multiple){
 
 			if(t[0].tagName =='OPTGROUP'){
 				v.text = attr.label || '';
-				v.data = option2json(t);
+				v.option = option2json(t);
 			}else{
 				Nums ++;
 			}
@@ -1159,8 +1159,8 @@ $.selectToHtml = function(element, multiple){
 	function options(dt){
 		var h = '';
 		$.loop(dt,function(value, key){
-			if(value.data){
-				h += '<v class="ks-select-optgroup-title"><strong>'+(value.text)+'</strong><ks-list class="ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.data)+'</ks-list></v>';
+			if(value.option){
+				h += '<ks-list-item class="ks-select-optgroup-title"><strong>'+(value.text)+'</strong><ks-list class="ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(value.option)+'</ks-list></ks-list-item>';
 			}else{
 				if(!$.isObject(value) && !$.isArray(value)){
 					value = {value:key, text:value, selected: _isSelected(key)}
@@ -1173,44 +1173,75 @@ $.selectToHtml = function(element, multiple){
 	return [select, multiple, '<ks-list class="ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+options(data)+'</ks-list>'];
 }
 
-/**
- * 获取select已选中文本 并组合为ksaui需要的结果
- */
-$.plugin.selectText = function(){
-	var select = this[0];
-	if(!select){
-		return;
-	}
-	select = $(select);
-	var text = '';
-	select.find('option:selected').each(function(_, e){
-		text += '<span>'+e.text+'</span>';
+
+
+
+//将JSON数据转换为HTML菜单列表
+function select_json_html(dt, defvalue, multiple){
+	var h = '';
+	var dtArr = $.isArray(dt);
+	$.loop(dt.option,function(value, key){
+		if(value.option){
+			h += '<ks-list-item class="ks-select-optgroup-title"><strong>'+(value.label)+'</strong>'+select_json_html(value, defvalue, multiple)+'</ks-list-item>';
+		}else{
+			//不是对象 则认为值是字符串
+			if(!$.isObject(value)){
+				value = {value:dtArr ? value : key, label:value}
+			}
+			if(defvalue && $.inArray(value.value, defvalue)){
+				value.selected = true;
+			}
+			if(!value.selected){
+				value.selected = null;
+			}
+			var txt = $.isset(value.label) ? value.label : value.content;
+			delete value.content;
+			h += $.tag('ks-list-item', value, txt);
+		}
 	});
-	text = text ? text : (select.attr('deftitle') || '请选择');
-	return text;
+	return '<ks-list class="ks-list-select" '+(multiple ? ' multiple="multiple"' :'')+'>'+h+'</ks-list>';
 }
 
+function select_html_json(select, defValue, Nums){
+	Nums = Nums || 0;
+	select = $(select);
 
+	defValue = Nums ===0 ? select.val() : defValue;
+	var json = select.attr() || {};
+	select.children().map(function(el){
+		var v;
+		if(el.tagName =='OPTGROUP'){
+			v = select_html_json(el, defValue, Nums);
+		}else{
+			v = $(el).attr() || {};
+			v.n = Nums;
+			v.selected = el.selected;
+			v.content = el.text;
+			Nums ++;
+		}
+		json.option = json.option || [];
+		json.option.push(v);
+	});
+	return json;
+}
 /**
  * select下拉菜单模拟
  * 触发函数
  * @param {selector} btn 触发元素dom
- * @param {json} data select表单对象或者JSON数据，JSON格式：
+ * @param {json/array} data：
+------------ JSON格式 -------------
  {
-	title : '下拉菜单标题',
 	value : '默认值', // ['默认值1','默认值2']
 	multiple : 1, //是否多选
-	data : [ //列表数据
+	option : [ //列表数据
 	  {
 		  value   :   值 必须
-		  title   :   标签title 可选
-		  text    :   显示标题 必须
-		  showtitle : 选中后按钮上显示的文字
+		  label   :   选项名称 可选
 		  selected:   是否选中 可选
 		  disabled:   是否禁用 可选
 		  icon    :   图标名称 可选
 		  style   :   样式 可选
-		  data    : { //子级(如果需要) 类似select的optgroup标签
+		  option    : { //子级(如果需要) 类似select的optgroup标签
 			  值同上
 		  }
 	  },
@@ -1219,16 +1250,23 @@ $.plugin.selectText = function(){
 	  ...
 	]
 }
+------------ Array格式 -------------
+['名称1','名称2']
+
+------------ JSON简要格式 -------------
+{key:value, key2:value2, ...}
+
  * @param {func} callFun 每项点击后的回调函数 1=值 2=text 3=多选值列表
  * @param {boolean} multiple 是否多选(data=select时根据元素属性自动判断)
  * @param {json} layerOption layer配置参数
  */
 $.plugin.showSelect = function(data, callFun, multiple, layerOption){
-	var btn = $(this[0]), layerID;
+	var btn = $(this[0]), isBtnInput = this[0].tagName ==='INPUT', layerID;
 	//触发按钮被禁用时不响应
 	if(btn.disabled()){
 		return;
 	}
+
 	function _close(){
 		layerID && $.layerHide(layerID);
 		btn.removeData('layer-id').active(false);
@@ -1239,15 +1277,23 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 		_close();
 		return;
 	}
-	
-	var htmlObj = $.selectToHtml(data, multiple);
-	multiple = htmlObj[1];
-	var select = htmlObj[0];
+	multiple = data.multiple;
+
+	if(isBtnInput && !data.option){
+		data = {
+			value : [btn.val()],
+			option : data
+		};
+	//简要格式支持
+	}else if(!data.option){
+		data = {option:data};
+	}
+	data.value = data.value && !$.isArray(data.value) ? [data.value] : data.value;
 	layerOption = layerOption || {};
 	layerOption = $.arrayMerge({
 		pos : btn,
 		cover : 0,
-		content : htmlObj[2],
+		content : select_json_html(data, data.value, data.multiple),
 		closeBtn : 0,
 		bodyOver : false, //body不需要裁切
 		init : function(layer){
@@ -1266,33 +1312,16 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 				e.stopPropagation();//阻止冒泡
 				//多选下拉菜单
 				if(multiple){
-					select && select.find('option').eq(T.attr('n')).selected(T.selected() ? true : false);
 					txt = '';
 					d.find('ks-list-item[selected]').each(function (i,l) {
-						l = $(l);
-						txt += '<span>'+l.attr('_text')+'</span>';
+						txt += '<span>'+l.innerHTML+'</span>';
 					});
 					txt = txt ? txt : '请选择';
-				}else{
-					select && select.val(val);
 				}
-				select && select.trigger('change'); //手动触发change事件
 				//选择后回调函数
-				if(typeof(callFun) =='function'){
-					var calltxt = callFun(val, txt, valdt);
-					txt = calltxt === false ?  false : txt;
-				}
+				callFun && callFun.call(T, val, txt, valdt, T, e);
 				//触发按钮输出text
-				if(txt){
-					//btn对象是input
-					if($.inArray(btn[0].tagName, ['INPUT','TEXTAREA'])){
-						btn.val(txt);
-					//btn对象是其他标签
-					}else{
-						btn.children('.ks-select-title').html(txt);
-					}
-				}
-				btn.data('value',valdt);
+				isBtnInput && btn.val(txt);
 				//单选框选择后关闭pop层
 				if(!multiple){
 					_close();
@@ -1309,7 +1338,6 @@ $.plugin.showSelect = function(data, callFun, multiple, layerOption){
 		close : _close
 	}, layerOption, {class:'ks-layer-select'});
 
-	htmlObj = null;
 	return $.layer(layerOption);
 }
 
@@ -1523,7 +1551,6 @@ $.showDate = function(input, format){
 		}
 	});
 }
-
 /**
  * 弹出菜单
  * @param {document} obj 触发元素
@@ -1581,7 +1608,6 @@ $.plugin.showMenu = function(obj, content, title){
 		}
 	});
 }
-
 /**
  * 地区选择组件
  * @author cr180<cr180@cr180.com>
@@ -1758,7 +1784,6 @@ $.plugin.area = function(tit, defDt, callFun, maxLevel, apiUrl){
 	});
 
 }
-
 //title提示文字处理
 $.showTip = function(obj, txt, click){
 	obj = $(obj);
@@ -1788,10 +1813,6 @@ $.showTip = function(obj, txt, click){
 		},10);
 	});
 }
-
-
-
-
 /**
  * 幻灯轮播
  * @param options
@@ -1995,8 +2016,6 @@ $.plugin.slide = function(options){
 
 	return this;
 }
-
-
 /**
  * form表单生成
  * @param {JSON} data 配置参数参考：
@@ -2151,9 +2170,10 @@ $.newForm = function(data){
 	H += '</ks-form></form>';
 	return H;
 }
+;
 
-
-;(function(){
+(function(){
+	console.time('KSAUI RENDER');
 	function moveLabelAttr(tagname, input, appendClass){
 		input = $(input);
 		input.removeClass(appendClass);
@@ -2292,13 +2312,14 @@ $.newForm = function(data){
 			t.removeClass('ks-select');
 			//如果控件为展开类型 元素存在open属性
 			if($.isset(at.open)){
-				var obj = $.selectToHtml(t);
-				var ele = $('<div class="ks-select-list">'+obj[2]+'</div>');
+				var json = select_html_json(t[0]);
+				var ele = $('<div class="ks-select-list">'+select_json_html(json, json.value, json.multiple)+'</div>');
 				ele.children().listSelect(function(value){
 					$(t).val(Object.keys(arguments[2])).trigger('change');
 				});
 				t.after(ele).hide();
 				ele.prepend(t);
+				t.next().disabled(t.disabled());
 				//绑定一个内部事件 让select表单值改变后通知父级
 				t.DOMchange('val',function(){
 					var val =  $(this).val();
@@ -2308,34 +2329,45 @@ $.newForm = function(data){
 						ele.find('ks-list-item[value="'+v+'"]').selected(true);
 					});
 				});
+
+				t.DOMchange('attr.disabled', function() {
+					var ts = $(this);
+					ts.next().disabled(ts.disabled());
+				});
+
 			}else{
-				t.removeAttr('type');
-				var opt = t.find('option:selected'),
-					tit = (at.text || '请选择');
-				if (opt.length) {
-					if ($.isset(at.multiple)) {
-						tit = opt.text();
-					} else {
-						tit = opt.attr('text') || opt.text();
-					}
+				//获取select已选中文本
+				function _selectText(){
+					var text = '';
+					t.find('option:selected').each(function(_, e){
+						text += '<span>'+e.text+'</span>';
+					});
+					return text ? text : (t.attr('deftext') || '请选择');
 				}
+
+
+				t.attr('type value','');
 				t.wrap(moveLabelAttr('div', t, 'ks-select'));
-				t.after('<span class="ks-select-title" icon="caret-down">' + tit + '</span>');
-				t.parent().click(function(){
-					$(this).showSelect(t);
+				t.after('<span class="ks-select-title" icon="caret-down">' + _selectText() + '</span>');
+				t.next().click(function(){
+					if(t.disabled()){
+						return;
+					}
+
+					var optionJson = select_html_json(t[0]);
+					$(this).showSelect(optionJson, function(val, txt, valdt){
+						t.val(Object.keys(valdt));
+						t.next('.ks-select-title').html(_selectText());
+						t.trigger('change'); //手动触发change事件
+					});
 				});
 				//绑定一个内部事件 让select表单值改变后通知父级
 				t.DOMchange('val',function(){
-					var select =  $(this);
-					select.parent().children('.ks-select-title').html(select.selectText());
+					t.parent().children('.ks-select-title').html(_selectText());
 				});
 			}
-			//监听属性禁用变化事件
-			t.DOMchange('attr.disabled', function(){
-				t.next().disabled($(this).disabled());
-			});
 			//如果在标签属性data-value给定选中值 则处理到内部
-			t.data('value') && t.val($.explode(' ', t.data('value'),''));
+			$.isset(at.value) && t.val($.explode(' ', at.value,''));
 		},
 		'input[type="ks-date"]' : function(ele){
 			var t = $(ele), at = t.attr();
@@ -2746,11 +2778,11 @@ $.newForm = function(data){
 			function _updt(el){
 				el = $(el);
 				var attr = el.attr();
-				el.attr('username src','');
+				el.attr('title src','');
 				
-				var code = '', username = attr.username && !attr.src ? attr.username : null;
+				var code = '', title = attr.title && !attr.src ? attr.title : null;
 				var size = attr.size;
-				if(username){
+				if(title){
 					code = '<span class="ks-avatar-name"></span>';
 				}else if(attr.src){
 					code = ('<img src="'+attr.src+'">');
@@ -2758,9 +2790,9 @@ $.newForm = function(data){
 					code = '<i icon="user"></i>';
 				}
 				el[0].innerHTML = code;
-				if(username){
+				if(title){
 					var unameEl = el.children('.ks-avatar-name');
-					unameEl.text(username);
+					unameEl.text(title);
 					//监听name表单变化
 					var w = unameEl.width(true), pw = unameEl.parent().width(true);
 					var scale = Math.min(  (size ==='mini' ? 0.75 : 1) , (pw-6)/w);
@@ -2910,5 +2942,5 @@ $.newForm = function(data){
 			});
 		}
 	});
-
+	console.timeEnd('KSAUI RENDER');
 })();
