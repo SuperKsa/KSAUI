@@ -97,7 +97,7 @@ label {white-space: nowrap;}
 ::-webkit-scrollbar-track { background: #ededed; border-radius: 10px;}
 
 //============== 清理浮动 ==============
-ks-col:after, ks-card:after, ks-card-content:after, .ks-step:after, ks-col:after, ks-layout:after, ks-alert:after { content: ''; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
+ks-col:after, ks-card:after, ks-card-content:after, .ks-step:after, ks-col:after, ks-layout:after, ks-alert:after, .ks-row:after { content: ''; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
 
 //============== 自定义新元素 ==============
 	// 货币
@@ -506,6 +506,7 @@ ks-form[inline] {
 }
 
 
+
 ks-row {
 	display: flex; flex-wrap: wrap; align-items: stretch;
 	&[spacing] {display:flex; flex-wrap: wrap; align-items:stretch;}
@@ -695,9 +696,9 @@ ks-btn-group {
 	}
 }
 
-//============== mark标记 ==============
-mark {
-	display:inline-block; white-space:nowrap; padding:.1em .4em; font-size: 14px; border-radius:.22em; line-height: 1.5; background: #ecf5ff; color: @primary;
+//============== ks-tag标记 ==============
+ks-tag {
+	display:inline-block; white-space:nowrap; padding:0 28px 0 10px ; height: 30px; line-height: 28px; font-size: 14px; border-radius:3px; vertical-align: middle; background: #ecf5ff; color: @primary; position: relative;
 	&[cap] { border-radius: 1em;}//圆角
 	&:not([line]) {
 		&[color='primary'] { background: @primary; color:#fff;}
@@ -712,6 +713,12 @@ mark {
 		&[color='warning'] { color:@warning; border-color: @warning; background: #fff9f0}
 		&[color='danger'] { color:@danger; border-color: @danger; background: #fff1f1}
 	}
+	> i[icon="x"] {font-size: 12px; display: inline-block; width: 12px; height: 12px; text-align: center; line-height: 14px; cursor: pointer; opacity: .7; position: absolute; right: 8px; top:50%; margin-top: -6px}
+	> i[icon="x"]:before {content:"\e66c"; float: left;}
+	> i[icon="x"]:hover { opacity: 1}
+
+	&[edit] { cursor: pointer}
+	> input[type="text"] { position: absolute; left: 0; top: 0; border: none; background: none; width: 100%; height: 100%; padding:0 .4em;}
 }
 
 
@@ -746,6 +753,8 @@ ks-input-group, ks-input-group > *,
 .ks-date,
 ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 
+
+
 //日期输入框 单行内 输入框 底色 宽度 边框 圆角 内边距
 
 .ks-date {align-items: center; padding: 0 40px 0 10px; width:190px; overflow: hidden; position: relative}
@@ -765,7 +774,7 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 		//第一个span后面的span 添加分割斜杠
 		> span:first-child ~ span:before { content:'/'; margin: 0 3px; color: #999;}
 	}
-	&[active] .ks-select-title:before {transform:rotate(180deg); color:#333;}
+	.ks-select-title[active]:before {transform:rotate(180deg); color:#333;}
 }
 
 select:disabled ~ .ks-list-select { cursor: not-allowed; opacity: .7}
@@ -788,7 +797,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-input-arrow {
 	position: relative; display: inline-block;
 	&:after { content: ''; width: 100%; height: 0; overflow: hidden; display: block}
-	> [data-digit] { position: absolute; right: 1px; width: 22px; height:50%; line-height: 20px; top: 1px; text-align: center; border-left: @borderColor 1px solid; cursor: pointer; display: none; z-index: 10; user-select: none; font-size: 12px}
+	> [data-digit] { position: absolute; right: 1px; width: 22px; height:50%; line-height: 1.5; top: 1px; text-align: center; border-left: @borderColor 1px solid; cursor: pointer; display: none; z-index: 10; user-select: none; font-size: 12px}
 	> [data-digit]:hover { color: @primary}
 	> [data-digit='down'] { bottom: 1px; top: initial; border-top: @borderColor 1px solid;}
 	> input { height: inherit; background: #fff; padding: 0 22px 0 10px; float: left; width: 100%}
@@ -918,6 +927,9 @@ ks-area:not([disabled])[active] { border-color: @primary; color: #495057 !import
 
 
 //普通行
+.ks-row {display: block;}
+
+
 .ks-row-arrow:after { content: ''; display: block; width: 100%; clear: both; overflow: hidden;}
 //限制行 只有一行文字 固定高度 超出裁切 相对定位 
 .ks-row-x { width: 100%; height: 1.71428em; line-height: 1.71428em; position:relative; overflow: hidden;}
@@ -1186,6 +1198,31 @@ ks-input-group {
 	input:disabled { background:#f0f0f0; cursor: not-allowed }
 	.ks-select { min-width: 100px;}
 }
+
+
+//============== 表单小尺寸 ==============
+ks-input-group[size=small],
+ks-input-group[size=small] > *,
+.ks-input[size=small],
+.ks-input[size=small] > input,
+.ks-select[size=small],
+.ks-date[size=small],
+ks-area[size=small] {height: (@inputHeight - 6); line-height: (@inputHeight - 8);}
+
+.ks-input-arrow[size=small] > input { padding-left: 6px; padding-right: 16px}
+.ks-input-arrow[size=small] > [data-digit] { width: 16px; line-height: 1}
+
+
+ks-input-group[size=mini],
+ks-input-group[size=mini] > *,
+.ks-input[size=mini],
+.ks-input[size=mini] > input,
+.ks-select[size=mini],
+.ks-date[size=mini],
+ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14); font-size: 12px;}
+
+.ks-input-arrow[size=mini] > input { padding-left: 6px; padding-right: 16px}
+.ks-input-arrow[size=mini] > [data-digit] { width: 16px; line-height: 1}
 
 
 //============== 浮动提示窗口层 ==============

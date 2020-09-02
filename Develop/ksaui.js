@@ -61,7 +61,6 @@ $.ksauiRenderTree = {};
 		window.setTimeout(function(){
 			document.addEventListener('DOMNodeInserted', _r);
 		},60);
-		
 	});
 })();
 
@@ -1078,27 +1077,6 @@ $.plugin.listSelect = function(callFun){
 	return this;
 }
 
-/**
- * 渲染TAB选项卡
- * @param callFun 需要回调的函数 参数1=当前tab顺序值
- * @returns {K}
- */
-$.plugin.tab = function(callFun){
-	var $this = this;
-
-	$this.find('.ks-tab-title li').click(function(){
-		var o = $(this);
-		var index = o.index();
-		$this.find('.ks-tab-item').hide().eq(index).show();
-		o.addClass('a').siblings().removeClass('a');
-		$.isFunction(callFun) && callFun(index);
-	});
-	var showK = $this.find('.ks-tab-title li.a').index();
-	showK = showK == -1 ? 0 : showK;
-	$this.find('.ks-tab-title li').eq(showK).addClass('a');
-	$this.find('.ks-tab-item').hide().eq(showK).show();
-	return this;
-}
 
 /**
  * 将select元素 或者 selectJSON 转为渲染后的html
@@ -2177,11 +2155,12 @@ $.newForm = function(data){
 	function moveLabelAttr(tagname, input, appendClass){
 		input = $(input);
 		input.removeClass(appendClass);
-		var attr = 'style title color';
+		var inputAttr = input.attr();
+		var attr = 'style title color size';
 		var dt = {};
 	
 		$.loop(attr.split(' '), function(val){
-			dt[val] = input.attr(val);
+			dt[val] = inputAttr[val];
 		});
 	
 		dt.class = (dt.class ? dt.class : '') +' '+appendClass;
@@ -2304,7 +2283,7 @@ $.newForm = function(data){
 			t.after('<span data-digit="down" icon="sub"></span><span data-digit="up" icon="add"></span>');
 			t.inputNumber();
 		},
-		'select.ks-select' : function(ele){
+		'select.ks-select, select[type="ks-select"]' : function(ele){
 			var t = $(ele), at = t.attr();
 			if(t[0].tagName != 'SELECT'){
 				return;
@@ -2509,9 +2488,6 @@ $.newForm = function(data){
 			});
 			
 		},
-		'.ks-tab' : function(e){
-			$(e).tab();
-		},
 		'.ks-slide' : function(ele){
 			ele = $(ele);
 			var sdt = ele.attr();
@@ -2523,7 +2499,6 @@ $.newForm = function(data){
 			});
 		},
 		'ks-collapse' : function(ele){//折叠面板
-
 			$(ele).children().map(function(el){
 				el = $(el);
 				var attr = el.attr();
@@ -2770,8 +2745,8 @@ $.newForm = function(data){
 				ele.wrapInner('<ks-card-content></ks-card-content>');
 			}
 			//title存在 则附加title
-			if(!ele.children('ks-card-title').length && attrs.title){
-				ele.prepend('<ks-card-title '+(attrs.icon ? 'icon="'+attrs.icon+'"' : '')+'>'+attrs.title+'</ks-card-title>').attr('title icon','');
+			if(!ele.children('ks-card-title').length && attrs.label){
+				ele.prepend('<ks-card-title '+(attrs.icon ? 'icon="'+attrs.icon+'"' : '')+'>'+attrs.label+'</ks-card-title>').attr('label icon','');
 			}
 		},
 		'ks-avatar' : function(ele){
@@ -2868,8 +2843,8 @@ $.newForm = function(data){
 		var itemTitle = '<ks-tab-title-status></ks-tab-title-status>';
 		item.each(function(i, el){
 			el = $(el);
-			itemTitle += '<ks-tab-title-item index="'+i+'">'+(el.attr('title') || '')+'</ks-tab-title-item>';
-			el.attr({'title':'', index: i});
+			itemTitle += '<ks-tab-title-item index="'+i+'">'+(el.attr('label') || '')+'</ks-tab-title-item>';
+			el.attr({index: i});
 		});
 		if(title.length){
 			title.prepend(itemTitle);
@@ -2881,31 +2856,32 @@ $.newForm = function(data){
 		item.wrapAll('<ks-tab-content></ks-tab-content>');
 
 		var titleStatus = title.children('ks-tab-title-status');
+		var titleItem = title.children('ks-tab-title-item');
+
 
 		var contentBox = ele.children('ks-tab-content');
 		var eleWidth = contentBox.width(true);
 
 
-		var moveX = 0, currIndex = ele.find('ks-tab-title-item[active]').index();
-		currIndex = currIndex == -1 ? 0 : currIndex;
+		var moveX = 0, currIndex = item.filter('[active]').index();
+		currIndex = currIndex === -1 ? 0 : currIndex;
 
 		function _titleStatus(N){
-			var titleItem = title.find('ks-tab-title-item').eq(N);
-			var left = (titleItem[0].offsetLeft + titleItem.width(true)/2);
+			var el = titleItem.eq(N);
+			var left = (el[0].offsetLeft + el.width(true)/2);
 			titleStatus.css('left', left <30 ? 30 : left);
 		}
 		function _play(N){
 			N = parseInt(N);
-			var titleItem = title.find('ks-tab-title-item').eq(N);
-			titleItem.active(true).siblings().active(false);
+			titleItem.eq(N).active(true).siblings().active(false);
 			moveX = (0- eleWidth * N);
-			isTouch ? contentBox.removeClass('ks-no-transition').css({transform:'translateX(' + moveX + 'px)'}) : item.eq(N).show().siblings().hide();
+			isTouch ? contentBox.removeClass('ks-no-transition').css({transform:'translateX(' + moveX + 'px)'}) : item.eq(N).show().active(true).siblings().hide().active(false);
 			_titleStatus(N);
 		}
 
-		_play(currIndex);
 
-		title.find('ks-tab-title-item').click(function(){
+
+		titleItem.click(function(){
 			_play($(this).attr('index'));
 		});
 
@@ -2932,6 +2908,40 @@ $.newForm = function(data){
 					contentBox.removeClass('ks-no-transition').css({transform: 'translateX(' + moveX + 'px)'})
 				}
 			}, 'X');
+		}
+
+		_play(currIndex);
+	});
+
+	//tag标签关闭
+	$.render('ks-tag[close], ks-tag[edit]', function(ele){
+		ele = $(ele);
+		var attr = ele.attr();
+		ele.wrapInner('<span></span>');
+		if(attr.edit){
+			var input = $('<input type="hidden" value="'+ele.text()+'">');
+			input.blur(function(){
+				var val = input.val();
+				input.attr('type','hidden');
+				input.prev().css('opacity','').text(val);
+				$.callStrEvent.call(ele[0], attr.edit, val);
+			});
+			ele.append(input);
+			ele.click(function(){
+				input.prev().css('opacity','0');
+				input.attr('type','text').focus().select();
+			});
+		}
+
+		if($.isset(attr.close)){
+			var btn = $('<i icon="x"></i>');
+			btn.click(function(evn){
+				var x;
+				attr.close && (x = $.callStrEvent.call(ele[0], attr.close, evn));
+				x !== false && ele.remove();
+				return false;//阻止冒泡
+			});
+			ele.append(btn);
 		}
 	});
 
