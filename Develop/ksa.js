@@ -1046,7 +1046,7 @@ function debugTime(key){
 	 */
 	K.serialize = function(){
 		var dt = this.formData();
-		return $.urlsParam(dt);
+		return $.urlParam(dt);
 	}
 
 
@@ -2225,7 +2225,7 @@ function debugTime(key){
 		return {scale:bc, a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
 	}
 // ====================== 当前或指定url格式化为对象 ====================== //
-	$.urls = function(url){
+	$.url = function(url){
 		var P = {}, u = [];
 		if(url){
 			u = url.match(/(([a-z]+)\:\/\/)?([^:/]*?)(:(\d+)?)([^?]*)([^#]*)(#.*)?/i);
@@ -2266,7 +2266,7 @@ function debugTime(key){
 	 * @param query 参数：xxx=value
 	 * @returns {string}
 	 */
-	$.urlsAdd = function(url, query){
+	$.urlAdd = function(url, query){
 		return url + (url.indexOf('?') !== -1 ? '&' : '?') + query;
 	}
 
@@ -2275,7 +2275,7 @@ function debugTime(key){
 	 * @param url
 	 * @returns {*}
 	 */
-	$.urlsParam = function(url){
+	$.urlParam = function(url){
 		if($.isObject(url) || $.isArray(url)){
 			var u = [];
 			$.loop(url, function(value, key){
@@ -2310,7 +2310,7 @@ function debugTime(key){
 			window[copyCallback] = function () {
 				responseData = arguments;
 			}
-			option.url = $.urlsAdd(option.url,'jsonpCallback='+copyCallback);
+			option.url = $.urlAdd(option.url,'jsonpCallback='+copyCallback);
 			var script = document.createElement('script');
 			script.src = option.url;
 			script.type = 'text/javascript';
@@ -2348,8 +2348,8 @@ function debugTime(key){
 					});
 				}
 			}else if(getType =='GET'){
-				_data = $.urlsParam(option.data);
-				option.url = $.urlsAdd(option.url, _data);
+				_data = $.urlParam(option.data);
+				option.url = $.urlAdd(option.url, _data);
 				_data = '';
 			}
 

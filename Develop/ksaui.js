@@ -899,7 +899,7 @@ $.plugin.formSubmit = function(callFun){
 		if(obj.attr('id')){
 			formData.append('FORMID', obj.attr('id'));
 		}
-		$.API($.urlsAdd(obj.attr('action'), 'formsubmit=true'), formData, function(dt){
+		$.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function(dt){
 			if(typeof callFun == 'function'){
 				callFun(dt);
 			}
