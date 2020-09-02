@@ -632,10 +632,12 @@ function debugTime(key){
 					var oldAttrs = $.attrs(ele);
 					var isUpdate;
 					$.loop(sets, function (val, k) {
+						var odV = oldAttrs[k] === '' ? true : oldAttrs[k];//如果旧值是空值 则以true表示
+
 						//新旧值不同才更新
-						if(!$.isset(oldAttrs[k]) || val !== oldAttrs[k]){
-							val === '' || $.isNull(val) ? ele.removeAttribute(k) : ele.setAttribute(k, val);
-							$(ele).trigger('KSADOMchange', ['attr.'+k, val, oldAttrs[k]]);
+						if(!odV || val !== odV){
+							val === '' || $.isNull(val) ? ele.removeAttribute(k) : ele.setAttribute(k, (val === true ? '' : val));
+							$(ele).trigger('KSADOMchange', ['attr.'+k, val, odV]);
 							if (k.indexOf('data-') === 0) {
 								dataAttr[k.substr(5)] = val;
 							}
@@ -3375,7 +3377,6 @@ function debugTime(key){
 											var e = $(ele);
 											var newats = attrs[0]();
 											var oldats = $(ele).attr();
-											var inats = {};
 											//删除原来的
 											$.loop(oldats, function (nv, nk) {
 												if (!newats[nk]) {
@@ -3400,6 +3401,7 @@ function debugTime(key){
 								var el = $(ele);
 								$.loop(insetattr, function(v, k){
 									if(k !=='v-update'){
+										v = v ==='' ? true : v;
 										el.attr(k, v);
 									}
 								});
@@ -4090,7 +4092,30 @@ function debugTime(key){
 		return value.toString().length;
 	}
 
-	$.loop(('input blur focus focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
+	K.focus = function(fun){
+		if(fun){
+			this.on('focus', fun);
+		}else{
+			this[0] && this[0].focus();
+		}
+		return this;
+	}
+
+	/**
+	 * 触发一个JS字符串代码
+	 * 必须通过apply|call触发才能正确调整this指向
+	 *
+	 * @param code 需要触发的代码
+	 * @param param 传递的参数 支持数组
+	 * @returns {*}
+	 */
+	$.callStrEvent = function(code, param){
+		code = code.trim();
+		var fun = window[code] ? window[code] : new Function('return '+code);
+		return fun && $.isArray(param) ? fun.apply(this, param) : fun.call(this, param);
+	}
+
+	$.loop(('input blur focusin focusout resize scroll click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave change keydown keypress keyup contextmenu touchstart touchmove touchend').split(' '),function (name) {
 		K[name] = function(func, fn) {
 			return arguments.length > 0 ? this.on(name, null, func, fn) : this.trigger(name);
 		};
