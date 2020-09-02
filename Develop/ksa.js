@@ -163,7 +163,7 @@ function debugTime(key){
 		try {
 			return matchesSelector.call(ele, selectorStr(selector));
 		}catch (e) {
-			console.error(new Error('isSelectDom执行错误，浏览器不支持matches'));
+			console.error(new Error('选择器语法可能有错误：'+selector));
 		}
 	}
 
@@ -1704,6 +1704,20 @@ function debugTime(key){
 			});
 		});
 		return rdom;
+	}
+
+	/**
+	 * 集合内部遍历并生成新集合
+	 * @param selector
+	 * @returns {*[]|Uint8Array|BigInt64Array|Float64Array|Int8Array|Float32Array|Int32Array|Uint32Array|Uint8ClampedArray|BigUint64Array|Int16Array|Uint16Array}
+	 */
+	K.filter = function(selector){
+		selector = selector || '*';
+		return this.map(function(ele){
+			if(isSelectDom(ele, selector)){
+				return ele;
+			}
+		});
 	}
 
 	/**

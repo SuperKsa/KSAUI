@@ -2283,7 +2283,7 @@ $.newForm = function(data){
 	
 			if(txt){
 				txt = txt.split('|');
-				txt = $.isset(txt[1]) ? '<em>'+txt[0]+'</em><em>'+txt[1]+'</em>' : '<em>'+txt[0]+'</em>';
+				txt = $.isset(txt[1]) ? '<em>'+txt[1]+'</em><em>'+txt[0]+'</em>' : '<em>'+txt[0]+'</em>';
 			}
 			t.attr('type','checkbox').removeAttr('name');
 	
@@ -2824,33 +2824,40 @@ $.newForm = function(data){
 					},300);
 				});
 			}
-		},
-		'ks' : function(ele){
-			ele = $(ele);
-			//显示底部导航对应的内容区
-			function _navbarContentShow(el, key){
-				el.parent('ks-navbar').prev('ks-content').children('ks-navbar-content[key="'+key+'"]').show().siblings('ks-navbar-content').hide();
-			}
-			ele.find('ks-body > ks-navbar > ks-navbar-item[key]').each(function(i, el){
-				var attrs = $.attrs(el);
-				el = $(el);
-				if(el.active()){
-					_navbarContentShow(el, attrs.key);
-				}
-				el.click(function(){
-					$(this).active(true)
-				}).DOMchange('attr.active', function(){
-					var el = $(this);
-					if(el.active()){
-						//去掉同辈活动状态
-						el.siblings().active();
-						//更新content
-						_navbarContentShow(el, attrs.key);
-					}
-				});
-			});
 		}
 	});
+
+
+	//H5主框架
+	$.render('ks', function(ele){
+		ele = $(ele);
+		var navbars = ele.find('ks-body > ks-navbar > ks-navbar-item');
+		var contents = el.parent('ks-navbar').prev('ks-content').children('ks-navbar-content');
+
+		//显示底部导航对应的内容区
+		function _navbarContentShow(el, key){
+			contents.filter('[key="'+key+'"]').show().siblings().hide();
+		}
+		navbars.each(function(i, el){
+			el = $(el);
+			var skey = el.attr('key');
+			if(el.active()){
+				_navbarContentShow(el, skey);
+			}
+			el.click(function(){
+				$(this).active(true);
+			}).DOMchange('attr.active', function(){
+				var el = $(this);
+				if(el.active()){
+					//去掉同辈活动状态
+					el.siblings().active(false);
+					//更新content
+					_navbarContentShow(el, skey);
+				}
+			});
+		});
+	});
+
 
 	$.render('ks-tab', function(ele){
 		ele = $(ele);
@@ -2931,7 +2938,6 @@ $.newForm = function(data){
 	//title必须在最后渲染
 	$.render('[title]', function(ele){//title提示文字处理
 		ele = $(ele);
-		ele.attr('_ksauirender_title_',1);
 		var tit = ele.attr('title');
 		if(tit) {
 			ele.hover(function(){
