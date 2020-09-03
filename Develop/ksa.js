@@ -13,7 +13,7 @@ function debug(data){
 	if(typeof data ==='object'){
 		console.dir(data);//debug
 	}else{
-		console.log(data);//debug
+		console.log.apply(this, arguments);//debug
 	}
 }
 
@@ -982,10 +982,9 @@ function debugTime(key){
 			});
 			return this;
 		}else{
-			var t = [], i=0;
+			var t = [];
 			this.map(function(ele){
-				t[i] = ele.innerHTML || ele.textContent || '';
-				i ++;
+				ele.innerHTML && t.push(ele.innerHTML || '');
 			});
 			return t.join("\n");
 		}
@@ -2905,6 +2904,7 @@ function debugTime(key){
 					ths.ECODE = ths.vdom(ths.Dom.childNodes);
 					delete ths.Dom;
 					var newDom = ths.parseVDOMcode(ths.ECODE);
+					ths.Html = $(newDom).html();
 					if (newDom) {
 						delete ths.ECODE;
 						if (ths.EL) {
@@ -2914,11 +2914,9 @@ function debugTime(key){
 								$(ths.EL).html(newDom);
 							}
 						}
-						$.loop(newDom, function (e) {
-							ths.Html += e.outerHTML || e.textContent;
-						});
 					}
 				}
+
 				return {
 					el : ths.EL,
 					cache : ths.cache,
