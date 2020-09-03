@@ -2890,6 +2890,7 @@ function debugTime(key){
 			EL : $(Config.el)[0],
 			isMonitor : $.isset(Config.isMonitor) ? Config.isMonitor : true,
 			data : Config.data || {},
+			methods : Config.methods || {},
 			Template : Config.template,
 			debug : Config.debug,
 			Html : '', //解析完成的HTML
@@ -2897,6 +2898,7 @@ function debugTime(key){
 			ECODE : [],
 			init : function(){
 				var ths = this;
+				ths.markMethods(ths.methods);
 				if(ths.Template) {
 					ths.ECODE = ths.vdom(ths.formatHTML());
 					var newDom = ths.parseVDOMcode(ths.ECODE);
@@ -2918,6 +2920,7 @@ function debugTime(key){
 					cache : ths.cache,
 					template : ths.Template,
 					data : ths.data,
+					methods : ths.methods,
 					dom : newDom,
 					html : ths.Html,
 					isMonitor : ths.isMonitor,
@@ -3095,6 +3098,9 @@ function debugTime(key){
 					var attrsIsP = [];
 					$.loop(ele.attributes, function (v) {
 						var value = v.value, key = v.name;
+						if(key.substr(0,1) ==='@'){
+							return;
+						}
 						var ep = ths.parseText(value);
 						value = ep[0];
 						if($.isObject(ep[1])){
@@ -3192,10 +3198,19 @@ function debugTime(key){
 							rcode += ths.vdom(ele.childNodes);
 						}
 					}
-					monitor = monitor ? (', function(){' + monitor) + '}' : '';
+					monitor = monitor ? ('function(){' + monitor) + '}' : '""';
 
-					rcode = '_$$_.F(function(){return _$$_.C((arguments[0]||"' + tag + '"), ' + nodeType + ', ' + (attrs || '""') + ', ' + (rcode || '""') + ')}' + monitor + ')';
-
+					var events = [];
+					$.loop(ele.attributes, function(val){
+						if(val.name.substr(0,1) === '@'){
+							if(!events){
+								events = {};
+							}
+							events.push('"'+(val.name.substr(1))+'": function(){return '+val.value+'}');
+						}
+					});
+					events = events.length ? '{'+events.join(',')+'}' : '""';
+					rcode = '_$$_.F(function(){return _$$_.C((arguments[0]||"' + tag + '"), ' + nodeType + ', ' + (attrs || '""') + ', ' + (rcode || '""') + ')}, ' + monitor + ', '+events+')';
 					Enode.push(rcode);
 
 				});
@@ -3270,6 +3285,25 @@ function debugTime(key){
 					}
 				}
 			},
+			//给沙箱函数打上标记
+			markMethods : function(methods){
+				if(!methods){
+					return;
+				}
+				var ths = this;
+				//写入内部沙箱事件
+				$.loop(methods, function(value, key){
+					if($.isFunction(value)){
+						Object.defineProperty(value, '_isKSAtplEvent', {
+							value: true,
+							enumerable: false,
+							writable: true
+						});
+					}else if($.isObject(value)){
+						ths.markMethods(value);
+					}
+				});
+			},
 			/**
 			 * 统一解析VDOM虚拟树中的变量
 			 */
@@ -3284,26 +3318,45 @@ function debugTime(key){
 					invars.push("var "+key+" = "+svs+";");
 					ths.isMonitor && ginvars.push("_$$_.G(_$data_, '"+key+"', function(v){"+key+"= v;})");
 				});
+				//写入沙箱对象
+				$.loop(this.methods, function(value, key){
+					invars.push("var "+key+" = _$methods_."+key+";");
+				});
 				invars = invars.join("\n");
 				ginvars = ginvars.join("\n");
 				_EvalCodes = invars+"\n"+ginvars+" \n return _$$_.D("+_EvalCodes+")";
 				if(ths.debug){
 					_EvalCodes = "console.error(new Error('Evalcode回调'));"+_EvalCodes;
 				}
-				var Es = new Function('_$data_', 'var _$$_ = this; '+_EvalCodes+'');
+				var Es = new Function('_$tpl_, _$data_ , _$methods_', 'var _$$_ = this; '+_EvalCodes+'');
 
 				/**
 				 * 创建节点并创建变量监听
-				 * @param Cfunc
-				 * @param Mfunc
+				 * @param Cfunc 创建元素节点语句
+				 * @param Mfunc 监听元素节点语句
+				 * @param event 元素绑定的事件
 				 * @returns {*}
 				 */
-				Es.prototype.F = function(Cfunc, Mfunc){
+				Es.prototype.F = function(Cfunc, Mfunc, event){
 					var ele = Cfunc();
 					ths.setAttrs(ele, 'renderFunction', function(){
 						Cfunc(ele);
 					});
+
+					//监听函数
 					Mfunc && Mfunc(ele);
+
+					//绑定事件
+					$.loop(event, function(func, name){
+
+						$(ele).on(name, function(){
+							var R = func.apply(ele, arguments);
+							//可能绑定的是一个函数变量名 这时返回的就是一个函数 所以需要判断是否是沙箱内的函数
+							if(R && $.isFunction(R) && R._isKSAtplEvent){
+								R.apply(ele, arguments);
+							}
+						})
+					});
 					return ele;
 				}
 
@@ -3394,19 +3447,18 @@ function debugTime(key){
 							if($.isObject(insetattr)){
 								var el = $(ele);
 								$.loop(insetattr, function(v, k){
-									if(k !=='v-update'){
+									//双向绑定
+									if(k ==='v-update') {
+										ths.vUpdateModel(ele, v);
+									//事件绑定
+									}else if(k.substr(0,1) == '@'){
+										//ths.bindEvent(ele, k.substr(1), v);
+									}else{
 										v = v ==='' ? true : v;
 										el.attr(k, v);
 									}
 								});
-								$.loop(insetattr, function(v, k){
-									if(k ==='v-update'){
-										ths.vUpdateModel(ele, v)
-									}
-								});
 							}
-
-
 						}
 					}
 					if(monitorFunc){
@@ -3623,7 +3675,6 @@ function debugTime(key){
 					return newEle;
 				}
 
-
 				/**
 				 * if判断节点回调处理
 				 * 每个参数代表一个判断条件
@@ -3715,7 +3766,7 @@ function debugTime(key){
 					return pushDom;
 				}
 
-				return new Es(ths.data);
+				return new Es(ths, ths.data, ths.methods);
 			},
 			/**
 			 * 提取字符串中的变量名
