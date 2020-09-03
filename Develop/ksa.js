@@ -2828,7 +2828,7 @@ function debugTime(key){
 	}
 // ====================== TPL模板语法 ====================== //
 	$.tpl = function(Config){
-		if(Config.el){
+		if(!Config.template && Config.el){
 			Config.template = $(Config.el).html();
 		}
 		//匹配模板变量正则 {xxx}
@@ -2894,15 +2894,11 @@ function debugTime(key){
 			debug : Config.debug,
 			Html : '', //解析完成的HTML
 			cache : {},
-			Dom : document.createDocumentFragment(), //虚拟节点
 			ECODE : [],
 			init : function(){
-
 				var ths = this;
 				if(ths.Template) {
-					ths.formatHTML();
-					ths.ECODE = ths.vdom(ths.Dom.childNodes);
-					delete ths.Dom;
+					ths.ECODE = ths.vdom(ths.formatHTML());
 					var newDom = ths.parseVDOMcode(ths.ECODE);
 					ths.Html = $(newDom).html();
 					if (newDom) {
@@ -2934,7 +2930,6 @@ function debugTime(key){
 				};
 			},
 			formatHTML : function () {
-				var ths = this;
 				var code = this.Template;
 				//规整语法 去掉{{}}里面的空白字符
 				code = code.replace(/\{\{(.*?)\}\}/g, function(){
@@ -2968,10 +2963,11 @@ function debugTime(key){
 				code = code.replace(/\{\{eval\}\}([\s\S]*?)\{\{\/eval\}\}/g, function(){
 					return '<!--eval '+arguments[1].trim()+'-->';
 				});
-				$.loop($.dom(code), function(e){
-					ths.Dom.appendChild(e);
-				});
-				return this;
+				var dom = $.dom(code);
+				if(!$.isArray(dom)){
+					dom = [dom];
+				}
+				return dom;
 			},
 			setAttrs : function(ele, key, value){
 				if(!ele){
@@ -3322,7 +3318,7 @@ function debugTime(key){
 
 					var nodeType = arguments[1],
 						attrs = arguments[2],
-						textContent = arguments[3],
+						textContent = arguments[3] || '',
 						monitorFunc = arguments[4];
 					if($.isObject(tag) && tag.nodeType){
 						tag.textContent = textContent;
