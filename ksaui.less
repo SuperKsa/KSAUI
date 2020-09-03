@@ -443,7 +443,7 @@ ks-avatar {
 	tr > th:only-of-type ~ td:only-of-type { width:auto;}
 
 	//鼠标经过加背景色
-	&[hover] tbody tr:hover { background: #fafafa; border-left: #999 2px solid; border-right: #999 2px solid}
+	&[hover] tbody tr:hover { background: #fafafa;}
 
 	//thead增加背景色
 	> thead ,
@@ -667,16 +667,16 @@ ks-btn[cap]:empty, ks-btn-group[cap] > ks-btn:empty { padding: 0; text-align: ce
 
 //按钮组处理
 ks-btn-group {
-	display: inline-block;
+	display: inline-block; vertical-align: middle;
 	&:after { content: ''; display: block; clear: both; width: 100%; overflow: hidden}
 	> ks-btn { float: left}
 	> ks-btn:not(:first-child) { margin-left: -1px}
 	//不是最后一个和第一个
 	> ks-btn:not(:last-child):not(:first-child) { border-radius: 0 !important;}
 	//第一个
-	> ks-btn:first-child { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;}
+	> ks-btn:first-child:not(:only-child) { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;}
 	//最后一个
-	> ks-btn:last-child { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
+	> ks-btn:last-child:not(:only-child) { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
 
 	//按钮颜色
 	&[color] > ks-btn {color: #fff;}

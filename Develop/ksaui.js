@@ -816,7 +816,6 @@ $.week = function(y,m,d){
  * @returns {Boolean}
  */
 $.API = function(url, postdata, fun, errfun, datatype,isBflow){
-	var $this = this;
 	datatype = datatype ? datatype : 'json';
 	url += (url.indexOf('?') == -1 ? '?' : '&') +'ajax=1';
 	var option = {
@@ -836,23 +835,23 @@ $.API = function(url, postdata, fun, errfun, datatype,isBflow){
 
 				if($.isset(s.msg) && s.msg){
 					if(s.success){
-						$this.toast(s.msg , 'success', function(){
+						$.toast(s.msg , 'success', function(){
 							if(s.success && s.locationUrl){
 								window.location.href = s.locationUrl;
 							}
 						});
 					}else{
-						$this.toast(s.msg, 'error');
+						$.toast(s.msg, 'error');
 					}
 				}
 
 			}else{
-				$this.toast('error', 'ajax远端系统错误');
+				$.toast('error', 'ajax远端系统错误');
 			}
 		},
 		error : function(s) {
 			console.log('%cKSAUI-AJAX-ERROR (Code:'+s.status+')','background:#f00; color:#fff', 'URL:'+url);//debug
-			$this.toast('ajax远端系统错误', 'error');
+			$.toast('ajax远端系统错误', 'error');
 			if(typeof(errfun) ==='function'){
 				errfun(s);
 			}
@@ -923,22 +922,19 @@ $.plugin.formSubmit = function(callFun){
  * @param {url} url 上传地址
  * @param {func} callFun 上传后回调函数
  */
-$.plugin.upload = function(name, files, url, callFun){
+$.upload = function(name, files, url, callFun){
 	name = name ? name : 'upload';
-	var O = $(files);
-	if(typeof(O) =='object' && O.length && O[0] && O[0].tagName =='INPUT'){
-		files = files.files;
-	}
-	if(files.length>1 && name.indexOf('[]') == -1){
+	files = files.files;
+	if(files.length>1 && name.indexOf('[]') === -1){
 		name += '[]';
 	}
 	var formData = new FormData();
-	this.loop(files, function(k, val){
+	$.loop(files, function(val){
 		if(val.size && val.type){
 			formData.append(name, val);
 		}
 	});
-	this.API(url,formData, function(data){
+	this.API(url, formData, function(data){
 		callFun(data);
 	}, null, 'json', 1);
 }
