@@ -57,10 +57,10 @@ $.ksauiRenderTree = {};
 			});
 		}
 		_r();
-		//演示60ms后 监听DOM变化
+		//延迟监听DOM变化 防止出现渲染阻塞
 		window.setTimeout(function(){
 			document.addEventListener('DOMNodeInserted', _r);
-		},60);
+		},5);
 	});
 })();
 
@@ -2170,25 +2170,23 @@ $.newForm = function(data){
 			var selector = $(t.attr('selector') || t.parent()[0].form || t.parent().parent());
 			var tParent = t.parent();
 			var inputs = 'input[type="checkbox"][name="' + name + '"]:not([ischeckall])';
-			var checkboxObj = selector.find(inputs),
-				checkboxNum = checkboxObj.length,
-				indeterName = 'ks-checkbox-indeter';
+			var indeterName = 'ks-checkbox-indeter';
 			//全选事件绑定
 			t.change(function () {
 				//域下相同类型的元素
 				if (this.checked) {
 					//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-					name && checkboxObj.checked(true);
+					name && selector.find(inputs).checked(true);
 				} else {
 					//数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-					name && checkboxObj.checked(false);
+					name && selector.find(inputs).checked(false);
 				}
 				tParent.removeClass(indeterName);
 			});
-			checkboxObj.change(function(){
+			selector.on('change', inputs, function(){
 				var st = false;
 				var selectedNum = selector.find(inputs+':checked').length;
-				if(selectedNum >= checkboxNum){
+				if(selectedNum >= selector.find(inputs).length){
 					st = true;
 					tParent.removeClass(indeterName);
 				}else if(selectedNum > 0){
