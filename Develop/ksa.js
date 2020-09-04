@@ -2451,7 +2451,7 @@ function debugTime(key){
 			//只传入三个值时 第三个参数为函数
 			if(!Fun && $.isFunction(keyName)){
 				Fun = keyName;
-				keyName = '';
+				keyName = undefined;
 			}
 			//obj必须是对象、数组 回调函数必须存在
 			if(!$.isObject(obj)  || !$.isFunction(Fun)){
@@ -2464,11 +2464,10 @@ function debugTime(key){
 				ths.Event[objID] = ths.newQueue();
 			}
 			var evnObj = ths.Event[objID];
-			keyName = keyName ? $.explode(' ', keyName,'') : '';
 
 			$.loop($.explode(' ', action, ''), function(ac){
-				if(keyName){
-					$.loop(keyName,  function(val){
+				if($.isset(keyName)){
+					$.loop($.explode(' ', keyName,''),  function(val){
 						evnObj.monitor = evnObj.monitor || {};
 						if(!evnObj.monitor[val]){
 							evnObj.monitor[val] = ths.newQueue();
@@ -2490,7 +2489,7 @@ function debugTime(key){
 		 * @param keyName
 		 */
 		monitor : function(obj, keyName){
-			if(!$.isObject(obj) || !keyName){
+			if(!$.isObject(obj) || !$.isset(keyName)){
 				return;
 			}
 			var ths = this;
@@ -2553,7 +2552,7 @@ function debugTime(key){
 		 * @param dt
 		 */
 		reset : function(obj, keyName, dt){
-			if(!$.isObject(obj) || !keyName){
+			if(!$.isObject(obj)){
 				return;
 			}
 			var ths = this;
@@ -2579,7 +2578,7 @@ function debugTime(key){
 			ths.add(obj, keyName, dt);
 		},
 		update : function(obj, keyName, dt){
-			if(!$.isObject(obj) || !keyName){
+			if(!$.isObject(obj)){
 				return;
 			}
 			var ths = this;
@@ -2598,7 +2597,7 @@ function debugTime(key){
 		 * @param dt
 		 */
 		set : function(obj, keyName, dt){
-			if(!$.isObject(obj) || !keyName){
+			if(!$.isObject(obj)){
 				return;
 			}
 			var ths = this,
@@ -2621,7 +2620,7 @@ function debugTime(key){
 					//遍历旧数据 不存在的直接删除
 					$.loop(setObj, function(oldV, k){
 						//如果新数据不存在 则删除
-						if(!$.isset(dt[k])){
+						if(!dt[k]){
 							$.def.delete(setObj, k);
 						}
 					});
@@ -2657,7 +2656,7 @@ function debugTime(key){
 		 * @param keyName 需要删除的键名 多个以空格分开
 		 */
 		delete : function(obj, keyName){
-			if(!$.isObject(obj) || !keyName){
+			if(!$.isObject(obj) || !$.isset(keyName)){
 				return;
 			}
 			var ths = this;
@@ -3107,7 +3106,8 @@ function debugTime(key){
 						value = ep[0];
 						if($.isObject(ep[1])){
 							$.loop(ep[1], function(kv, kn){
-								$.isObject(kv) && attrsIsP.push("["+kn+", '" + Object.keys(kv).join(',')+"']");
+								//组合需要监听的键名、执行函数、监听的变量(多个逗号隔开)
+								$.isObject(kv) && attrsIsP.push("['"+key+"', "+kn+", '" + Object.keys(kv).join(',')+"']");
 							});
 						}
 						if(key ==='v-update' || key ==='v-updatetext'){
@@ -3350,7 +3350,6 @@ function debugTime(key){
 
 					//绑定事件
 					$.loop(event, function(func, name){
-
 						$(ele).on(name, function(){
 							var R = func.apply(ele, arguments);
 							//可能绑定的是一个函数变量名 这时返回的就是一个函数 所以需要判断是否是沙箱内的函数
@@ -3422,9 +3421,18 @@ function debugTime(key){
 								insetattr = attrs[0]();
 								if(attrs[1]) {
 									$.loop(attrs[1], function (v) {
-										$.def.createEvent('set', v[0], v[1], function () {
+										$.def.createEvent('set', v[1], v[2], function () {
 											var e = $(ele);
-											var newats = attrs[0]();
+											$.loop(attrs[0](), function(attrV, attrK){
+												attrV = attrV ==='' ? attrK : attrV;
+												if(attrK === v[0]){
+													e.attr(attrK, attrV);
+												}
+											})
+											//$(ele).attr(v[0], attrs[0]());
+											/*
+											var e = $(ele);
+											var newats = attrs[1]();
 											var oldats = $(ele).attr();
 											//删除原来的
 											$.loop(oldats, function (nv, nk) {
@@ -3439,6 +3447,7 @@ function debugTime(key){
 													e.attr(nk, nv);
 												}
 											});
+											*/
 										});
 									});
 								}
