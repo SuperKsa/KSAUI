@@ -256,7 +256,7 @@ $.layerHide = function(Id, Fun){
 		nextEle.length && nextEle.css({transition:'all 0.2s',opacity:0});
 		setTimeout(function(){
 			if(option.close && typeof(option.close) == 'function'){
-				option.close();
+				option.layerID && $.layerHide(option.layerID);
 			}
 			option.backEvent && $.BackEvent('KsaLayer'+Id);
 			Fun && typeof(Fun) =='function' && Fun(Id);
@@ -748,13 +748,6 @@ $.openWindow = function(option){
 	}));
 }
 
-/**
- * 关闭函数 所有KSAUI事件综合处理
- * @param closeFun
- */
-$.close = function(closeFun){
-	this.layerID && $.layerHide(this.layerID, closeFun);
-}
 
 /**
  * 将各种日期/时间戳转换为对象
@@ -962,74 +955,6 @@ $.tag = function(tp, dt, txt, ed){
 	return h;
 }
 
-/**
- * input[type=number] 绑定快捷加减事件
- * @param {func} callFun 变化后的回调函数 参数1=当前值 参数2=当前动作(up=加 down=减)
- */
-$.plugin.inputNumber = function(callFun){
-	var $this = this;
-	var attrs = $this.attr();
-	!$this.val().length && !attrs.placeholder && $this.val(attrs.min || 0);
-	var ef = $this.parent();
-	!ef.hasClass('ks-input-arrow') && ef.addClass('ks-input-arrow');
-	var min = parseFloat(attrs.min) || 0, //input最小值
-		max = parseFloat(attrs.max) || 0, //input最大值
-		step = parseFloat(attrs.step) || 0, //input步进值
-		n = step && step.toString().indexOf('.') != -1 ? step.toString().split('.')[1].length : 0; //step有多少小数位 踏马的js精度
-	//计算 并写input  x[0=+ 1=-]
-	function r(x){
-		var v = parseFloat($this.val()) || 0;
-		if(x == 'up'){
-			if(step){
-				v = v+step;
-			}else{
-				v ++;
-			}
-		}else{
-			if(step){
-				v = v-step;
-			}else{
-				v --;
-			}
-		}
-		v = n >0 ? v.toFixed(n) : v; //去踏马的精度问题 再骂一次加深印象
-		v = v < min ? min : v; //最小值限制
-		v = max && v > max ? max : v; //最大值限制
-		$this.val(v);
-	}
-
-	//检查input标签是否存在回调函数属性 callfun="xxx"
-	if(!callFun) {
-		var cfun = attrs.callfun;
-		if (cfun) {
-			callFun = string2Function(cfun);
-		}
-	}
-
-	var S,S1;
-	//鼠标按下处理
-	var evn = $.device == 'MOBILE' ? 'touchstart touchend' : 'mousedown mouseup';
-	ef.find('*[data-digit]').on(evn,function(e){
-
-		var i = $(this).data('digit'); //取i标签当前索引
-		if($.inArray(e.type,['mousedown','touchstart'])){
-			r(i); //按下 计算一次
-			//x时间内未松开鼠标 则一直计算
-			S = setTimeout(function(){
-				S1 = setInterval(function(){
-					r(i);
-				},60);
-			},250);
-
-			//鼠标松开后释放自动计算事件
-		}else{
-			$this.change();
-			clearInterval(S1);
-			clearTimeout(S);
-			typeof(callFun) =='function' && callFun($this.val(), i);
-		}
-	});
-}
 
 /**
  * 初始化选择列表
@@ -2272,12 +2197,65 @@ $.newForm = function(data){
 			});
 		},
 		'input[type="ks-number"]' : function(ele){
-			var t = $(ele);
-			t.attr('type','number').addClass('ks-input');
-			t.wrap(moveLabelAttr('label', t, 'ks-input ks-input-arrow'));
+			ele = $(ele);
+			ele.attr('type','number').addClass('ks-input');
+			ele.wrap(moveLabelAttr('label', ele, 'ks-input ks-input-arrow'));
 	
-			t.after('<span data-digit="down" icon="sub"></span><span data-digit="up" icon="add"></span>');
-			t.inputNumber();
+			ele.after('<span data-digit="down" icon="sub"></span><span data-digit="up" icon="add"></span>');
+
+			var attrs = ele.attr();
+			!ele.val().length && !attrs.placeholder && ele.val(attrs.min || 0);
+			var ef = ele.parent();
+			!ef.hasClass('ks-input-arrow') && ef.addClass('ks-input-arrow');
+			var min = parseFloat(attrs.min) || 0, //input最小值
+				max = parseFloat(attrs.max) || 0, //input最大值
+				step = parseFloat(attrs.step) || 0, //input步进值
+				n = step && step.toString().indexOf('.') != -1 ? step.toString().split('.')[1].length : 0; //step有多少小数位 踏马的js精度
+			//计算 并写input  x[0=+ 1=-]
+			function r(x){
+				var v = parseFloat(ele.val()) || 0;
+				if(x == 'up'){
+					if(step){
+						v = v+step;
+					}else{
+						v ++;
+					}
+				}else{
+					if(step){
+						v = v-step;
+					}else{
+						v --;
+					}
+				}
+				v = n >0 ? v.toFixed(n) : v; //去踏马的精度问题 再骂一次加深印象
+				v = v < min ? min : v; //最小值限制
+				v = max && v > max ? max : v; //最大值限制
+				ele.val(v);
+			}
+
+			var S,S1;
+			//鼠标按下处理
+			var evn = $.device == 'MOBILE' ? 'touchstart touchend' : 'mousedown mouseup';
+			ef.find('*[data-digit]').on(evn,function(e){
+
+				var i = $(this).data('digit'); //取i标签当前索引
+				if($.inArray(e.type,['mousedown','touchstart'])){
+					r(i); //按下 计算一次
+					//x时间内未松开鼠标 则一直计算
+					S = setTimeout(function(){
+						S1 = setInterval(function(){
+							r(i);
+						},60);
+					},250);
+
+					//鼠标松开后释放自动计算事件
+				}else{
+					ele.change();
+					clearInterval(S1);
+					clearTimeout(S);
+					typeof(callFun) =='function' && callFun(ele.val(), i);
+				}
+			});
 		},
 		'select.ks-select, select[type="ks-select"]' : function(ele){
 			var t = $(ele), at = t.attr();
@@ -2576,96 +2554,6 @@ $.newForm = function(data){
 			scrollTd.className = 'ks-td-scroll';
 			dom.find('.ks-table-header > table > thead > tr').append(scrollTd);
 		},
-		//分页初始化
-		'ks-page' : function(ele){
-			function _pgTo(val, isInit){
-				if(ele.disabled()  || val == ele[0].value){
-					return;
-				}
-				if(val ==='prev'){
-					val = ele[0].value - 1;
-					val = val < 1 ? 1 : val;
-				}else if(val === 'next'){
-					val = ele[0].value + 1;
-					val = val > total ? total : val;
-				}
-				val = parseInt(val);
-							
-				ele.children('ks-page-prev').disabled(val ===1);
-				ele.children('ks-page-first').disabled(val < pageNum / 2);
-	
-				ele.children('ks-page-next').disabled(val === total);
-				ele.children('ks-page-last').disabled(val > total- pageNum / 2);
-	
-				ele.attr('current', val);
-				ele[0].value = val;
-				var startPg = val - ((pageNum - 1) / 2);
-				var endPg = total - pageNum+1;
-				startPg = startPg < 1 ? 1 : (startPg > endPg ? endPg : startPg);
-				ele.children('a').map(function (a) {
-					$(a).attr('value', startPg).text(startPg);
-					startPg++;
-				});
-				ele.children('a[value="'+val+'"]').addClass('a').siblings('a').removeClass('a');
-				ele.find('.ks-input-group > input').val(val);
-				!isInit && ele.trigger('change');
-			}
-	
-			ele = $(ele);
-			var total = parseInt(ele.attr('total') || 0);
-			if(!total){
-				return;
-			}
-			var current = parseInt(ele.attr('current') || 1);
-			var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
-	
-			//给当前ele添加value属性值
-			//ele[0].value = current;
-			var href = ele.attr('href');
-			var pgcode = '';
-			(function(){
-				var start = Math.ceil(current - ((pageNum - 1) / 2));
-				start = start < 1 ? 1 : start;
-				var mx = Math.min(total+1, start+pageNum);
-				if(mx <=2){
-					return;
-				}
-				for(var i = start; i < mx; i++) {
-					var txt = i;
-					var val = i;
-					var attr = ' value="' + val + '"';
-					if (href) {
-						attr += ' href="' + href.replace('{{page}}', val) + '"';
-					}
-					pgcode += '<a ' + attr + '>' + txt + '</a>';
-				}
-			})();
-			if(!pgcode){
-				return;
-			}
-			var H = '<ks-page-first icon="first_page" value="1"></ks-page-first><ks-page-prev icon="arrow_left" value="prev"></ks-page-prev>';
-			H += pgcode;
-			H += '<ks-page-next icon="arrow_right" value="next"></ks-page-next><ks-page-last icon="last_page" value="'+total+'"></ks-page-last>';
-			if($.isset(ele.attr('quick'))){
-				H += '<ks-input-group><i>转</i><input type="text" value="'+current+'"><i>页</i></ks-input-group>';
-			}
-			ele.html(H);
-			_pgTo(current, true);
-			ele.children('*:not(ks-input-group)').click(function(){
-				var el = $(this);
-				if(el.disabled()){
-					return;
-				}
-				_pgTo(el.attr('value'));
-			});
-			ele.find('ks-input-group > input').keyup(function(e){
-				if(e.keyCode === 13){
-					_pgTo(this.value);
-				}
-			}).focus(function(){
-				$(this).select();
-			});
-		},
 		//表单结构初始化
 		'ks-form' : function(dom){
 			dom = $(dom);
@@ -2798,6 +2686,99 @@ $.newForm = function(data){
 		}
 	});
 
+	//分页器渲染
+	$.render('ks-page', function(ele){
+		function _pgTo(val, isInit){
+			if(ele.disabled()  || val == ele[0].value){
+				return;
+			}
+			if(val ==='prev'){
+				val = ele[0].value - 1;
+				val = val < 1 ? 1 : val;
+			}else if(val === 'next'){
+				val = ele[0].value + 1;
+				val = val > total ? total : val;
+			}
+			val = parseInt(val);
+
+			ele.children('ks-page-prev').disabled(val ===1);
+			ele.children('ks-page-first').disabled(val < pageNum / 2);
+
+			ele.children('ks-page-next').disabled(val === total);
+			ele.children('ks-page-last').disabled(val > total- pageNum / 2);
+
+			ele.attr('current', val);
+			ele[0].value = val;
+			var startPg = val - ((pageNum - 1) / 2);
+			var endPg = total - pageNum+1;
+			startPg = startPg > endPg ? endPg : startPg;
+			startPg = startPg < 1 ? 1 : startPg;
+			ele.children('a').map(function (a) {
+				$(a).attr('value', startPg).text(startPg);
+				startPg++;
+			});
+			ele.children('a[value="'+val+'"]').addClass('a').siblings('a').removeClass('a');
+			ele.find('.ks-input-group > input').val(val);
+			!isInit && ele.trigger('change');
+		}
+
+		ele = $(ele);
+		var total = parseInt(ele.attr('total') || 0);
+		if(!total){
+			return;
+		}
+		var current = parseInt(ele.attr('current') || 1);
+		var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
+
+		//给当前ele添加value属性值
+		//ele[0].value = current;
+		var href = ele.attr('href');
+		var pgcode = '';
+		(function(){
+			var start = Math.ceil(current - ((pageNum - 1) / 2));
+			start = start < 1 ? 1 : start;
+
+			var mx = Math.min(total+1, start+pageNum);
+			if(mx <=2){
+				return;
+			}
+
+			for(var i = start; i < mx; i++) {
+				var txt = i;
+				var val = i;
+				var attr = ' value="' + val + '"';
+				if (href) {
+					attr += ' href="' + href.replace('{{page}}', val) + '"';
+				}
+				pgcode += '<a ' + attr + '>' + txt + '</a>';
+			}
+		})();
+		if(!pgcode){
+			return;
+		}
+		var H = '<ks-page-first icon="first_page" value="1"></ks-page-first><ks-page-prev icon="arrow_left" value="prev"></ks-page-prev>';
+		H += pgcode;
+		H += '<ks-page-next icon="arrow_right" value="next"></ks-page-next><ks-page-last icon="last_page" value="'+total+'"></ks-page-last>';
+		if($.isset(ele.attr('quick'))){
+			H += '<ks-input-group><i>转</i><input type="text" value="'+current+'"><i>页</i></ks-input-group>';
+		}
+		ele.html(H);
+		_pgTo(current, true);
+		ele.children('*:not(ks-input-group)').click(function(){
+			var el = $(this);
+			if(el.disabled()){
+				return;
+			}
+			_pgTo(el.attr('value'));
+		});
+		ele.find('ks-input-group > input').keyup(function(e){
+			if(e.keyCode === 13){
+				_pgTo(this.value);
+			}
+		}).focus(function(){
+			$(this).select();
+		});
+	});
 
 	//H5主框架
 	$.render('ks', function(ele){

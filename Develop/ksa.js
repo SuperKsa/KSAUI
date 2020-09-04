@@ -2553,29 +2553,30 @@ function debugTime(key){
 		 * @param dt
 		 */
 		reset : function(obj, keyName, dt){
-			if(!$.isObject(obj) || !keyName || !$.isObject(dt)){
+			if(!$.isObject(obj) || !keyName){
 				return;
 			}
 			var ths = this;
-			ths.add(obj, keyName, dt);
-			//当前对象ID
-			var objID = $.objectID(obj);
 
-			var originalID = $.objectID(obj[keyName]) || (ths.deleteObjectIdList[objID] ? ths.deleteObjectIdList[objID][keyName] : null);
-			//同步对象ID
-			originalID && $.objectID(dt, originalID);
+			if($.isObject(dt)) {
+				//当前对象ID
+				var objID = $.objectID(obj);
 
-			//触发对象reset事件 父级关联的
-			var events = ths.Event[objID]; //当前对象监听事件
-			if(events){
-				//从父级触发当前对象reset
-				events.monitor[keyName] && events.monitor[keyName].run('reset', obj, keyName, dt);
+				var originalID = $.objectID(obj[keyName]) || (ths.deleteObjectIdList[objID] ? ths.deleteObjectIdList[objID][keyName] : null);
+				//同步对象ID
+				originalID && $.objectID(dt, originalID);
+
+				//触发对象reset事件 父级关联的
+				var events = ths.Event[objID]; //当前对象监听事件
+				if (events) {
+					//从父级触发当前对象reset
+					events.monitor[keyName] && events.monitor[keyName].run('reset', obj, keyName, dt);
+				}
+				//触发对象reset事件
+				originalID && ths.Event[originalID] && ths.Event[originalID].run('reset', obj, keyName, dt);
+
 			}
-			//触发对象reset事件
-			originalID && ths.Event[originalID] && ths.Event[originalID].run('reset', obj, keyName, dt);
-
-			//给对象赋值
-			obj[keyName] = dt;
+			ths.add(obj, keyName, dt);
 		},
 		update : function(obj, keyName, dt){
 			if(!$.isObject(obj) || !keyName){
@@ -2609,7 +2610,6 @@ function debugTime(key){
 
 			//值新增 空值、已删除、类型不同
 			if($.isEmpty(setObj) || (delObj && delObj[keyName]) || ($.isObject(setObj) && $.isObject(dt) && setObj.__proto__.constructor !== dt.__proto__.constructor)){
-
 				ths.reset(obj, keyName, dt);
 
 				delObj && delObj[keyName] && delete delObj[keyName];
@@ -2643,6 +2643,8 @@ function debugTime(key){
 			//原来的值不存在 添加
 			}else if(!$.isset(setObj)){
 				$.def.add(obj, keyName, dt);
+			}else if(obj[keyName] !== dt){
+				obj[keyName] = dt;
 			}
 
 			return obj;
