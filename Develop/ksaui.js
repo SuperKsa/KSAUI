@@ -255,18 +255,16 @@ $.layerHide = function(Id, Fun){
 		var nextEle = o.next('[data-layer-key="'+Id+'"]');
 		nextEle.length && nextEle.css({transition:'all 0.2s',opacity:0});
 		setTimeout(function(){
-			if(option.close && typeof(option.close) == 'function'){
-				option.layerID && $.layerHide(option.layerID);
-			}
 			option.backEvent && $.BackEvent('KsaLayer'+Id);
-			Fun && typeof(Fun) =='function' && Fun(Id);
+			Fun && Fun(Id);
+			option.close && option.close();
 			if(option.cache){
 				nextEle.length && nextEle.hide();
 				o.hide();
 			}else{
 				nextEle.length && nextEle.remove();
 				o.remove();
-				$.layerOption[Id] = null;
+				delete $.layerOption[Id];
 			}
 		},90);
 	}
@@ -1325,12 +1323,12 @@ $.showDate = function(input, format){
 	if(isHi){
 		TimeHtml = '<div class="' + cl.d + ' ks-clear">';
 		TimeHtml +='<div class="'+cl.e+'">';
-		TimeHtml +='<div><i data-digit="up" icon="caret-up"></i><input type="number" value="'+dt.H+'" min="1" max="23" norender><i data-digit="down" icon="caret-down"></i></div>';
+		TimeHtml +='<div><input type="ks-number" value="'+dt.H+'" min="0" max="23"></div>';
 		TimeHtml +='<div>:</div>';
-		TimeHtml +='<div><i data-digit="up" icon="caret-up"></i><input type="number" value="'+dt.i+'" min="1" max="59" norender><i data-digit="down" icon="caret-down"></i></div>';
+		TimeHtml +='<div><input type="ks-number" value="'+dt.i+'" min="0" max="59"></div>';
 		if(isHis){
 			TimeHtml +='<div>:</div>';
-			TimeHtml +='<div><i data-digit="up" icon="caret-up"></i><input type="number" value="'+dt.s+'" min="1" max="59" norender><i data-digit="down" icon="caret-down"></i></div>';
+			TimeHtml +='<div><input type="ks-number" value="'+dt.s+'" min="0" max="59"></div>';
 		}
 
 		TimeHtml += '</div>';
@@ -1418,10 +1416,6 @@ $.showDate = function(input, format){
 				sput();//写值
 				return false;
 			});
-			//时分秒增加步进值事件
-			dom.find('.'+cl.e+' input').each(function(i,t){
-				$(t).inputNumber(sput);
-			});
 			//确认按钮
 			dom.find('button').click(function(){
 				sput();//写值
@@ -1456,57 +1450,89 @@ $.showDate = function(input, format){
  * @param {html/document} content 菜单内容
  * @param {string} title 菜单名称
  */
-$.plugin.showMenu = function(obj, content, title){
-	var $this = this;
-	var Evn = event || window.event;
-	var EvnType = Evn.type;
-	obj = $(obj);
-	if(obj.hasClass('a') && obj.data('layerID')){
-		if($.inArray(EvnType,['click'])){
-			$.layerHide(obj.data('layerID'));
-		}
-		return;
-	}
-	return $.layer({
-		pos : obj,
-		cover : 0,
-		title : title,
-		content : content,
-		closeBtn : 0,
-		BackEvent: 0,
-		bodyOver : false,
-		show : function(dom, layer){
-			obj.addClass('a').data('layerID',layer.layerID);
-			//如果是鼠标经过触发的事件 则绑定鼠标离开事件的处理
-			if($.inArray(EvnType, ['mouseover','mouseenter'])){
-				var s, a = function(){
-					s && clearTimeout(s);
-				},b=function(){
-					s = setTimeout(function(){
-						$.layerHide(layer.layerID);
-					},200);
-				};
-				obj.hover(a,b);
-				dom.hover(a,b);
-				//如果是点击触发事件 则绑定点击其他地方时关闭layer
-			}else if($.inArray(EvnType,['click'])){
-				dom.click(function(){
-					return false;
-				});
-				//监听点击事件 自动关闭
-				$(document).on('click.KSAUI-showMenu'+layer.layerID, function(e){
-					if(!$.inArray(e.target,[obj[0], dom[0]])){
-						$.layerHide(layer.layerID);
-					}
-				});
-			}
+
+
+/**
+ * 绑定下拉菜单
+ * @param action 触发动作名称 hover/click/...
+ * @param options 下拉菜单内容 html/json
+	[
+		{
+			label : '设置',
+			url : '', //链接
+			icon : '', //icon
+			style : '',//style
+			event : '', //被点击触发的事件
 		},
-		close : function() {
-			$(document).off('click.KSAUI-showMenu'+obj.data('layerID'));
-			obj.removeClass('a').removeData('layerID');
+		...
+	 ]
+ */
+$.plugin.showMenu = function(action, options){
+	var btns = this;
+	function _funShow(){
+		if(btns.active()){
+			return;
 		}
-	});
+		btns.active(true);
+		$.layer({
+			pos : btns,
+			cover : 0,
+			content : content,
+			closeBtn : 0,
+			bodyOver : false, //body不需要裁切
+			init : function(layer){
+				layer.addClass('ks-layer-showmenu');
+				//监听点击事件 自动关闭
+				if(action ==='hover'){
+					var layerCloseEvn;
+					btns.push(layer).hover(function(){
+						layerCloseEvn && window.clearTimeout(layerCloseEvn);
+					}, function(){
+						layerCloseEvn = window.setTimeout(function(){
+							$.layerHide(layer.layerID);
+						}, 100);
+					});
+				}else{
+					//监听点击事件 自动关闭
+					$(document).on('click.KSAUI-dropdown', function(e){
+						!$.inArray(e.target,[layer[0]]) && $.layerHide(layer.layerID);
+					});
+				}
+			},
+			close : function(){
+				btns.active(false);
+				$(document).off('click.KSAUI-dropdown');
+			}
+		});
+	}
+
+	var isHtml = $.isString(options);
+	var content = '';
+	if(isHtml) {
+		content = options;
+	}else{
+		content = '';
+		$.loop(options, function(val, key){
+			if($.isString(val)){
+				content += val;
+			}else{
+				content += $.tag(val.url ? 'a' : 'p', {style:val.style, href:val.url, icon:val.icon, 'dropdown-event-key':key}, val.label);
+			}
+		});
+		content = $(content);
+		content.filter('[dropdown-event-key]').map(function(ele){
+			ele = $(ele);
+			var key = ele.attr('dropdown-event-key');
+			var op = options[key];
+			if(op){
+				op.event && ele.click(op.event);
+			}
+		});
+	}
+
+	this.on(action === 'hover' ? 'mouseenter' : action, _funShow);
 }
+
 /**
  * 地区选择组件
  * @author cr180<cr180@cr180.com>
@@ -2639,9 +2665,9 @@ $.newForm = function(data){
 				var attr = el.attr();
 				el.attr('title src','');
 				
-				var code = '', title = attr.title && !attr.src ? attr.title : null;
+				var code = '', label = attr.label && !attr.src ? attr.label : null;
 				var size = attr.size;
-				if(title){
+				if(label){
 					code = '<span class="ks-avatar-name"></span>';
 				}else if(attr.src){
 					code = ('<img src="'+attr.src+'">');
@@ -2649,9 +2675,9 @@ $.newForm = function(data){
 					code = '<i icon="user"></i>';
 				}
 				el[0].innerHTML = code;
-				if(title){
+				if(label){
 					var unameEl = el.children('.ks-avatar-name');
-					unameEl.text(title);
+					unameEl.text(label);
 					//监听name表单变化
 					var w = unameEl.width(true), pw = unameEl.parent().width(true);
 					var scale = Math.min(  (size ==='mini' ? 0.75 : 1) , (pw-6)/w);
@@ -2783,31 +2809,37 @@ $.newForm = function(data){
 	//H5主框架
 	$.render('ks', function(ele){
 		ele = $(ele);
-		var navbars = ele.find('ks-body > ks-navbar > ks-navbar-item');
-		var contents = el.parent('ks-navbar').prev('ks-content').children('ks-navbar-content');
-
-		//显示底部导航对应的内容区
-		function _navbarContentShow(el, key){
-			contents.filter('[key="'+key+'"]').show().siblings().hide();
+		if(ele.children('ks-side').length){
+			ele.css('flex-direction','row');
 		}
-		navbars.each(function(i, el){
-			el = $(el);
-			var skey = el.attr('key');
-			if(el.active()){
-				_navbarContentShow(el, skey);
+
+		var navbar = ele.children('ks-navbar');
+		if(navbar.length){
+			var navbarItem = navbar.children('ks-navbar-item');
+			var contents = ele.children('ks-content').children('ks-navbar-content');
+			//显示底部导航对应的内容区
+			function _navbarContentShow(el, key){
+				contents.filter('[key="'+key+'"]').show().siblings().hide();
 			}
-			el.click(function(){
-				$(this).active(true);
-			}).DOMchange('attr.active', function(){
-				var el = $(this);
+			navbarItem.each(function(i, el){
+				el = $(el);
+				var skey = el.attr('key');
 				if(el.active()){
-					//去掉同辈活动状态
-					el.siblings().active(false);
-					//更新content
 					_navbarContentShow(el, skey);
 				}
+				el.click(function(){
+					$(this).active(true);
+				}).DOMchange('attr.active', function(){
+					var el = $(this);
+					if(el.active()){
+						//去掉同辈活动状态
+						el.siblings().active(false);
+						//更新content
+						_navbarContentShow(el, skey);
+					}
+				});
 			});
-		});
+		}
 	});
 
 
