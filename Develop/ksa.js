@@ -3704,6 +3704,7 @@ function debugTime(key){
 					//var cache = ths.cache.ifscope[ifKey];
 					var Args = arguments;
 
+
 					//解析当前域的条件 返回 为真的条件顺序
 					function _factor(){
 						var index = null;
@@ -3725,6 +3726,9 @@ function debugTime(key){
 						//如果没有生成节点 则创建占位节点
 						if (!dom) {
 							dom = [document.createComment('KSA-Placeholder:if')];
+						//如果生成了节点 但不是数组时 转为数组
+						}else if(!$.isArray(dom)){
+							dom = [dom];
 						}
 						return dom;
 					}
