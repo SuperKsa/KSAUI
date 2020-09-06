@@ -1,12 +1,12 @@
 /* \.(.*?): 替换为 [icon=$1]:  */
 @font-face {
     font-family: 'ksaui';  /* project id 1671843 */
-    src: url('//at.alicdn.com/t/font_1671843_u3x6igzas8k.eot');
-    src: url('//at.alicdn.com/t/font_1671843_u3x6igzas8k.eot?#iefix') format('embedded-opentype'),
-    url('//at.alicdn.com/t/font_1671843_u3x6igzas8k.woff2') format('woff2'),
-    url('//at.alicdn.com/t/font_1671843_u3x6igzas8k.woff') format('woff'),
-    url('//at.alicdn.com/t/font_1671843_u3x6igzas8k.ttf') format('truetype'),
-    url('//at.alicdn.com/t/font_1671843_u3x6igzas8k.svg#ksaui') format('svg');
+    src: url('//at.alicdn.com/t/font_1671843_0ui2kdvrqj8m.eot');
+    src: url('//at.alicdn.com/t/font_1671843_0ui2kdvrqj8m.eot?#iefix') format('embedded-opentype'),
+    url('//at.alicdn.com/t/font_1671843_0ui2kdvrqj8m.woff2') format('woff2'),
+    url('//at.alicdn.com/t/font_1671843_0ui2kdvrqj8m.woff') format('woff'),
+    url('//at.alicdn.com/t/font_1671843_0ui2kdvrqj8m.ttf') format('truetype'),
+    url('//at.alicdn.com/t/font_1671843_0ui2kdvrqj8m.svg#ksaui') format('svg');
 }
 
 *[icon]:before,*[icon]:after {font-family: "ksaui"; font-style: normal; font-weight: normal; display:inline;}
