@@ -442,7 +442,7 @@ ks-avatar {
 
 //============== 表格框(table.js必须) ==============
 .ks-table {
-	width: 100%; background: #fff; display: table; empty-cells: show; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 1.5715;
+	width: 100%; background: #fff; display: table; empty-cells: show; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 1.5715; position: relative; z-index: 1;
 	th { font-weight: bold; color: rgba(0,0,0,.75)}
 	th, td { padding: 14px; min-width: 51px; overflow-wrap:break-word; border-bottom: #f0f0f0 1px solid}
 	//模式 左标题右内容
@@ -1186,6 +1186,15 @@ ks-dot {
 }
 .loop(1);
 
+//============== 边框 ==============
+.ks-border { border: @borderColor 1px solid;}
+.ks-border-t { border-top: @borderColor 1px solid;}
+.ks-border-r { border-right: @borderColor 1px solid;}
+.ks-border-b { border-bottom: @borderColor 1px solid;}
+.ks-border-l { border-left: @borderColor 1px solid;}
+
+//============== 分割线 ==============
+.ks-hr { background: @borderColor; width: 100%; height: 1px; display: block;}
 
 //============== 动画 ==============
 @keyframes spin {
@@ -1448,6 +1457,10 @@ ks-area {
 .ks-sidebar { width: 240px; background: #06101b; position: absolute; left: 0; top: 0; bottom: 0; z-index: 999}
 .ks-sidebar, .ks-sidebar a { color: rgba(255,255,255,.5)}
 .ks-sidebar .ks-menu > .ks-label { color: rgba(255,255,255,.9)}
+
+//============== 暂无数据 ==============
+ks-empty { display: block; padding: 30px 0; text-align: center; color: #cacaca}
+ks-empty:before { content: '\e612'; font-size:3em; font-family: 'ksaui'; display: block;}
 
 
 
