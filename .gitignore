@@ -3,3 +3,4 @@
 /*.jscompress
 *.jscompress
 /.vscode
+/node_modules

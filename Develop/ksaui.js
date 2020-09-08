@@ -56,11 +56,14 @@ $.ksauiRenderTree = {};
 				});
 			});
 		}
+		document.addEventListener('DOMNodeInserted', _r);
 		_r();
+		/*
 		//延迟监听DOM变化 防止出现渲染阻塞
 		window.setTimeout(function(){
 			document.addEventListener('DOMNodeInserted', _r);
 		},5);
+		 */
 	});
 })();
 
@@ -266,7 +269,7 @@ $.layerHide = function(Id, Fun){
 				o.remove();
 				delete $.layerOption[Id];
 			}
-		},90);
+		},31);
 	}
 }
 
@@ -544,15 +547,13 @@ $.layer = function(option, pos, cover, showFun, closeFun, btnFun, initFun){
 				var toh = to.height(true);
 				css.left = to.offset().left;
 				css.top = to.offset().top + toh;
-				if (ELSize.W > 0 && css.left > ELSize.W - D.width(true)) {
+				if (ELSize.W - (css.left + D.width(true)) < 0) {
 					css.left = css.left - D.width(true) + to.width(true);
 				}
 
 				//如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
-				var sh = $(document).scrollTop();//卷去高度
-				if (ELSize.H >0 && ELSize.H - (css.top - sh) < D.height(true)) {
-					css.margin = '-100px 0 0';
-					css.top = css.top - D.height(true) - toh;
+				if (ELSize.H - (css.top + D.height(true)) < 0) {
+					css.top = to.offset().top - D.height(true);
 				}
 			}
 			D.css(css);
@@ -2325,7 +2326,7 @@ $.newForm = function(data){
 
 				t.attr('type value','');
 				t.wrap(moveLabelAttr('div', t, 'ks-select'));
-				t.after('<span class="ks-select-title" icon="caret-down">' + _selectText() + '</span>');
+				t.after('<span class="ks-select-title">' + _selectText() + '</span>');
 				t.next().click(function(){
 					if(t.disabled()){
 						return;

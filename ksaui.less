@@ -84,7 +84,8 @@ ks-collapse-block { display: block;}
 	--danger : #ff6a5b; //错误/危险
 }
 
-
+html, body { width: 100%; height: 100%;}
+body { overflow: auto}
 * { word-wrap: break-word; margin: 0; padding: 0; box-sizing:border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color:rgba(0,0,0,0)}
 article, aside, figcaption, figure, footer, header, hgroup, main, nav, section { display: block;}
 body, input, button, select, textarea, pre, code {font-family:"-apple-system","BlinkMacSystemFont","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","sans-serif","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"; font-size:inherit; font-style:inherit; outline:none; color: inherit}
@@ -160,10 +161,10 @@ ks {
 
 //============== 当前位置 ==============
 ks-navaction {display: block; margin-bottom: 15px;
-	> * { float: left; padding: 0 10px 0 0; margin-right: 10px; position: relative}
-	> *:after { content: ''; display: inline-block; position: absolute; top: 50%; right: 0; margin-top: -3px; vertical-align: middle; width:6px; height: 6px; border: @textColor 1px solid; border-left: 0; border-bottom: 0; transform: rotate(45deg);}
-	> :last-child { margin-right: 0}
-	> :last-child:after { display: none}
+	> *:not(ks-btn) { float: left; padding: 0 10px 0 0; margin-right: 10px; position: relative}
+	> *:not(ks-btn):after { content: ''; display: inline-block; position: absolute; top: 50%; right: 0; margin-top: -3px; vertical-align: middle; width:6px; height: 6px; border: @textColor 1px solid; border-left: 0; border-bottom: 0; transform: rotate(45deg);}
+	> :not(ks-btn):last-child { margin-right: 0}
+	> :not(ks-btn):last-child:after { display: none}
 }
 
 
@@ -191,16 +192,16 @@ ks-navaction {display: block; margin-bottom: 15px;
 ks-alert {
 	display: block; background:#f2f2f2; border:#e4e8ec 1px solid; color:#787878; padding:10px 15px; border-radius: 3px; position: relative; transition:all 0.1s ease-in-out;
 	&[icon] { padding-left: 35px;}
-	&[icon]:before { content: '\e7a4'; font-size: 20px; position: absolute; left: 10px; top: 9px; z-index: 1;}
+	&[icon]:before { content: '\ee58'; font-size: 20px; position: absolute; left: 10px; top: 9px; z-index: 1;}
 	&[type="success"] {
 		background: #f6ffed; border-color:#b7eb8f; color:@success;
-		&[icon]:before { content: '\e64f';}
+		&[icon]:before { content: '\eb80';}
 	}
 	&[type="info"] {background: #ecf5ff; border-color:#b2d8ff; color:@primary;
-		&[icon]:before { content: '\e7a4';}
+		&[icon]:before { content: '\ee58';}
 	}
 	&[type="error"] {background: #fff2f0; border-color:#ffccc7; color:@danger;
-		&[icon]:before { content: '\e64e';}
+		&[icon]:before { content: '\eb96';}
 	}	
 	ks-alert-close { position: absolute; right: 10px; top: 10px; z-index: 9; cursor: pointer; font-size: 12px;}
 	ks-alert-title { display: block; width: 100%; margin-bottom: 5px; font-weight: 600;}
@@ -216,8 +217,7 @@ ks-tab-touch-content {overflow: hidden}
 ks-tab {
 	display: block;
 
-	ks-tab-content {transition:all 0.1s ease-in-out;}
-	.ks-tab-item:not(:first-of-type) { display: none}
+	ks-tab-content {transition:all 0.1s ease-in-out; padding-top: 15px;}
 
 	ks-tab-title {
 		width: 100%; height: 40px; line-height: 40px; position: relative;
@@ -285,7 +285,7 @@ ks-collapse {
 	> * {
 		> ks-collapse-title {height: auto; cursor: pointer; outline: none; padding:6px 0;}
 		> ks-collapse-content {transition:all 0.1s ease-in-out; height: 0; overflow: hidden;}
-		> ks-collapse-title:not([icon])::before {content: '\e65d'; float: left; margin:.15em .4em; font-family: 'ksaui'; font-size: 1em; line-height: 1.2em; transition:all 0.3s ease-in-out;}
+		> ks-collapse-title:not([icon])::before {content: '\ea6d'; float: left; margin:.15em .4em; font-family: 'remixicon'; font-size: 1em; line-height: 1.2em; transition:all 0.3s ease-in-out;}
 		> ks-collapse-content { opacity: 0; transition:all 0.3s ease-in-out;}
 		&[active] > ks-collapse-title:not([icon])::before {transform: rotate(90deg);}
 		&[active] > ks-collapse-content { opacity: 1}
@@ -317,8 +317,8 @@ ks-collapse {
 //带右箭头
 ks-list > ks-list-item[icon='arrow_right'], .ks-list-arrow > ks-list-item { padding-right:2em;}
 ks-list > ks-list-item[icon='arrow_right']:before,
-.ks-list-arrow > ks-list-item:before {color:#777; top: 50%; font-size: 1em; width: 1.2em; height: 1.2em; line-height: 1.2em; transform: translateY(-50%); text-align: center; font-family: 'ksaui'; position: absolute; right: 0;}
-.ks-list-arrow > ks-list-item:before { content: '\e7da'; }
+.ks-list-arrow > ks-list-item:before {color:#777; top: 50%; font-size: 1em; width: 1.2em; height: 1.2em; line-height: 1.2em; transform: translateY(-50%); text-align: center; font-family: 'remixicon'; position: absolute; right: 0;}
+.ks-list-arrow > ks-list-item:before { content: '\ea6d'; }
 
 //左侧图标 设置类
 .ks-list-icon {
@@ -332,9 +332,9 @@ ks-list > ks-list-item[icon='arrow_right']:before,
 	width: 100%; overflow-y: auto;
 	> ks-list-item {cursor:pointer; white-space: nowrap;}
 	> ks-list-item:not(.ks-select-optgroup-title):hover {opacity: .7}
-	> ks-list-item:before {font-size: 16px; width:16px; height:16px; text-align: center; font-family: 'ksaui'; color: @textColor; margin:2px 5px 0 0;}
+	> ks-list-item:before {font-size: 16px; width:16px; height:16px; text-align: center; font-family: 'remixicon'; color: @textColor; margin:2px 5px 0 0;}
 	> ks-list-item[selected] {color:@primary;}
-	> ks-list-item:not([icon])[selected]:before {content: '\e652';}
+	> ks-list-item:not([icon])[selected]:before {content: '\eb7b';}
 	> ks-list-item[selected]:before {float: right; color:@primary}
 	> ks-list-item[disabled] {color:#ddd; cursor:not-allowed; background: none}//被禁用的选项
 	//分组名
@@ -343,9 +343,9 @@ ks-list > ks-list-item[icon='arrow_right']:before,
 	> ks-list-item.ks-select-optgroup-title > strong { display: block}
 	
 	//多选列表
-	&[multiple] > ks-list-item:not([icon]):before { content: '\e601';}
+	&[multiple] > ks-list-item:not([icon]):before { content: '\eb7f';}
 	&[multiple] > ks-list-item:before { float: left;}
-	&[multiple] > ks-list-item:not([icon])[selected]:before { content: '\e602'}
+	&[multiple] > ks-list-item:not([icon])[selected]:before { content: '\eb85'}
 }
 
 //layer层处理
@@ -487,7 +487,7 @@ ks-avatar {
 //处理表单布局
 ks-form {
 	display: block;
-	> * {margin-bottom: 25px; display: block;}
+	ks-form-item {margin-bottom: 25px; display: block;}
 	> :last-child { margin-bottom: 0}
 	ks-form-label { float: left; width: 125px; text-align: right; height: @inputHeight; line-height: @inputHeight;}
 	ks-form-label:after { content: ':'; padding: 0 8px 0 5px; color: rgba(0,0,0,.4)}
@@ -797,7 +797,7 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 	select:disabled ~ .ks-select-title { cursor: not-allowed; opacity: .7}
 	.ks-select-title {
 		display: block; position: relative; padding:0 25px 0 10px; height: 100%; overflow: hidden; background:none;  cursor: pointer; min-width: 80px;
-		&:before {transition:all 0.2s ease-in-out; font-size: 14px; position: absolute; right:0; top:0; width: 20px; text-align: center;}
+		&:before {font-family:'remixicon'; content: '\ea4e'; transition:all 0.2s ease-in-out; font-size: 14px; position: absolute; right:0; top:0; width: 20px; text-align: center;}
 		//第一个span后面的span 添加分割斜杠
 		> span:first-child ~ span:before { content:'/'; margin: 0 3px; color: @textColor;}
 	}
@@ -966,7 +966,7 @@ ks-area:not([disabled])[active] { border-color: @primary; color: #495057 !import
 
 //普通行 带右箭头
 .ks-row-arrow { position: relative; padding-right: 1.4rem;}
-.ks-row-arrow:before { font-family: 'ksaui'; content: '\e7da'; height: 1.2rem; line-height: 1.2rem; position: absolute; top: 50%; right: 0; margin-top: -0.6rem;}
+.ks-row-arrow:before { font-family: 'remixicon'; content: '\ea6e'; height: 1.2rem; line-height: 1.2rem; position: absolute; top: 50%; right: 0; margin-top: -0.6rem;}
 
 //相对定位
 .ks-pos { position: relative;}
@@ -1330,7 +1330,7 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 //确认框
 .ks-Dialog_confirm {
 	.ks-layer-title { padding: 20px 0 0 40px; font-size: 16px;}
-	.ks-layer-title:before {font-family:'ksaui'; content: '\e7a4'; color: @primary; margin-right:5px; font-size: 30px; vertical-align: middle}
+	.ks-layer-title:before {font-family:'remixicon'; content: '\ee59'; color: @primary; margin-right:5px; font-size: 30px; vertical-align: middle}
 	.ks-layer-content {font-size: 16px; width:360px; padding:10px 30px 30px 75px;}
 	.ks-layer-bottom { border-top: 0; padding: 0 30px 30px;}
 }
@@ -1345,8 +1345,8 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 .ks-Dialog_success .ks-layer-content::before,
 .ks-Dialog_error .ks-layer-content::before {font-size: 30px; position: absolute; left: 50px; top: 34px}
 
-.ks-Dialog_success .ks-layer-content::before {font-family:'ksaui'; content: '\e64f'; color: #18bc4a;}
-.ks-Dialog_error .ks-layer-content::before {font-family:'ksaui'; content: '\e7a4'; color: #ff6161;}
+.ks-Dialog_success .ks-layer-content::before {font-family:'remixicon'; content: '\eb80'; color: #18bc4a;}
+.ks-Dialog_error .ks-layer-content::before {font-family:'remixicon'; content: '\ee58'; color: #ff6161;}
 .ks-Dialog_html .ks-layer-content { max-width: 680px;}
 
 
@@ -1454,7 +1454,7 @@ ks-area {
 
 //============== 暂无数据 ==============
 ks-empty { display: block; padding: 30px 0; text-align: center; color: #cacaca}
-ks-empty:before { content: '\e612'; font-size:3em; font-family: 'ksaui'; display: block;}
+ks-empty:before { content: '\ecec'; font-size:3em; font-family: 'remixicon'; display: block;}
 
 //============== 附加效果 ==============
 //去掉动画
