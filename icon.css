@@ -19,7 +19,7 @@
     font-display: swap;
 }
 
-*[icon]:before,*[icon]:after {font-family: 'remixicon' !important;font-style: normal;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale; display: inline-block}
+*[icon]:before,*[icon]:after {font-family: 'remixicon' !important;font-style: normal;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale; display: inline-block; font-size: 1.1428571em}
 [icon=loading]:before { display: inline-block; animation:spin 1s infinite linear; line-height: normal; border-radius: 100%;}
 [icon]:not(:empty):before {margin-right: 3px}
 /*============================================*/

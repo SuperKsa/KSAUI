@@ -84,7 +84,6 @@ ks-collapse-block { display: block;}
 	--danger : #ff6a5b; //错误/危险
 }
 
-html, body { width: 100%; height: 100%;}
 body { overflow: auto}
 * { word-wrap: break-word; margin: 0; padding: 0; box-sizing:border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color:rgba(0,0,0,0)}
 article, aside, figcaption, figure, footer, header, hgroup, main, nav, section { display: block;}
@@ -318,7 +317,7 @@ ks-collapse {
 ks-list > ks-list-item[icon='arrow_right'], .ks-list-arrow > ks-list-item { padding-right:2em;}
 ks-list > ks-list-item[icon='arrow_right']:before,
 .ks-list-arrow > ks-list-item:before {color:#777; top: 50%; font-size: 1em; width: 1.2em; height: 1.2em; line-height: 1.2em; transform: translateY(-50%); text-align: center; font-family: 'remixicon'; position: absolute; right: 0;}
-.ks-list-arrow > ks-list-item:before { content: '\ea6d'; }
+.ks-list-arrow > ks-list-item:before { content: '\ea6e'; }
 
 //左侧图标 设置类
 .ks-list-icon {
@@ -332,7 +331,7 @@ ks-list > ks-list-item[icon='arrow_right']:before,
 	width: 100%; overflow-y: auto;
 	> ks-list-item {cursor:pointer; white-space: nowrap;}
 	> ks-list-item:not(.ks-select-optgroup-title):hover {opacity: .7}
-	> ks-list-item:before {font-size: 16px; width:16px; height:16px; text-align: center; font-family: 'remixicon'; color: @textColor; margin:2px 5px 0 0;}
+	> ks-list-item:before {font-size: 20px; width:20px; height:20px; text-align: center; font-family: 'remixicon'; color: #acacac; margin:0 5px 0 0;}
 	> ks-list-item[selected] {color:@primary;}
 	> ks-list-item:not([icon])[selected]:before {content: '\eb7b';}
 	> ks-list-item[selected]:before {float: right; color:@primary}
@@ -790,7 +789,7 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 
 //下拉选择框
 .ks-select {
-	display: inline-block;
+	display: inline-block; user-select: none;
 
 
 	select { display: none}
@@ -807,7 +806,11 @@ ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
 select:disabled ~ .ks-list-select { cursor: not-allowed; opacity: .7}
 
 //普通输入框
-.ks-input {vertical-align:middle; white-space: nowrap; }
+.ks-input {
+	vertical-align:middle; white-space: nowrap;
+	> left[icon], right[icon] {color: @textColor}
+}
+
 input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-input:not(input):not(textarea) { padding: 0; position: relative; display: inline-block}
 
@@ -836,9 +839,9 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 
 //输入框清理图标
 .ks-input-clear {
-	display: none; cursor: pointer;
-	&:before {display: inline-block; font-size: 12px; width: 14px; height: 14px; text-align: center; line-height: 14px; border-radius: 100%; background: #898989; color: #fff}
-	&.a { display: block}
+	display: none; cursor: pointer; font-size: 14px; width: 14px; height: 14px; text-align: center; line-height: 14px;
+	&:before {display: inline-block; }
+	&[active] { display: block}
 }
 
 
@@ -878,11 +881,11 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-checkbox { 
 	height: 20px; line-height: 20px;
 	> i {font-style: normal; display: inline-block; position: relative; overflow: hidden; background: #fff}
-	> i:before {color:#ccc; text-align:center; font-family:"ksaui"; vertical-align:middle; font-size: 12px; width:18px; height:18px; line-height:16px; border-radius:2px; content:'\e652'; float: left; border: #ddd 1px solid; box-sizing: border-box;}
+	> i:before {color:#ccc; text-align:center; font-family:"remixicon"; vertical-align:middle; font-size: 12px; width:18px; height:18px; line-height:16px; border-radius:2px; content:'\eb7b'; float: left; border: #ddd 1px solid; box-sizing: border-box;}
 	> input:checked ~ i:before {  background: @primary; color:#fff; border-color:@primary;}
 }
 
-.ks-checkbox-indeter > i:before { content: '\e66d'; color: @primary}
+.ks-checkbox-indeter > i:before { content: '\f1af'; color: @primary}
 //开关样式
 .ks-switch {
 	> i { position: relative; padding: 0 15px 0 26px; border-radius:100px; height: 24px; line-height: 24px; background: rgba(0,0,0,.3); color: #fff;}
@@ -1202,6 +1205,79 @@ ks-dot {
 	100% {transform:rotate(360deg);}
 }
 
+@keyframes ks-anim-up {
+	0% {transform: translate3d(0, 50%, 0); opacity: 0;}
+	100% { transform: translate3d(0, 0, 0); opacity: 1;}
+}
+@keyframes ks-anim-up-out {
+	0% {transform: translate3d(0, 0, 0); opacity: 1;}
+	100% { transform: translate3d(0, 100%, 0); opacity: 0;}
+}
+@keyframes ks-anim-down {
+	0% {transform: translate3d(0, -50%, 0); opacity: 0;}
+	100% { transform: translate3d(0, 0, 0); opacity: 1;}
+}
+@keyframes ks-anim-down-out {
+	0% {transform: translate3d(0, 0, 0); opacity: 1;}
+	100% { transform: translate3d(0, -100%, 0); opacity: 0;}
+}
+@keyframes ks-anim-left {
+	0% {transform: translate3d(50%, 0, 0); opacity: 0;}
+	100% { transform: translate3d(0, 0, 0); opacity: 1;}
+}
+@keyframes ks-anim-left-out {
+	0% {transform: translate3d(0, 0, 0); opacity: 1;}
+	100% { transform: translate3d(100%, 0, 0); opacity: 0;}
+}
+@keyframes ks-anim-right {
+	0% {transform: translate3d(-50%, 0, 0); opacity: 0;}
+	100% { transform: translate3d(0, 0, 0); opacity: 1;}
+}
+@keyframes ks-anim-right-out {
+	0% {transform: translate3d(0, 0, 0); opacity: 1;}
+	100% { transform: translate3d(-100%, 0, 0); opacity: 0;}
+}
+@keyframes ks-anim-scale {
+	0% {transform: scale(.3); opacity: 0;}
+	100% { transform: scale(1); opacity: 1;}
+}
+@keyframes ks-anim-scale-out {
+	0% {transform: scale(1); opacity: 1;}
+	100% { transform: scale(0); opacity: 0;}
+}
+
+@keyframes ks-anim-fadein {
+	0% {opacity: 0;}
+	100% {opacity: 1;}
+}
+
+@keyframes ks-anim-fadeout {
+	0% {opacity: 1;}
+	100% {opacity: 0;}
+}
+
+.ks-layer, .ks-layer-cover, *[class*='ks-anim-'] {
+	-webkit-animation-duration: .2s;
+	animation-duration: .2s;
+	-webkit-animation-fill-mode: both;
+	animation-fill-mode: both
+}
+.ks-anim-up {animation-name:ks-anim-up;}
+.ks-anim-down {animation-name:ks-anim-down;}
+.ks-anim-left {animation-name:ks-anim-left;}
+.ks-anim-right {animation-name:ks-anim-right;}
+.ks-anim-scale {animation-name:ks-anim-scale;}
+.ks-anim-fadein {animation-name:ks-anim-fadein;}
+.ks-anim-fadeout {animation-name:ks-anim-fadeout;}
+
+
+.ks-anim-hide {opacity: 0; }
+.ks-anim-hide.ks-anim-up {animation-name:ks-anim-up-out;}
+.ks-anim-hide.ks-anim-down {animation-name:ks-anim-down-out;}
+.ks-anim-hide.ks-anim-left {animation-name:ks-anim-left-out;}
+.ks-anim-hide.ks-anim-right {animation-name:ks-anim-right-out;}
+.ks-anim-hide.ks-anim-scale {animation-name:ks-anim-scale-out;}
+
 //============== 输入框组 ==============
 ks-input-group {
 	display: inline-table; width:100%; border-collapse:separate; vertical-align:middle; background: #f2f2f2;
@@ -1261,17 +1337,31 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 //============== 浮动提示窗口层 ==============
 .ks-body-layer-overflow { overflow: hidden}
 .ks-layer {
-	position: fixed; top: 0; left: 0; font-size: 14px; background:#fff; opacity:0; box-shadow: #444 0 0 5px; border-radius: 3px; min-width:360px;
-	//从底部弹出
-	&[pos="7"],
-	&[pos="8"],
-	&[pos="9"] { top: inherit; border-radius:7px 7px 0 0}
+	position: fixed; font-size: 14px; background:#fff; opacity:0; box-shadow: #444 0 0 5px; border-radius: 3px; min-width:360px;  top: 50%; left: 50%;
+
 	//自由定位的layer样式调整 一般用于下拉选择
-	&._pos_0 { border-radius: 3px; border: #e4eaf2 1px solid; box-shadow: 0 5px 5px 0 rgba(154,161,171,.17); position: absolute; min-width: 120px;}
-	&._pos_0 > .ks-layer-content { padding: 0;}
-	&._pos_0 > .ks-layer-title { background: #f2f2f2;}
+	&[pos="0"] { border-radius: 3px; border: #e4eaf2 1px solid; box-shadow: 0 5px 5px 0 rgba(154,161,171,.17); position: absolute; min-width: 120px;}
+	&[pos="0"] > .ks-layer-content { padding: 0;}
+	&[pos="0"] > .ks-layer-title { background: #f2f2f2;}
+
+	/*
+	&[pos="1"] {left: 0; top: 0;}
+	&[pos="2"] {left: 50%; top: 0; transform: translate(-50%, 0);}
+	&[pos="3"] { right: 0; top: 0}
+	&[pos="4"] {left: 0; top: 50%; transform: translate(0, -50%);}
+	&[pos="5"] {left: 50%; top: 50%; transform: translate(-50%, -50%);}
+	&[pos="6"] { right: 0; top: 50%; transform: translate(0, -50%);}
+	//从底部弹出
+	&[pos="7"] { left: 0; bottom:0; border-radius:7px 7px 0 0;}
+	&[pos="8"] { left: 50%; bottom:0; transform: translate(-50%, 0); border-radius:7px 7px 0 0;}
+	&[pos="9"] {right: 0; bottom: 0; border-radius:7px 7px 0 0;}
+*/
 	//从右到左滑出一个全屏（移动端适用）
-	&._pos_00 { width: 100%; min-width:100%; height: 100%; border-radius: 0}
+	&[pos="00"] { left:100%; top: 0; width: 100%; min-width:100%; height: 100%; border-radius: 0}
+
+	&[active] { opacity: 1}
+	&[active] + .ks-layer-cover { opacity: 1}
+
 }
 
 //layer遮罩层
@@ -1430,7 +1520,7 @@ ks-area {
 
 
 //浮动层
-.ks-area-layer._pos_0 { min-width: 220px; height: 320px;
+.ks-area-layer[pos='0'] { min-width: 220px; height: 320px;
 	.ks-layer-content {position: relative; padding: 0}
 	.ks-layer-content { overflow: hidden}
 	.ks-area-layer-btn { border-bottom:#dfdfdf 1px solid; padding:5px 10px; background: #f2f2f2;
