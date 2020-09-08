@@ -1367,7 +1367,11 @@ function debugTime(key){
 	 */
 	K.scrollTop = function(val, AnimationTime){
 		if(!$.isset(val)){
-			return this[0] ? this[0].scrollTop : 0;
+			var dom = this[0];
+			if(dom === document){
+				dom = dom.scrollingElement;
+			}
+			return dom ? dom.scrollTop : 0;
 		}else{
 			this.map(function(e){
 				var top = e.scrollTop;
@@ -4137,15 +4141,29 @@ function debugTime(key){
 		return str;
 	}
 
-	$.intval = function(value){
+	function _intval(value, isFloat){
 		if($.isObject(value) || $.isArray(value)){
 			$.loop(value, function(v, k){
-				value[k] = $.intval(v);
+				value[k] = _intval(v, isFloat);
 			});
 		}else{
-			value = parseFloat(value) || 0;
+			value = (isFloat ? parseFloat(value) : parseInt(value)) || 0;
 		}
 		return value;
+	}
+
+	$.intval = function(value){
+		return _intval(value);
+	}
+
+	$.floatval = function(value){
+		return _intval(value, true);
+	}
+
+	$.strpos = function(str, val, len){
+		str = str.toString();
+		str = len > 0 ? str.substr(len) : str;
+		return str.indexOf(val) !== -1;
 	}
 
 	$.strlen = function(value){
