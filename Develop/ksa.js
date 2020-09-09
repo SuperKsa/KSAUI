@@ -258,12 +258,7 @@ function debugTime(key){
 		});
 		return this;
 	}
-	window.addEventListener('DOMContentLoaded', function(){
-		$.loop(DocumentReadyFunction, function(func){
-			func();
-		});
-		DocumentReadyFunction = [];
-	}, false);
+
 
 	/**
 	 * 监听dom变化（仅在KSA语法中有效）
@@ -1525,15 +1520,21 @@ function debugTime(key){
 					return i;
 				}
 			}
-		}else{
-			var i=0, kdt = Object.keys(dt);
-			Object.keys(dt).forEach(function(k){
-				var val = dt[k];
-				if((actions && (actions ==='first' || (actions ==='last' && i === kdt.length -1))) || fun(val, k, i) === true){
-					return val;
+		}else if($.isObject(dt)){
+			var keys = Object.keys(dt),
+				i=0,
+				len = keys.length,
+				key, val;
+			if(len) {
+				for (key in keys) {
+					var k = keys[key];
+					val = dt[k];
+					if ((actions && (actions === 'first' || (actions === 'last' && i === len - 1))) || fun(val, k, i) === true) {
+						return val;
+					}
+					i++;
 				}
-				i++;
-			})
+			}
 		}
 	}
 
@@ -3242,7 +3243,7 @@ function debugTime(key){
 					obj = arguments[1][0],
 					key = arguments[1][1],
 					isText = !!arguments[1][2];
-				type = type.indexOf('ks-') === 0 ? type.substr(3) : type;
+				type = type && type.indexOf('ks-') === 0 ? type.substr(3) : type;
 				if($.isObject(obj)){
 					var ths = this;
 					var objID = $.objectID(obj);
@@ -4034,11 +4035,15 @@ function debugTime(key){
 	}
 
 	$.count = function(dt){
-		var S = 0;
-		$.loop(dt,function(){
-			S ++;
-		});
-		return S;
+		if($.isArray(dt)){
+			return dt.length;
+		}else if($.isObject(dt)){
+			var S = 0, k;
+			for(k in dt){
+				S ++;
+			}
+			return S;
+		}
 	}
 
 	$.arrayMerge = function(){
@@ -4198,6 +4203,15 @@ function debugTime(key){
 			return arguments.length > 0 ? this.on(name, null, func, fn) : this.trigger(name);
 		};
 	});
+
+	$(document).on('DOMContentLoaded.ksa', function(){
+		$.loop(DocumentReadyFunction, function(func){
+			func();
+		});
+		DocumentReadyFunction = [];
+		$(document).off('DOMContentLoaded.ksa');
+	});
+
 	//插件钩子 $.plugin.xxx = xxx;
 	$.plugin = $.prototype;
 	window.KSA = window.$ = $;
