@@ -84,10 +84,9 @@ ks-collapse-block { display: block;}
 	--danger : #ff6a5b; //错误/危险
 }
 
-body { overflow: auto}
 * { word-wrap: break-word; margin: 0; padding: 0; box-sizing:border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color:rgba(0,0,0,0)}
 article, aside, figcaption, figure, footer, header, hgroup, main, nav, section { display: block;}
-body, input, button, select, textarea, pre, code {font-family:"-apple-system","BlinkMacSystemFont","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","sans-serif","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"; font-size:inherit; font-style:inherit; outline:none; color: inherit}
+body, input, button, select, textarea, pre, code {font-family:"Microsoft YaHei","-apple-system","BlinkMacSystemFont","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","sans-serif","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"; font-size:inherit; font-style:inherit; outline:none; color: inherit}
 a, .ks-link, .ks-link-line { text-decoration:none; color: #545454;}
 a:active, a:hover { outline:none; text-decoration: none;}
 
@@ -441,8 +440,8 @@ ks-avatar {
 
 //============== 表格框(table.js必须) ==============
 .ks-table {
-	width: 100%; background: #fff; display: table; empty-cells: show; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 1.5715; position: relative; z-index: 1;
-	th { font-weight: bold; color: rgba(0,0,0,.75)}
+	width: 100%; background: #fff; display: table; empty-cells: show; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 1.5715; position: relative; z-index: 1; text-align: left;
+	th { font-weight: bold; color: rgba(0,0,0,.75); text-align: left;}
 	th, td { padding: 14px; min-width: 51px; overflow-wrap:break-word; border-bottom: #f0f0f0 1px solid}
 	//模式 左标题右内容
 	tr > th:only-of-type { width: 100px;}
@@ -479,6 +478,7 @@ ks-avatar {
 .ks-table-body { margin-top: -1px;}
 .ks-table-header tr > th:last-of-type { border-right: 0}
 .ks-table-header .ks-td-scroll { padding: 0; border-left: 0;}//页头占位滚动条
+
 
 
 //============== 表单结构 ==============
