@@ -64,47 +64,48 @@ $.ksauiRenderTree = {};
 			thisEl.length && _documentRenderFun(func, thisEl[0], selector);
 		});
 	}
-	/*
+
+	function _renderInit(){
+		/*
 		uninitialized（未初始化）：对象存在但尚未初始化。
 		loading（正在加载）：对象正在加载数据。
 		loaded（加载完毕）：对象加载数据完成。
 		interactive（交互）：可以操作对象了，但还没有完全加载。
 		complete（完成）：对象已经加载完毕。
 	 */
-	$(document).on('DOMContentLoaded.ksaui', function(){
-		debug(document.readyState);
-		$(document).off('DOMContentLoaded.ksaui');
-	});
+		$(document).on('DOMContentLoaded.ksaui', function(){
+			debug(document.readyState);
+			$(document).off('DOMContentLoaded.ksaui');
+		});
 
 
+		//监听节点变动 HTML5
+		if(window.MutationObserver){
+			var observer = new MutationObserver(function(Mut){
+				$.loop(Mut, function(val){
+					if(val.type ==='childList' && val.addedNodes.length){
+						$.loop(val.addedNodes, function(ele){
+							if(ele.nodeType === 1){
+								_documentRender(ele);
+							}
+						});
+					}
+				});
+			});
+			observer.observe(document, {childList: true, subtree: true });
+			//监听节点变动 低版本浏览器
+		}else{
 
-
-	//监听节点变动 HTML5
-	if(window.MutationObserver){
-		var observer = new MutationObserver(function(Mut){
-			$.loop(Mut, function(val){
-				if(val.type ==='childList' && val.addedNodes.length){
-					$.loop(val.addedNodes, function(ele){
-						if(ele.nodeType === 1){
-							_documentRender(ele);
-						}
+			$(document).on('DOMContentLoaded DOMNodeInserted', function(Mut){
+				if(Mut.type ==='DOMNodeInserted'){
+					_documentRender(Mut.target);
+				}else{
+					$.loop(document.body.children, function(ele){
+						_documentRender(ele);
 					});
 				}
 			});
-		});
-		observer.observe(document, {childList: true, subtree: true });
-	//监听节点变动 低版本浏览器
-	}else{
-
-		$(document).on('DOMContentLoaded DOMNodeInserted', function(Mut){
-			if(Mut.type ==='DOMNodeInserted'){
-				_documentRender(Mut.target);
-			}else{
-				$.loop(document.body.children, function(ele){
-					_documentRender(ele);
-				});
-			}
-		});
+		}
 	}
 
 	//渲染树
@@ -319,7 +320,6 @@ $.ksauiRenderTree = {};
 	 */
 
 	$.layer = function (option, pos, cover, showFun, closeFun, btnFun, initFun) {
-		console.time('test');
 		$.layerOption = $.layerOption ? $.layerOption : {};
 		if (typeof (option) == 'string' || (option instanceof $ && option[0].innerHTML)) {
 			option = {content: option};
@@ -499,7 +499,6 @@ $.ksauiRenderTree = {};
 			if (option.btn) {
 				cententMaxH -= D.children('.ks-layer-bottom').height(true, true);
 			}
-			console.timeEnd('test');
 
 			if (option.height) {
 				var oph = option.height;
@@ -2458,21 +2457,19 @@ $.ksauiRenderTree = {};
 				t.wrap(moveLabelAttr('label', t, 'ks-input')).removeAttr('icon');
 				(at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
 				at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
-				if ($.isset(at.clear)) {
-					var clearbtn = $('<right class="ks-input-clear" icon="close-circle-fill" style="z-index:99"></right>');
-					t.before(clearbtn);
-					clearbtn.click(function () {
-						t.val('').focus();
+				var clearbtn = $('<right class="ks-input-clear" icon="close-circle-fill" style="z-index:99"></right>');
+				t.before(clearbtn);
+				clearbtn.click(function () {
+					t.val('').focus();
+					clearbtn.active(false);
+				});
+				t.keyup(function () {
+					if (t.val().length > 0) {
+						clearbtn.active(true);
+					} else {
 						clearbtn.active(false);
-					});
-					t.keyup(function () {
-						if (t.val().length > 0) {
-							clearbtn.active(true);
-						} else {
-							clearbtn.active(false);
-						}
-					});
-				}
+					}
+				});
 			},
 			'input[type="ks-password"]': function (ele) {
 				var t = $(ele), at = t.attr();
@@ -2487,10 +2484,10 @@ $.ksauiRenderTree = {};
 						var input = ths.nextAll('input');
 						if (input.attr('type') == 'text') {
 							input.attr('type', 'password');
-							ths.attr('icon', 'eye-off');
+							ths.addClass('ri-eye-off').removeClass('ri-eye-fill');
 						} else {
 							input.attr('type', 'text');
-							ths.attr('icon', 'eye-fill');
+							ths.addClass('ri-eye-fill').removeClass('ri-eye-off');
 						}
 					});
 				}
@@ -3062,12 +3059,15 @@ $.ksauiRenderTree = {};
 				});
 			}
 		});
-
+		//图标转换
 		$.render('[icon]', function(ele){
 			var icon = ele.attributes.icon.value;
 			if(icon){
-				ele.className += 'ri-'+icon;
+				ele.className += ' ri-'+icon;
 			}
 		});
 	})();
+
+	//开始渲染流程
+	_renderInit();
 })(KSA);

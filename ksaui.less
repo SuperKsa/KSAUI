@@ -273,7 +273,7 @@ ks-page {
 ks-list {
 	width: 100%; height: auto; overflow: hidden;
 	> * { display: block; padding: .71428em 0; position: relative; height: auto; overflow: hidden; list-style:none;}
-	> *:after {position: absolute; right: 0; bottom: 0; left:0; height: 1px; content: ''; background-color: #c8c7cc; -webkit-transform: scaleY(.5); transform: scaleY(.5)}
+	> *:after {position: absolute; right: 0; bottom: 0; left:0; height: 1px; content: ''; background-color: #c8c7cc;}
 	> *:not(.ks-fl):last-of-type:after {display: none;}
 	> * > small { float: right; color: #898989;}
 }
@@ -328,7 +328,7 @@ ks-list > ks-list-item[icon='arrow_right']:before,
 //单选列表
 .ks-list-select {
 	width: 100%; overflow-y: auto;
-	> ks-list-item {cursor:pointer; white-space: nowrap;}
+	> ks-list-item {cursor:pointer; white-space: nowrap; display: block}
 	> ks-list-item:not(.ks-select-optgroup-title):hover {opacity: .7}
 	> ks-list-item:before {font-size: 20px; width:20px; height:20px; text-align: center; font-family: 'remixicon'; color: #acacac; margin:0 5px 0 0;}
 	> ks-list-item[selected] {color:@primary;}
@@ -808,20 +808,28 @@ select:disabled ~ .ks-list-select { cursor: not-allowed; opacity: .7}
 //普通输入框
 .ks-input {
 	vertical-align:middle; white-space: nowrap;
-	> left[icon], right[icon] {color: @textColor}
+	input {height: inherit; background: #fff; padding: 0 10px; float: left; width: 100%}
+	//清除text文本输入框的清除图标
+	> input::-ms-clear{display: none;}
+	//清除password密码输入框的明文图标
+	> input::-ms-reveal{display: none;}
+
+	> left[icon], > right[icon] { width: 32px; height: 34px; line-height: 34px; text-align: center; position: absolute; top: 1px; z-index: 10; color: @textColor}
+	> left[icon] { left: 1px}
+	> left[icon] ~ input { padding-left: 32px;}
+	> right[icon] { right: 1px}
+	> right[icon] ~ input { padding-right: 32px;}
+	//输入框清理图标
+	> .ks-input-clear {
+		display: none; cursor: pointer; font-size: 14px; width: 14px; height: 14px; text-align: center; line-height: 14px;
+		&:before {display: inline-block; }
+		&[active] { display: block}
+	}
 }
 
 input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-input:not(input):not(textarea) { padding: 0; position: relative; display: inline-block}
 
-.ks-input {
-	input {height: inherit; background: #fff; padding: 0 10px; float: left; width: 100%}
-	> left[icon], > right[icon] { width: 32px; height: 34px; line-height: 34px; text-align: center; position: absolute; top: 1px; z-index: 10}
-	> left[icon] { left: 1px}
-	> left[icon] ~ input { padding-left: 32px;}
-	> right[icon] { right: 1px}
-	> right[icon] ~ input { padding-right: 32px;}
-}
 
 //递增输入框
 .ks-input-arrow {
@@ -829,7 +837,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 	&:after { content: ''; width: 100%; height: 0; overflow: hidden; display: block}
 	> [data-digit] { position: absolute; right: 1px; width: 22px; height:50%; line-height: 1.5; top: 1px; text-align: center; border-left: @borderColor 1px solid; cursor: pointer; display: none; z-index: 10; user-select: none; font-size: 12px}
 	> [data-digit]:hover { color: @primary}
-	> [data-digit='down'] { bottom: 1px; top: initial; border-top: @borderColor 1px solid;}
+	> [data-digit='down'] { bottom: 1px; top: auto; border-top: @borderColor 1px solid;}
 	> input { height: inherit; background: #fff; padding: 0 22px 0 10px; float: left; width: 100%}
 	&:hover [data-digit] , >input:focus ~ [data-digit] { display: block}
 }
@@ -837,12 +845,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 //密码输入框
 .ks-password [icon=ishide].a { content: '\e66a'}
 
-//输入框清理图标
-.ks-input-clear {
-	display: none; cursor: pointer; font-size: 14px; width: 14px; height: 14px; text-align: center; line-height: 14px;
-	&:before {display: inline-block; }
-	&[active] { display: block}
-}
+
 
 
 
@@ -854,7 +857,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 //============== 单选、复选、开关 ==============
 .ks-checkbox, .ks-radio, .ks-switch {cursor:pointer; display: inline-block; font-weight: normal; position: relative; color: @textColor; user-select: none; vertical-align: middle;}
 .ks-checkbox input, .ks-radio input, .ks-switch input{display:none; }
-.ks-checkbox > i, .ks-switch > i { background: #efefef; font-style: normal; display: inline-block; font-style: normal}
+.ks-checkbox > i, .ks-switch > i { background: #efefef; font-style: normal; display: inline-block;}
 .ks-checkbox *, .ks-radio *, .ks-switch * { font-style: normal; box-sizing: border-box}
 
 
@@ -1211,7 +1214,7 @@ ks-dot {
 }
 @keyframes ks-anim-up-out {
 	0% {transform: translate3d(0, 0, 0); opacity: 1;}
-	100% { transform: translate3d(0, 100%, 0); opacity: 0;}
+	100% { transform: translate3d(0, 15%, 0); opacity: 0;}
 }
 @keyframes ks-anim-down {
 	0% {transform: translate3d(0, -50%, 0); opacity: 0;}
@@ -1219,7 +1222,7 @@ ks-dot {
 }
 @keyframes ks-anim-down-out {
 	0% {transform: translate3d(0, 0, 0); opacity: 1;}
-	100% { transform: translate3d(0, -100%, 0); opacity: 0;}
+	100% { transform: translate3d(0, -15%, 0); opacity: 0;}
 }
 @keyframes ks-anim-left {
 	0% {transform: translate3d(50%, 0, 0); opacity: 0;}
