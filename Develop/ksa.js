@@ -1480,7 +1480,7 @@ function debugTime(key){
 						gets[val] = sty[val];
 					});
 					if (getkeys.length === 1) {
-						return Object.values(gets)[0];
+						return gets[getkeys[0]];
 					} else {
 						return gets;
 					}
@@ -4211,7 +4211,19 @@ function debugTime(key){
 		DocumentReadyFunction = [];
 		$(document).off('DOMContentLoaded.ksa');
 	});
-
+	$.extend = $.arrayMerge;
+	K.innerWidth = function(){
+		return this.width(true);
+	}
+	K.innerHeight = function(){
+		return this.height(true);
+	}
+	K.outerWidth = function(){
+		return this.width(true,true);
+	}
+	K.outerHeight = function(){
+		return this.height(true,true);
+	}
 	//插件钩子 $.plugin.xxx = xxx;
 	$.plugin = $.prototype;
 	window.KSA = window.$ = $;
