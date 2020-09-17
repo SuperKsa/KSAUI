@@ -24,6 +24,17 @@ $.ksauiRenderTree = {};
 
 
 (function($) {
+	var UserAgent = navigator.userAgent;
+	//低版本IE给html增加 .ks-ie9
+	$.IE = _getIEversion();
+	$.IE > 0 && $('html').addClass('ks-ie'+$.IE+' ks-ie');
+	function _getIEversion(){
+		var ie = UserAgent.match(/msie\s([\d.]+)/i)
+		var ie11 = UserAgent.match(/trident\/([\d.]+)/i);
+		return parseInt(ie && ie[1] ? ie[1] : (ie11 && ie11[1] ? '11' : '0'));
+	}
+
+
 	$.W = window.innerWidth;
 	$.H = window.innerHeight;
 
@@ -39,45 +50,47 @@ $.ksauiRenderTree = {};
 			$.mouseY = e.y || e.layerY || 0;
 		});
 	}
+	$(window).resize(function(){
+		$.W = window.innerWidth;
+		$.H = window.innerHeight;
+	});
 
-	function _documentRenderFun(func, ele, selector){
-		if (!ele._KSAUIRENDER_) {
-			ele._KSAUIRENDER_ = {};
-		}
-		if (ele._KSAUIRENDER_[selector]) {
-			return;
-		}
-		ele._KSAUIRENDER_[selector] = true;
-		func.call(ele, ele);
-	}
 
-	function _documentRender(ele) {
-		if(ele.nodeType !== 1){
-			return;
-		}
-		ele = $(ele);
-		$.loop($.ksauiRenderTree, function (func, selector) {
-			ele.find(selector).map(function (ele) {
-				_documentRenderFun(func, ele, selector);
-			});
-			var thisEl = ele.filter(selector);
-			thisEl.length && _documentRenderFun(func, thisEl[0], selector);
-		});
-	}
-
-	function _renderInit(){
-		/*
-		uninitialized（未初始化）：对象存在但尚未初始化。
-		loading（正在加载）：对象正在加载数据。
-		loaded（加载完毕）：对象加载数据完成。
-		interactive（交互）：可以操作对象了，但还没有完全加载。
-		complete（完成）：对象已经加载完毕。
+	/**
+	 * 内部DOM渲染函数
+	 * @private
 	 */
-		$(document).on('DOMContentLoaded.ksaui', function(){
-			debug(document.readyState);
-			$(document).off('DOMContentLoaded.ksaui');
-		});
-
+	function _KSArenderStart(){
+		//回调渲染函数
+		function _documentRenderFun(option, ele, selector){
+			if (!ele._KSAUIRENDER_) {
+				ele._KSAUIRENDER_ = {};
+			}
+			if (ele._KSAUIRENDER_[selector]) {
+				return;
+			}
+			ele._KSAUIRENDER_[selector] = true;
+			//渲染回调
+			option.callback && option.callback.call(ele, ele);
+			//检查是否有DOMchange监听事件
+			option.monitor && $(ele).DOMchange(option.monitor, function(){
+				option.callback && option.callback.call(ele, ele);
+			});
+		}
+		//创建回调渲染
+		function _documentRender(ele) {
+			if(ele.nodeType !== 1){
+				return;
+			}
+			ele = $(ele);
+			$.loop($.ksauiRenderTree, function (option, selector) {
+				ele.find(selector).map(function (ele) {
+					_documentRenderFun(option, ele, selector);
+				});
+				var thisEl = ele.filter(selector);
+				thisEl.length && _documentRenderFun(option, thisEl[0], selector);
+			});
+		}
 
 		//监听节点变动 HTML5
 		if(window.MutationObserver){
@@ -108,16 +121,13 @@ $.ksauiRenderTree = {};
 		}
 	}
 
-	//渲染树
-	//$(document).ready(_documentRender);
-
-	$.render = function (selector, func) {
+	$.render = function (selector, func, monitor) {
 		if ($.isObject(selector) && !func) {
 			$.loop(selector, function (val, key) {
-				$.ksauiRenderTree[key] = val;
+				$.ksauiRenderTree[key] = {callback : val, monitor:monitor};
 			});
 		} else {
-			$.ksauiRenderTree[selector] = func;
+			$.ksauiRenderTree[selector] = {callback : func, monitor:monitor};
 		}
 	}
 
@@ -353,6 +363,7 @@ $.ksauiRenderTree = {};
 		var ELoffset = EL.offset();
 		//EL尺寸与位置
 		var ELSize = {W: EL.width(true), H: EL.height(true), L: ELoffset.left, T: ELoffset.top};
+		var Layer;
 
 		//手机端默认监听后退事件
 		if (option.backEvent === null && $.device == 'MOBILE') {
@@ -363,7 +374,6 @@ $.ksauiRenderTree = {};
 			option.cover = 0;
 		}
 
-
 		var tmpOption = option;//声明一个临时配置变量用于全局缓存
 		option.type = option.type ? option.class + ' ' + option.class + '_' + option.type : '';
 		option.cache = option.cache ? option.cache : null;
@@ -372,13 +382,77 @@ $.ksauiRenderTree = {};
 			option.content = '<iframe src="' + option.iframe + '" width="100%" height="100%"></iframe>';
 		}
 
-		var AutoEvn;
+
+
+		//layer 尺寸、位置处理
+		function _pos(){
+			var style = {};
+			var pos = option.pos;
+			var w = Layer.width(true),
+				h = Layer.height(true);
+			if ($.inArray(pos, ['00', 1, 2, 3, 4, 5, 6, 7, 8, 9])) {
+				if ($.inArray(pos, [1, 4, 7])) {
+					style.left = 0;
+				}
+				if ($.inArray(pos, [1, 2, 3])) {
+					style.top = 0;
+				}
+				//X轴居中
+				if ($.inArray(pos, [2, 5, 8])) {
+					style['margin-left'] = $.intval(0 - w / 2);
+				}
+				//X轴居右
+				if ($.inArray(pos, [3, 6, 9])) {
+					style.right = 0;
+					style.left = 'initial';
+				}
+				//Y轴居中
+				if ($.inArray(pos, [4, 5, 6])) {
+					style['margin-top'] = $.intval(0 - h / 2);
+				}
+				//Y轴底部
+				if ($.inArray(pos, [7, 8, 9])) {
+					style.top = 'initial';
+					style.bottom = '0';
+				}
+				//全屏
+				if (pos == '00') {
+					style.top = '0';
+					style.bottom = '0';
+					style['margin-left'] = '-100%';
+				}
+
+				//如果定位不是既定位置 则认为是一个选择器 自适应定位
+			} else {
+				var trigger = $(pos),
+					teiggerW = trigger.width(true),
+					teiggerH = trigger.height(true),
+					layerW = Layer.width(true),
+					layerH = Layer.height(true);
+				style.left = trigger.offset().left;
+				style.top = trigger.offset().top + teiggerH;
+
+				var seH = trigger.offset().top - $(document).scrollTop() + teiggerH + layerH;
+				if (ELSize.W - (style.left + layerW) < 0) {
+					style.left = style.left - layerW + teiggerW;
+				}
+				//如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
+				if ($.H - seH < 0) {
+					style.top = trigger.offset().top - layerH;
+					Layer.layerAnimKey = 2;
+				} else {
+					Layer.layerAnimKey = 8;
+				}
+			}
+			Layer.css(style);
+		}
+
 
 		function __run() {
 
 			//层级序号自增
 			$.ZINDEX++;
-			var D, H, Id, cacheID;
+			var H, Id, cacheID;
 			//添加缓存键名
 			if (option.cache) {
 				$.loop($.layerOption, function (val, k) {
@@ -388,8 +462,8 @@ $.ksauiRenderTree = {};
 				});
 			}
 			if (cacheID) {
-				D = $(cacheID);
-				Id = D.attr('key');
+				Layer = $(cacheID);
+				Id = Layer.attr('key');
 			} else {
 				var pos = typeof (option.pos) == 'object' ? 0 : option.pos;
 				Id = $.ZINDEX + 1;
@@ -425,29 +499,29 @@ $.ksauiRenderTree = {};
 					H += s ? '<div class="ks-layer-bottom">' + s + '</div>' : '';
 				}
 				H += '</div>';
-				D = $(H);
+				Layer = $(H);
 			}
 
 			//添加layerID
-			D.layerID = Id;
+			Layer.layerID = Id;
 			if (!cacheID) {
 				//添加content
-				D.find('.ks-layer-content').html(option.content);
+				Layer.find('.ks-layer-content').html(option.content);
 			}
-			$(EL).append(D);
+			$(EL).append(Layer);
 
 			if (!cacheID) {
 				//关闭事件 右上角按钮
-				D.find('.ks-layer-close').click(function () {
+				Layer.find('.ks-layer-close').click(function () {
 					clearTimeout(AutoEvn);
 					$.layerHide(Id);
 				});
 
 				//底部按钮处理
 				if (option.btn) {
-					D.find('.ks-layer-bottom > ks-btn').click(function () {
+					Layer.find('.ks-layer-bottom > ks-btn').click(function () {
 						var t = $(this);
-						if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), D) !== false))) {
+						if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), Layer) !== false))) {
 							clearTimeout(AutoEvn);
 							$.layerHide(Id);
 
@@ -474,58 +548,59 @@ $.ksauiRenderTree = {};
 							$.layerHide(Id);
 						}
 					});
-					D.after(cover);
+					Layer.after(cover);
 				}
 				//iframe body加当前ID
 				if (option.iframe) {
-					D.iframe = null;
-					D.find('iframe')[0].onload = function () {
-						D.iframe = $(this.contentWindow.document.body);
-						D.iframe.attr('parentlayerid', Id);
+					Layer.iframe = null;
+					Layer.find('iframe')[0].onload = function () {
+						Layer.iframe = $(this.contentWindow.document.body);
+						Layer.iframe.attr('parentlayerid', Id);
 					};
 				}
 				//初始化回调
-				$.isFunction(option.init) && option.init(D, Id);
+				$.isFunction(option.init) && option.init(Layer, Id);
 			}
+			(function(){
+				var style = {};
+				//内容区最大高度处理
+				var cententMaxH = $.H;
 
-			//内容区最大高度处理
-			var cententMaxH = $.H;
-			//layerCSS
-			var css = {};
 
-			if (option.title) {
-				cententMaxH -= D.children('.ks-layer-title').height(true, true);
-			}
-			if (option.btn) {
-				cententMaxH -= D.children('.ks-layer-bottom').height(true, true);
-			}
-
-			if (option.height) {
-				var oph = option.height;
-				//百分比值支持
-				if ($.strpos(oph, '%')) {
-					oph = cententMaxH * $.floatval(oph) / 100;
+				if (option.title) {
+					cententMaxH -= Layer.children('.ks-layer-title').height(true, true);
 				}
-				css.height = oph;
-			}
-			if (option.maxHeight) {
-				var opmh = option.maxHeight;
-				//百分比值支持
-				if ($.isString(opmh) && opmh.indexOf('%')) {
-					opmh = cententMaxH * $.floatval(opmh) / 100;
+				if (option.btn) {
+					cententMaxH -= Layer.children('.ks-layer-bottom').height(true, true);
 				}
-				css['max-height'] = opmh;
-			}
 
-			if (option.width) {
-				var opw = option.width;
-				//百分比值支持
-				if ($.isString(opw) && opw.indexOf('%')) {
-					opw = $.floatval(opw);
-					opw = ELSize.W * opw / 100;
+				if (option.height) {
+					style.height = option.height;
+					//百分比值支持
+					if ($.strpos(style.height, '%')) {
+						style.height = cententMaxH * $.floatval(style.height) / 100;
+					}
 				}
-				css.width = opw;
-			}
+				if (option.maxHeight) {
+					style['max-height'] = option.maxHeight;
+					//百分比值支持
+					if ($.isString(style['max-height']) && style['max-height'].indexOf('%')) {
+						style['max-height'] = cententMaxH * $.floatval(style['max-height']) / 100;
+					}
+				}
+
+				if (option.width) {
+					style.width = option.width;
+					//百分比值支持
+					if ($.isString(style.width) && style.width.indexOf('%')) {
+						style.width = $.floatval(style.width);
+						style.width = ELSize.W * style.width / 100;
+					}
+				}
+				Layer.children('.ks-layer-content').css(style);
+			})();
+
+			//layer动画
 			var layerAnim = {
 				1: 'ks-anim-right',
 				2: 'ks-anim-down',
@@ -538,81 +613,22 @@ $.ksauiRenderTree = {};
 				9: 'ks-anim-left',
 				'00': 'ks-anim-left',
 			};
-
-			var layerAnimKey = option.pos;
-			(function () {
-				var pos = option.pos;
-				var w = D.width(true),
-					h = D.height(true);
-				if ($.inArray(pos, ['00', 1, 2, 3, 4, 5, 6, 7, 8, 9])) {
-					if ($.inArray(pos, [1, 4, 7])) {
-						css.left = 0;
-					}
-					if ($.inArray(pos, [1, 2, 3])) {
-						css.top = 0;
-					}
-					//X轴居中
-					if ($.inArray(pos, [2, 5, 8])) {
-						css['margin-left'] = $.intval(0 - w / 2);
-					}
-					//X轴居右
-					if ($.inArray(pos, [3, 6, 9])) {
-						css.right = 0;
-						css.left = 'initial';
-					}
-					//Y轴居中
-					if ($.inArray(pos, [4, 5, 6])) {
-						css['margin-top'] = $.intval(0 - h / 2);
-					}
-					//Y轴底部
-					if ($.inArray(pos, [7, 8, 9])) {
-						css.top = 'initial';
-						css.bottom = '0';
-					}
-					//全屏
-					if (pos == '00') {
-						css.top = '0';
-						css.bottom = '0';
-						css['margin-left'] = '-100%';
-					}
-
-					//如果定位不是既定位置 则认为是一个选择器 自适应定位
-				} else {
-					var trigger = $(pos),
-						teiggerW = trigger.width(true),
-						teiggerH = trigger.height(true),
-						layerW = D.width(true),
-						layerH = D.height(true);
-					css.left = trigger.offset().left;
-					css.top = trigger.offset().top + teiggerH;
-
-					var seH = trigger.offset().top - $(document).scrollTop() + teiggerH + layerH;
-					if (ELSize.W - (css.left + layerW) < 0) {
-						css.left = css.left - layerW + teiggerW;
-					}
-					//如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
-					if ($.H - seH < 0) {
-						css.top = trigger.offset().top - layerH;
-						layerAnimKey = 2;
-					} else {
-						layerAnimKey = 8;
-					}
-				}
-				D.css(css);
-			})();
+			Layer.layerAnimKey = option.pos;
 
 			if (!$.isset(option.bodyOver) || option.bodyOver) {
 				$(EL).addClass('ks-body-layer-overflow');
 			}
+			var AutoEvn;
 			//延迟show 防止回调函数中click 同步响应
 			window.setTimeout(function () {
-				layerAnimKey && D.addClass(layerAnim[layerAnimKey]);
-				D.active(true);
+				_pos();
+				Layer.layerAnimKey && Layer.addClass(layerAnim[Layer.layerAnimKey]);
+				Layer.active(true);
 				//后退事件监听
 				option.backEvent && $.BackEvent('KsaLayer' + Id, '#ks-layer-' + Id);
 
 				//show回调函数
-				typeof (option.show) == 'function' && option.show(D, Id);
+				typeof (option.show) == 'function' && option.show(Layer, Id);
 
 				//N秒自动关闭
 				if (option.outTime > 0) {
@@ -620,26 +636,26 @@ $.ksauiRenderTree = {};
 						$.layerHide(Id);
 					}, option.outTime * 1000 + 50);
 				}
-			}, 1);
+			});
 
 			//按ESC键处理
 			$(document).off('keydown.ks-layer').on('keydown.ks-layer', function (e) {
 				if (e.keyCode == 27) {
 					//关闭浮动窗口
-					var o;
-					o = $('.ks-layer').last();
+					var o = $('.ks-layer').last();
 					if (o.length) {
 						$.layerHide(o.attr('key'));
 					}
 				}
 			});
-			return D;
+			return Layer;
 		}
 
 		var R = __run();
 		if (option.ajaxUrl) {
 			$.API(option.ajaxUrl, option.ajaxPost, function (d) {
 				R.children('.ks-layer-content').html(d);
+				_pos();
 			});
 		}
 		return R;
@@ -1867,7 +1883,7 @@ $.ksauiRenderTree = {};
 					var h = '';
 					//左右切换按钮 带属性：data-slide-btn
 					if (options.control) {
-						h += '<div class="ks-slide-control-prev" icon="arrow_left"></div><div class="ks-slide-control-next" icon="arrow_right"></div>';
+						h += '<div class="ks-slide-control-prev" icon="arrow-left-s"></div><div class="ks-slide-control-next" icon="arrow-right-s"></div>';
 					}
 					//状态栏 带属性：data-slide-status
 					if (options.status) {
@@ -1951,19 +1967,9 @@ $.ksauiRenderTree = {};
 						}
 					});
 				},
-				move: function (i, n, isCard) {
+				move: function (i, n) {
 					var mX = (this.itemWidth * n);
 					var scale = 1;
-					if (isCard) {
-						var leftP = (1 - this.widthScale) / 2 * this.width;
-						if (n == 0) {
-							mX = leftP;
-							scale = 1;
-						} else {
-							mX = ((this.itemWidth * n * 0.8) + leftP);
-							scale = .8;
-						}
-					}
 					this.item.eq(i).css('transition', '').css('transform', 'translateX(' + mX + 'px) scale(' + scale + ')').attr({
 						'css-mx': mX,
 						'css-scale': scale
@@ -1997,7 +2003,7 @@ $.ksauiRenderTree = {};
 						.each(function (_, e) {
 							var i = $(e).index();
 							var mvn = i == index ? 0 : (i == indexL ? -1 : (i == indexR ? 1 : i));
-							ths.move(i, mvn, !!options.card);
+							ths.move(i, mvn);
 						});
 
 					ths.item.eq([indexL, index, indexR]).addClass('_up');
@@ -2010,7 +2016,7 @@ $.ksauiRenderTree = {};
 						}
 						$(e).addClass('_hide').removeClass('_hide', 200);
 						var mvn = tp == 'next' ? 1 : -1;
-						ths.move(i, mvn, !!options.card);
+						ths.move(i, mvn);
 					});
 
 					ths.playIndex = index;
@@ -2191,18 +2197,15 @@ $.ksauiRenderTree = {};
 
 		function moveLabelAttr(tagname, input, appendClass) {
 			input = $(input);
-			input.removeClass(appendClass);
 			var inputAttr = input.attr();
 			var attr = 'style title color size';
+			input.removeAttr(attr);
+			input = null;
 			var dt = {};
-
 			$.loop(attr.split(' '), function (val) {
 				dt[val] = inputAttr[val];
 			});
-
-			dt.class = (dt.class ? dt.class : '') + ' ' + appendClass;
-			input.removeAttr(attr);
-
+			dt.class = appendClass;
 			return $.tag(tagname, dt);
 		}
 
@@ -2577,232 +2580,239 @@ $.ksauiRenderTree = {};
 				});
 
 			},
-			'.ks-slide': function (ele) {
-				ele = $(ele);
-				var sdt = ele.attr();
-				ele.attr('_ksauirender_', 1).slide({
-					auto: sdt.auto,
-					card: sdt.card,
-					control: sdt.control,
-					status: sdt.status,
-				});
-			},
-			'ks-collapse': function (ele) {//折叠面板
-				$(ele).children().map(function (el) {
-					el = $(el);
-					var attr = el.attr();
-					el.wrapInner('<ks-collapse-block></ks-collapse-block>').wrapInner('<ks-collapse-content></ks-collapse-content>');
-					el.prepend('<ks-collapse-title>' + (attr.label || '') + '</ks-collapse-title>')
+		});
 
-					var Pt = el.parent(), isAccordion = $.isset(Pt.attr('accordion'));
-					var content = el.children('ks-collapse-content');
-					//如果默认打开，必须赋予实际高度值以完成css3动画
-					if (el.active()) {
-						content.height(content.children('ks-collapse-block').height(true, true));
-					}
-					el.children('ks-collapse-title').click(function () {
-						var maxH = content.children('ks-collapse-block').height(true, true);
-						if (el.active()) {
-							content.height(0);
-							el.active(false);
-						} else {
-							content.height(maxH);
-							el.active(true);
-							var acList = isAccordion ? el.siblings() : !!0;//手风琴面板同辈
-							if (acList) {
-								acList.active(false);
-								acList.children('ks-collapse-content').height(0);
-							}
-						}
-					});
-				});
-			},
-			'.ks-table': function (ele) {
-				ele = $(ele);
-				var tr = ele.find('tbody > tr');
+		//轮播图
+		$.render('.ks-slide', function (ele) {
+			ele = $(ele);
+			var sdt = ele.attr();
+			ele.slide({
+				auto: sdt.auto,
+				card: sdt.card,
+				control: sdt.control,
+				status: sdt.status,
+			});
+		});
 
-				var trFirst = tr.eq(0);
-				if (trFirst.children('td:first-child').find('.ks-checkbox').length) {
-					tr.children('td:first-child').find('input[type=checkbox]').DOMchange('attr.checked', function () {
-						var t = $(this);
-						var f = t.parents('tr');
+		//table渲染
+		$.render('table.ks-table', function (ele) {
+			ele = $(ele);
+			var tr = ele.find('tbody > tr');
 
-						if (t.checked()) {
-							f.addClass('ks-table-tr-checked');
-						} else {
-							f.removeClass('ks-table-tr-checked');
-						}
-					})
-				}
-			},
-			//表格固定头部
-			'.ks-table[fixed-height]': function (ele) {
-				ele = $(ele);
-				var fixedHeight = parseInt(ele.attr('fixed-height')) || 0;
-				if (!fixedHeight) {
-					return;
-				}
-				ele.attr('fixed-height', '');
-				var thead = ele.children('thead');
-				var allWidth = ele.width(true); //总宽度值
-				var dom = $('<div class="ks-table-fixed-header"><div class="ks-table-header"></div><div class="ks-table-body" style="overflow-y: scroll; max-height:' + fixedHeight + 'px"></div></div>');
+			var trFirst = tr.eq(0);
+			if (trFirst.children('td:first-child').find('.ks-checkbox').length) {
+				tr.children('td:first-child').find('input[type=checkbox]').DOMchange('attr.checked', function () {
+					var t = $(this);
+					var f = t.parents('tr');
 
-				var rowCols = ele.children().eq(0).children().children();
-				var rowColsNum = rowCols.length - 1;
-
-				var colgroup = '<colgroup>';
-				rowCols.each(function (index, el) {
-					if (index === rowColsNum) {
-						return;
-					}
-					var w = $(el).width(true) / allWidth * 100;
-					colgroup += '<col style="width:' + w + '%; min-width: ' + w + '%">';
-				});
-				colgroup += '</colgroup>';
-				ele.after(dom);
-				dom.find('.ks-table-header').html('<table class="ks-table">' + colgroup + '</table>').find('table').append(thead);
-				dom.find('.ks-table-body').append(ele[0]).find('table').prepend(colgroup);
-
-				var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度
-				var scrollTd = document.createElement('td');
-				scrollTd.style.width = scrollWidth + 'px';
-				scrollTd.className = 'ks-td-scroll';
-				dom.find('.ks-table-header > table > thead > tr').append(scrollTd);
-			},
-			//表单结构初始化
-			'ks-form': function (dom) {
-				dom = $(dom);
-				var domInline = $.isset(dom.attr('inline')),
-					labelWidth = dom.attr('label-width');
-				dom.find('ks-form-item').map(function (ele) {
-					if (ele._ksa_render_ks_form_item) {
-						return;
-					}
-					ele._ksa_render_ks_form_item = 1;
-					ele = $(ele);
-					var attrs = ele.attr();
-					!domInline && ele.addClass('ks-clear');
-					ele.wrapInner('<ks-form-content></ks-form-content>');
-					attrs.label && ele.prepend('<ks-form-label ' + ($.isset(attrs.required) ? 'required' : '') + '>' + attrs.label + '</ks-form-label>');
-					attrs.extra && ele.append('<ks-form-extra>' + attrs.extra + '</ks-form-extra>');
-					ele.attr({label: '', extra: '', required: ''});
-
-					if (labelWidth) {
-						labelWidth = $.isNumber(labelWidth) ? labelWidth + 'px' : labelWidth;
-						ele.find('ks-form-label').width(labelWidth);
-						ele.find('ks-form-content , ks-form-extra').width('calc(100% - ' + labelWidth + ')');
-					}
-				});
-			},
-			//提交按钮
-			'ks-btn[submit]': function (dom) {
-				dom = $(dom);
-				var submits = dom.attr('submit');
-				dom.attr('submit', '');
-				var form = submits ? $(submits) : dom.parents('form');
-
-				if (form.length) {
-					dom.click(function () {
-						form.submit();
-					});
-				}
-			},
-			//重置按钮
-			'ks-btn[reset]': function (dom) {
-				dom = $(dom);
-				var resets = dom.attr('reset');
-				dom.attr('reset', '');
-				var form = resets ? $(resets) : dom.parents('form');
-				if (!form.length) {
-					form = dom.parents('ks-form');
-				}
-				if (form.length) {
-					dom.click(function () {
-						form.find('input:not([type="hidden"]), select, textarea').val('');
-					});
-				}
-			},
-			//价格标签
-			'ks-price': function (ele) {
-				var txt = ele.innerHTML.trim();
-				txt = txt.replace(/([^0-9\.\,]+)/gi, '<unit>$1</unit>');
-				txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
-
-				if ($.isset($(ele).attr('split'))) {
-					txt = txt.replace(/([0-9]+)\.?/, function (v) {
-						v = v.replace(/([0-9])([0-9]{3})$/g, '$1,$2');
-						return '<strong>' + v + '</strong>';
-					});
-				}
-				ele.innerHTML = txt;
-			},
-			'ks-card': function (ele) {
-				ele = $(ele);
-				var attrs = ele.attr();
-				//如果没有定义content则包裹
-				if (!ele.children('ks-card-content').length) {
-					ele.wrapInner('<ks-card-content></ks-card-content>');
-				}
-				//title存在 则附加title
-				if (!ele.children('ks-card-title').length && attrs.label) {
-					ele.prepend('<ks-card-title ' + (attrs.icon ? 'icon="' + attrs.icon + '"' : '') + '>' + attrs.label + '</ks-card-title>').attr('label icon', '');
-				}
-			},
-			'ks-avatar': function (ele) {
-				function _updt(el) {
-					el = $(el);
-					var attr = el.attr();
-					el.attr('title src', '');
-
-					var code = '', label = attr.label && !attr.src ? attr.label : null;
-					var size = attr.size;
-					if (label) {
-						code = '<span class="ks-avatar-name"></span>';
-					} else if (attr.src) {
-						code = ('<img src="' + attr.src + '">');
+					if (t.checked()) {
+						f.addClass('ks-table-tr-checked');
 					} else {
-						code = '<i icon="user"></i>';
+						f.removeClass('ks-table-tr-checked');
 					}
-					el[0].innerHTML = code;
-					if (label) {
-						var unameEl = el.children('.ks-avatar-name');
-						unameEl.text(label);
-						//监听name表单变化
-						var w = unameEl.width(true), pw = unameEl.parent().width(true);
-						var scale = Math.min((size === 'mini' ? 0.75 : 1), (pw - 6) / w);
-						unameEl.css('transform', 'scale(' + scale + ') translateX(-50%)');
-					}
-
-				}
-
-				_updt(ele);
-				$(ele).DOMchange('attr.src attr.size attr.text', function (v) {
-					_updt(this);
-				});
-			},
-			'ks-alert': function (ele) {
-				var ele = $(ele), attrs = ele.attr(), isClose = $.isset(attrs.close);
-				var prehtml = '';
-				if (attrs.title) {
-					prehtml += '<ks-alert-title>' + attrs.title + '</ks-alert-title>';
-				}
-				if (isClose) {
-					prehtml += '<ks-alert-close icon="close"></ks-alert-close>';
-				}
-				ele.prepend(prehtml);
-				ele.attr('title', '');
-				if (isClose) {
-					ele.children('ks-alert-close').click(function () {
-						ele.css('opacity', '0');
-						window.setTimeout(function () {
-							ele.remove();
-						}, 300);
-					});
-				}
+				})
 			}
 		});
 
-		//分页器渲染
+		//表格固定头部
+		$.render('table.ks-table[fixed-height]', function (ele) {
+			ele = $(ele);
+			var fixedHeight = parseInt(ele.attr('fixed-height')) || 0;
+			if (!fixedHeight) {
+				return;
+			}
+			ele.attr('fixed-height', '');
+			var thead = ele.children('thead');
+			var allWidth = ele.width(true); //总宽度值
+			var dom = $('<div class="ks-table-fixed-header"><div class="ks-table-header"></div><div class="ks-table-body" style="overflow-y: scroll; max-height:' + fixedHeight + 'px"></div></div>');
+
+			var rowCols = ele.children().eq(0).children().children();
+			var rowColsNum = rowCols.length - 1;
+
+			var colgroup = '<colgroup>';
+			rowCols.each(function (index, el) {
+				if (index === rowColsNum) {
+					return;
+				}
+				var w = $(el).width(true) / allWidth * 100;
+				colgroup += '<col style="width:' + w + '%; min-width: ' + w + '%">';
+			});
+			colgroup += '</colgroup>';
+			ele.after(dom);
+			dom.find('.ks-table-header').html('<table class="ks-table">' + colgroup + '</table>').find('table').append(thead);
+			dom.find('.ks-table-body').append(ele[0]).find('table').prepend(colgroup);
+
+			var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度
+			var scrollTd = document.createElement('td');
+			scrollTd.style.width = scrollWidth + 'px';
+			scrollTd.className = 'ks-td-scroll';
+			dom.find('.ks-table-header > table > thead > tr').append(scrollTd);
+		});
+
+		//自定义组件 表单结构
+		$.render('ks-form', function (dom) {
+			dom = $(dom);
+			var domInline = $.isset(dom.attr('inline')),
+				labelWidth = dom.attr('label-width');
+			dom.find('ks-form-item').map(function (ele) {
+				if (ele._ksa_render_ks_form_item) {
+					return;
+				}
+				ele._ksa_render_ks_form_item = 1;
+				ele = $(ele);
+				var attrs = ele.attr();
+				!domInline && ele.addClass('ks-clear');
+				ele.wrapInner('<ks-form-content></ks-form-content>');
+				attrs.label && ele.prepend('<ks-form-label ' + ($.isset(attrs.required) ? 'required' : '') + '>' + attrs.label + '</ks-form-label>');
+				attrs.extra && ele.append('<ks-form-extra>' + attrs.extra + '</ks-form-extra>');
+				ele.attr({label: '', extra: '', required: ''});
+
+				if (labelWidth) {
+					labelWidth = $.isNumber(labelWidth) ? labelWidth + 'px' : labelWidth;
+					ele.find('ks-form-label').width(labelWidth);
+					ele.find('ks-form-content , ks-form-extra').width('calc(100% - ' + labelWidth + ')');
+				}
+			});
+		});
+
+		//自定义组件 提交按钮
+		$.render('ks-btn[submit]', function (dom) {
+			dom = $(dom);
+			var submits = dom.attr('submit');
+			dom.attr('submit', '');
+			var form = submits ? $(submits) : dom.parents('form');
+
+			if (form.length) {
+				dom.click(function () {
+					form.submit();
+				});
+			}
+		});
+
+		//自定义组件 重置按钮
+		$.render('ks-btn[reset]', function (dom) {
+			dom = $(dom);
+			var resets = dom.attr('reset');
+			dom.attr('reset', '');
+			var form = resets ? $(resets) : dom.parents('form');
+			if (!form.length) {
+				form = dom.parents('ks-form');
+			}
+			if (form.length) {
+				dom.click(function () {
+					form.find('input:not([type="hidden"]), select, textarea').val('');
+				});
+			}
+		});
+
+		//自定义组件 折叠面板
+		$.render('ks-collapse', function (ele) {
+			$(ele).children().map(function (el) {
+				el = $(el);
+				var attr = el.attr();
+				el.wrapInner('<ks-collapse-block></ks-collapse-block>').wrapInner('<ks-collapse-content></ks-collapse-content>');
+				el.prepend('<ks-collapse-title>' + (attr.label || '') + '</ks-collapse-title>')
+
+				var Pt = el.parent(), isAccordion = $.isset(Pt.attr('accordion'));
+				var content = el.children('ks-collapse-content');
+				//如果默认打开，必须赋予实际高度值以完成css3动画
+				if (el.active()) {
+					content.height(content.children('ks-collapse-block').height(true, true));
+				}
+				el.children('ks-collapse-title').click(function () {
+					var maxH = content.children('ks-collapse-block').height(true, true);
+					if (el.active()) {
+						content.height(0);
+						el.active(false);
+					} else {
+						content.height(maxH);
+						el.active(true);
+						var acList = isAccordion ? el.siblings() : !!0;//手风琴面板同辈
+						if (acList) {
+							acList.active(false);
+							acList.children('ks-collapse-content').height(0);
+						}
+					}
+				});
+			});
+		});
+
+		//自定义组件 价格标签
+		$.render('ks-price', function (ele) {
+			var txt = ele.innerHTML.trim();
+			txt = txt.replace(/([^0-9\.\,]+)/gi, '<unit>$1</unit>');
+			txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
+
+			if ($.isset($(ele).attr('split'))) {
+				txt = txt.replace(/([0-9]+)\.?/, function (v) {
+					v = v.replace(/([0-9])([0-9]{3})$/g, '$1,$2');
+					return '<strong>' + v + '</strong>';
+				});
+			}
+			ele.innerHTML = txt;
+		},'html');
+
+		//自定义组件 卡片盒子
+		$.render('ks-card', function (ele) {
+			ele = $(ele);
+			var attrs = ele.attr();
+			//如果没有定义content则包裹
+			if (!ele.children('ks-card-content').length) {
+				ele.wrapInner('<ks-card-content></ks-card-content>');
+			}
+			var title = ele.children('ks-card-title');
+			//title存在 则附加title
+			if (title.length) {
+				if(attrs.label){
+					title.html(attrs.label);
+				}else{
+					title.remove();
+				}
+			}else if(attrs.label){
+				ele.prepend($.tag('ks-card-title', {icon:attrs.icon}, attrs.label));
+			}
+			ele[0].removeAttribute('icon');
+			ele[0].removeAttribute('label');
+		}, 'attr.label attr.icon');
+
+		//自定义组件 警示框渲染
+		$.render('ks-alert', function (ele) {
+			var ele = $(ele), attrs = ele.attr(), isClose = $.isset(attrs.close);
+			var prehtml = '';
+			if (attrs.title) {
+				prehtml += '<ks-alert-title>' + attrs.title + '</ks-alert-title>';
+			}
+			if (isClose) {
+				prehtml += '<ks-alert-close icon="close"></ks-alert-close>';
+			}
+			ele.prepend(prehtml);
+			ele.attr('title', '');
+			if (isClose) {
+				ele.children('ks-alert-close').click(function () {
+					ele.css('opacity', '0');
+					window.setTimeout(function () {
+						ele.remove();
+					}, 300);
+				});
+			}
+		});
+
+		//自定义组件 头像组件
+		$.render('ks-avatar', function (ele) {
+			ele = $(ele);
+			var attr = ele.attr();
+			var code = '', label = attr.label && !attr.src ? attr.label : null;
+			if (label) {
+				code = label;
+			} else if (attr.src) {
+				code = ('<img src="' + attr.src + '">');
+			} else {
+				code = '<i icon="user"></i>';
+			}
+			ele.html(code);
+		}, 'attr.label attr.src');
+
+		//自定义组件 分页器渲染
 		$.render('ks-page', function (ele) {
 			function _pgTo(val, isInit) {
 				if (ele.disabled() || val == ele[0].value) {
@@ -2833,7 +2843,7 @@ $.ksauiRenderTree = {};
 					$(a).attr('value', startPg).text(startPg);
 					startPg++;
 				});
-				ele.children('a[value="' + val + '"]').addClass('a').siblings('a').removeClass('a');
+				ele.children('a[value="' + val + '"]').active(true).siblings('a').active(false);
 				ele.find('.ks-input-group > input').val(val);
 				!isInit && ele.trigger('change');
 			}
@@ -2846,8 +2856,6 @@ $.ksauiRenderTree = {};
 			var current = parseInt(ele.attr('current') || 1);
 			var pageNum = parseInt(ele.attr('numbers') || 5); //最多显示多少个页码
 
-			//给当前ele添加value属性值
-			//ele[0].value = current;
 			var href = ele.attr('href');
 			var pgcode = '';
 			(function () {
@@ -2860,13 +2868,7 @@ $.ksauiRenderTree = {};
 				}
 
 				for (var i = start; i < mx; i++) {
-					var txt = i;
-					var val = i;
-					var attr = ' value="' + val + '"';
-					if (href) {
-						attr += ' href="' + href.replace('{{page}}', val) + '"';
-					}
-					pgcode += '<a ' + attr + '>' + txt + '</a>';
+					pgcode += $.tag('a', {active:current === i ? true : null, value:i, href:href ? href.replace('{{page}}', val) : null}, i);
 				}
 			})();
 			if (!pgcode) {
@@ -2878,6 +2880,7 @@ $.ksauiRenderTree = {};
 			if ($.isset(ele.attr('quick'))) {
 				H += '<ks-input-group><i>转</i><input type="text" value="' + current + '"><i>页</i></ks-input-group>';
 			}
+
 			ele.html(H);
 			_pgTo(current, true);
 			ele.children('*:not(ks-input-group)').click(function () {
@@ -2894,9 +2897,9 @@ $.ksauiRenderTree = {};
 			}).focus(function () {
 				$(this).select();
 			});
-		});
+		}, 'attr.total attr.quick attr.numbers');
 
-		//H5主框架
+		//自定义组件 H5主框架
 		$.render('ks', function (ele) {
 			ele = $(ele);
 			if (ele.children('ks-side').length) {
@@ -2934,7 +2937,14 @@ $.ksauiRenderTree = {};
 			}
 		});
 
-
+		//自定义组件 栅格
+		$.render('ks-row', function(ele){
+			ele = $(ele);
+			if(ele.children('ks-col').length){
+				ele.attr('flex',true);
+			}
+		});
+		//自定义组件 tab
 		$.render('ks-tab', function (ele) {
 			ele = $(ele);
 			var title = ele.children('ks-tab-title');
@@ -3014,7 +3024,7 @@ $.ksauiRenderTree = {};
 			_play(currIndex);
 		});
 
-		//tag标签关闭
+		//自定义组件 tag标签关闭
 		$.render('ks-tag[close], ks-tag[edit]', function (ele) {
 			ele = $(ele);
 			var attr = ele.attr();
@@ -3035,7 +3045,7 @@ $.ksauiRenderTree = {};
 			}
 
 			if ($.isset(attr.close)) {
-				var btn = $('<i icon="x"></i>');
+				var btn = $('<i icon="close"></i>');
 				btn.click(function (evn) {
 					var x;
 					attr.close && (x = $.callStrEvent.call(ele[0], attr.close, evn));
@@ -3069,5 +3079,5 @@ $.ksauiRenderTree = {};
 	})();
 
 	//开始渲染流程
-	_renderInit();
+	_KSArenderStart();
 })(KSA);

@@ -20,7 +20,7 @@
 }
 
 [class^="ri-"]:before,
-[class*=" ri-"]:before {font-family: 'remixicon' !important;font-style: normal;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale; font-size: 1.1428571em; vertical-align: middle}
+[class*=" ri-"]:before {font-family: 'remixicon' !important;font-style: normal;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale; font-size: 1.1428571em; vertical-align: middle; margin-top: -0.14285714285em}
 .ri-loading:before { display: inline-block; animation:spin 1s infinite linear; line-height: normal; border-radius: 100%;}
 /*============================================*/
 

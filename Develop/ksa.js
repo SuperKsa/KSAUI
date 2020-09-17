@@ -10,11 +10,7 @@
  * Update : 2020年7月29日
  */
 function debug(data){
-	if(typeof data ==='object'){
-		console.dir(data);//debug
-	}else{
-		console.log.apply(this, arguments);//debug
-	}
+	console.log.apply(this, arguments);//debug
 }
 
 var consoleGroupN = {};
@@ -3112,24 +3108,29 @@ function debugTime(key){
 						if($.isObject(ep[1])){
 							$.loop(ep[1], function(kv, kn){
 								//组合需要监听的键名、执行函数、监听的变量(多个逗号隔开)
-								$.isObject(kv) && attrsIsP.push("['"+key+"', "+kn+", '" + Object.keys(kv).join(',')+"']");
+								if($.isObject(kv)){
+									attrsIsP.push("['"+key+"', "+kn+", '" + Object.keys(kv).join(',')+"']");
+								}else{
+									attrsIsP.push("['"+key+"', null, '"+kn+"']");
+								}
 							});
 						}
-						if(key ==='v-update' || key ==='v-updatetext'){
+						if(key ==='v-model' || key ==='v-modeltext') {
 							var upbj = keyName(v.value);
-							if(upbj[0]){
-								if(!upbj[1]){
+							if (upbj[0]) {
+								if (!upbj[1]) {
 									upbj[1] = upbj[0];
 									upbj[0] = '_$data_';
 								}
-								attrs.push('"v-update":[(typeof('+upbj[0]+'.'+(upbj[1])+') !=="undefined" ? '+upbj[0]+' : ""), "'+upbj[1]+'", '+(key ==='v-updatetext')+']');
+								attrs.push('"v-model":[(typeof(' + upbj[0] + '.' + (upbj[1]) + ') !=="undefined" ? ' + upbj[0] + ' : ""), "' + upbj[1] + '", ' + (key === 'v-modeltext') + ']');
 							}
-
+						//动态绑定attr
+						}else if(key.substr(0,1) ===':'){
+							attrs.push('"'+key+'":function(){ return '+(value || '""')+'}');
 						}else{
 							attrs.push('"'+key+'":'+(value || '""')+'');
 						}
 					});
-
 					if(attrs.length>0){
 						attrs = '{'+attrs.join(',')+'}';
 						//如果attr有待监控变量时 以数组方式传递
@@ -3366,6 +3367,7 @@ function debugTime(key){
 					return ele;
 				}
 
+
 				/**
 				 * 创建节点
 				 * @returns {Comment | DocumentFragment}
@@ -3377,8 +3379,13 @@ function debugTime(key){
 
 					var nodeType = arguments[1],
 						attrs = arguments[2],
-						textContent = arguments[3] || '',
+						textContent = arguments[3],
 						monitorFunc = arguments[4];
+
+					//最终结果如果是空值则为空
+					if($.isNull(textContent) || textContent === undefined){
+						textContent = '';
+					}
 					if($.isObject(tag) && tag.nodeType){
 						tag.textContent = textContent;
 						return tag;
@@ -3426,33 +3433,25 @@ function debugTime(key){
 								insetattr = attrs[0]();
 								if(attrs[1]) {
 									$.loop(attrs[1], function (v) {
+										if(!v[1]){
+											v[1] = $.isset(ths.data[v[2]]) ? ths.data : window;
+										}
 										$.def.createEvent('set', v[1], v[2], function () {
 											var e = $(ele);
+
 											$.loop(attrs[0](), function(attrV, attrK){
 												attrV = attrV ==='' ? attrK : attrV;
 												if(attrK === v[0]){
-													e.attr(attrK, attrV);
+
+													//动态绑定attr 单独处理 attrv肯定是一个function
+													if(attrK.substr(0,1) ===':'){
+														var sAv = attrV();
+														e.attr(attrK.substr(1), sAv ? sAv : '');
+													}else{
+														e.attr(attrK, attrV);
+													}
 												}
 											})
-											//$(ele).attr(v[0], attrs[0]());
-											/*
-											var e = $(ele);
-											var newats = attrs[1]();
-											var oldats = $(ele).attr();
-											//删除原来的
-											$.loop(oldats, function (nv, nk) {
-												if (!newats[nk]) {
-													e.removeAttr(nk);
-												} else if (newats[nk] && newats[nk] != nv) {
-													e.attr(nk, newats[nk]);
-												}
-											});
-											$.loop(newats, function (nv, nk) {
-												if (!oldats[nk] || oldats[nk] != nv) {
-													e.attr(nk, nv);
-												}
-											});
-											*/
 										});
 									});
 								}
@@ -3464,8 +3463,12 @@ function debugTime(key){
 								var el = $(ele);
 								$.loop(insetattr, function(v, k){
 									//双向绑定
-									if(k ==='v-update') {
+									if(k ==='v-model') {
 										ths.vUpdateModel(ele, v);
+									//动态属性处理
+									}else if(k.substr(0,1) === ':'){
+										var sval = v();
+										el.attr(k.substr(1), sval ? sval : '');
 									//事件绑定
 									}else if(k.substr(0,1) == '@'){
 										//ths.bindEvent(ele, k.substr(1), v);
@@ -3874,7 +3877,7 @@ function debugTime(key){
 							var kname = match[1].trim();
 							$.loop(ths.extractParamName(kname), function (v) {
 								var skv = keyName(v);
-								if(ths.isMonitor){
+								if(ths.isMonitor && !$.inArray(skv[0],['false','true','null','undefined'])){
 									if (skv[1]) {
 										variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
 										variableList[skv[0]][skv[1]] = 1;

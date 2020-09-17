@@ -105,7 +105,16 @@ label {white-space: nowrap;}
 ::-webkit-scrollbar-track { background: #ededed; border-radius: 10px;}
 
 //============== 清理浮动 ==============
-ks-col:after, ks-card:after, ks-card-content:after, .ks-step:after, ks-col:after, ks-layout:after, ks-alert:after, .ks-row:after { content: ''; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
+ks-col:after,
+ks-card:after,
+ks-card-content:after,
+.ks-step:after,
+ks-col:after,
+ks-layout:after,
+ks-alert:after,
+.ks-row:after,
+.ks-ie9 ks-row[flex]:after,
+.ks-ie10 ks-row[flex]:after { content: ' '; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
 
 //============== 自定义新元素 ==============
 	// 货币
@@ -251,7 +260,7 @@ ks-page {
 	> *:first-child { border-radius: .22em 0 0 .22em;}
 	> *:last-child { border-radius: 0 .22em .22em 0;}
 	> *:hover { background: #fafafa}
-	> *.a { background:@primary; color:#fff !important; border-color: @primary; font-weight:bold;}
+	> *[active] { background:@primary; color:#fff !important; border-color: @primary; font-weight:bold;}
 	> *[disabled] { cursor: not-allowed; color: #bbb; background: #fff}
 	[icon='arrow_right']:before, [icon='last_page']:before { float: right; margin-right: 0;}
 	//快速跳转
@@ -383,19 +392,17 @@ ks-list > ks-list-item[icon='arrow_right']:before,
 
 //============== 头像尺寸 ==============
 ks-avatar {
-	position: relative; text-align: center; display: inline-block; background: #ccc; color: #fff; width: 64px; height: 64px; line-height:64px; text-align: center; overflow: hidden; white-space: nowrap;  border-radius:100em; vertical-align: middle;
+	position: relative; text-align: center; display: inline-block; background: #ccc; color: #fff; width: 64px; height: 64px; line-height:64px; overflow: hidden; white-space: nowrap;  border-radius:100em; vertical-align: middle; word-break:break-all; font-size: 16px;
 	&[isstr] {border: #f2f2f2 1px solid;}
 	> img {width: 100%; height: auto;}
 	> i[icon] { font-size: 28px;}
 
-	> .ks-avatar-name {word-break:break-all; font-size: 16px; transform-origin:0 center; position: absolute; left: 50%; top:0; transform: scale(1) translateX(-50%) translateY(-50%);}
-
-	&[size="small"] { width: 40px; height:40px; line-height:40px;
-		> .ks-avatar-name {line-height:40px;}
+	&[size="small"] {
+		width: 40px; height:40px; line-height:40px; font-size: 13px;
 		> i[icon] { font-size: 24px;}
 	}
-	&[size="mini"] { width: 24px; height: 24px; line-height:24px;
-		> .ks-avatar-name {line-height:24px;}
+	&[size="mini"] {
+		width: 24px; height: 24px; line-height:24px; font-size: 12px;
 		> i[icon] { font-size: 18px;}
 	}
 	&[square] { border-radius: 3px;}
@@ -410,23 +417,19 @@ ks-avatar {
 	.ks-slide-item:not(:first-child) {transform: translateX(200%) scale(1);}
 	
 	//左右控制器
-	.ks-slide-control-prev, .ks-slide-control-next { position: absolute; top: 50%; z-index: 99; cursor: pointer; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 100%; margin-top: -18px; background: #000; transition: all .3s ease-in-out; opacity: 0}
-	.ks-slide-control-prev:before, .ks-slide-control-next:before { content: ''; display: inline-block; transform: rotate(45deg); transform-origin: 50% 50%; color: #fff;}
-	.ks-slide-control-prev:before {transform: rotate(-135deg); margin-left: 3px;}
+	.ks-slide-control-prev, .ks-slide-control-next { position: absolute; top: 50%; z-index: 99; cursor: pointer; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 100%; margin-top: -18px; background: #000; transition: all .3s ease-in-out; opacity: 0; display: inline-block; color: #fff;}
 	.ks-slide-control-prev { left:0;}
 	.ks-slide-control-next { right:0;}
 	
-	.ks-slide:hover .ks-slide-control-prev { opacity: .3; left: 15px;}
-	.ks-slide:hover .ks-slide-control-next { opacity: .3; right: 15px;}
+	&:hover .ks-slide-control-prev { opacity: .3; left: 15px;}
+	&:hover .ks-slide-control-next { opacity: .3; right: 15px;}
 	
 	.ks-slide-item._moveon { z-index: 10;}
 	
 	.ks-slide-item._hide { opacity: 0; z-index: 0}
 	.ks-slide-item._up { z-index: 20}
 	.ks-slide-item._on { z-index: 90}
-	//卡片式
-	.ks-slide-item._slidecard {}
-	
+
 	//状态显示
 	.ks-slide-status { position: absolute; left: 0; bottom: 1em; text-align: center; width: 100%; z-index: 99}
 	.ks-slide-status > * { width: 30px; padding: 2px 0; background: rgba(0,0,0,.2); color: #fff; font-size: 0.8571rem; display: inline-block; cursor: pointer; margin: 0 2px;}
@@ -511,11 +514,21 @@ ks-form[inline] {
 	ks-form-label, ks-form-content, ks-form-extra { float: none; width:auto; text-align: left; display: inline-block; vertical-align: top;}
 }
 
+//普通行
+.ks-row {display: block;}
 
+
+.ks-row-arrow:after { content: ''; display: block; width: 100%; clear: both; overflow: hidden;}
+//限制行 只有一行文字 固定高度 超出裁切 相对定位
+.ks-row-x { width: 100%; height: 1.71428em; line-height: 1.71428em; position:relative; overflow: hidden;}
+
+//普通行 带右箭头
+.ks-row-arrow { position: relative; padding-right: 1.4rem;}
+.ks-row-arrow:before { font-family: 'remixicon'; content: '\ea6e'; height: 1.2rem; line-height: 1.2rem; position: absolute; top: 50%; right: 0; margin-top: -0.6rem;}
 
 ks-row {
-	display: flex; flex-wrap: wrap; align-items: stretch;
-	&[spacing] {display:flex; flex-wrap: wrap; align-items:stretch;}
+	display: block;
+	&[flex] {display:flex; flex-wrap: wrap; align-items:stretch;}
 	&[spacing='1'] { margin:-2.5px}
 	&[spacing='2'] { margin:-5px}
 	&[spacing='3'] { margin:-10px}
@@ -547,6 +560,10 @@ ks-col {
 	&[span='12'] {width:100%;}
 }
 
+.ks-ie9, .ks-ie10 {
+	ks-row[flex] { display: block;}
+	ks-col { float: left; display: block}
+}
 
 //栅格 平板
 @media only screen and (min-width: 576px){
@@ -739,9 +756,9 @@ ks-tag {
 		}
 		.loop(1);
 	}
-	> i[icon="x"] {font-size: 12px; display: inline-block; width: 12px; height: 12px; text-align: center; line-height: 14px; cursor: pointer; opacity: .7; position: absolute; right: 8px; top:50%; margin-top: -6px}
-	> i[icon="x"]:before {content:"\e66c"; float: left;}
-	> i[icon="x"]:hover { opacity: 1}
+	> i[icon="close"] {font-size: 12px; display: inline-block; width: 12px; height: 12px; text-align: center; line-height: 14px; cursor: pointer; opacity: .7; position: absolute; right: 8px; top:50%; margin-top: -6px}
+	> i[icon="close"]:before {float: left;}
+	> i[icon="close"]:hover { opacity: 1}
 
 	&[edit] { cursor: pointer}
 	> input[type="text"] { position: absolute; left: 0; top: 0; border: none; background: none; width: 100%; height: 100%; padding:0 .4em;}
@@ -865,10 +882,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-checkbox > i, .ks-checkbox > i:before,
 .ks-radio > i, .ks-radio > i:before,
 .ks-switch > i, .ks-switch > i:before {transition:all 0.2s ease-in-out;}
-//禁用状态
-.ks-checkbox > input[disabled] ~ i,
-.ks-radio > input[disabled] ~ i,
-.ks-switch > input[disabled] ~ i { cursor: not-allowed; opacity: 0.5; color: #ff9292}
+
 
 //radio样式
 .ks-radio {
@@ -939,13 +953,16 @@ ks-input-group > textarea:focus,
 ks-area:not([disabled])[active] { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
 
 //被禁用 disabled
-[disabled] ~ .ks-select {
-	cursor: not-allowed; background-color: #f0f0f0;
+.ks-input[disabled] > input,
+.ks-input > input:disabled,
+ks-input-group input:disabled,
+ks-area[disabled] {
+	cursor: not-allowed; background-color: #f0f0f0; opacity: .75;
 }
-[disabled] ~ .ks-list-select { opacity: .75;}
-[disabled] ~ .ks-list-select v {
-	cursor: not-allowed;
-}
+//禁用状态
+.ks-checkbox > input[disabled] ~ i,
+.ks-radio > input[disabled] ~ i,
+.ks-switch > input[disabled] ~ i { cursor: not-allowed; opacity: 0.75;}
 
 
 //============== H5标题栏 ==============
@@ -962,17 +979,7 @@ ks-area:not([disabled])[active] { border-color: @primary; color: #495057 !import
 
 
 
-//普通行
-.ks-row {display: block;}
 
-
-.ks-row-arrow:after { content: ''; display: block; width: 100%; clear: both; overflow: hidden;}
-//限制行 只有一行文字 固定高度 超出裁切 相对定位 
-.ks-row-x { width: 100%; height: 1.71428em; line-height: 1.71428em; position:relative; overflow: hidden;}
-
-//普通行 带右箭头
-.ks-row-arrow { position: relative; padding-right: 1.4rem;}
-.ks-row-arrow:before { font-family: 'remixicon'; content: '\ea6e'; height: 1.2rem; line-height: 1.2rem; position: absolute; top: 50%; right: 0; margin-top: -0.6rem;}
 
 //相对定位
 .ks-pos { position: relative;}
@@ -1306,8 +1313,6 @@ ks-input-group {
 	//按钮高度继承
 	> ks-btn { height: inherit; line-height: inherit}
 
-	//输入框组中 被禁用的input
-	input:disabled { background:#f0f0f0; cursor: not-allowed }
 	.ks-select { min-width: 100px;}
 }
 
@@ -1365,23 +1370,25 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 	&[active] { opacity: 1}
 	&[active] + .ks-layer-cover { opacity: 1}
 
+	//layer关闭按钮
+	.ks-layer-close {
+		height:40px; line-height: 40px; width:45px; font-size:16px; cursor: pointer; text-align: center; position: absolute; right:0; top: 0;
+		&:before {display:block;}
+		&:hover {color: @primary;}
+	}
+
+
+	//layer title
+	.ks-layer-title {padding:10px 24px; color: rgba(0,0,0,0.8); font-weight: bold; font-size: 16px; border-bottom: @borderColor 1px solid;}
+	//layer body
+	.ks-layer-content { padding:0 24px 24px; overflow-y: auto;}
+
 }
 
 //layer遮罩层
 .ks-layer-cover { background:rgba(0,0,0,0.5); opacity:0; width:100%; height:100%; position: fixed; left:0; top:0; bottom:0; z-index:1; user-select: none}
 
-//layer关闭按钮
-.ks-layer-close {
-	height:40px; line-height: 40px; width:45px; font-size:16px; cursor: pointer; text-align: center; position: absolute; right:0; top: 0;
-	&:before {display:block;}
-	&:hover {color: @primary;}
-}
 
-
-//layer title
-.ks-layer-title {padding:24px; color: rgba(0,0,0,0.8); font-weight: bold; font-size: 16px;}
-//layer body
-.ks-layer-content { padding:0 24px 24px; overflow-y: auto;}
 
 
 
@@ -1407,7 +1414,7 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 
 //表单框
 .ks-Dialog_form{
-	.ks-layer-content { min-width: 450px; padding-right: 80px;}
+	.ks-layer-content { min-width: 450px;  padding:24px 80px 24px 24px;}
 }
 //toast 提示框
 .ks-Dialog_toast.ks-layer{
@@ -1512,7 +1519,6 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 ks-area {
 	//border: @borderColor 1px solid; cursor: pointer; padding: 0 5px; overflow: hidden; line-height: @inputHeight -2; display: table;
 	cursor: pointer; padding:0 10px;
-	&[disabled] { background:#f0f0f0; cursor: not-allowed }
 	span { float: left; padding: 0 3px; white-space: nowrap;}
 	span:last-child { border-right: 0}
 	&[maxlevel='1'] span { max-width: 100%;}
