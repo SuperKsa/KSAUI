@@ -74,7 +74,7 @@ $.ksauiRenderTree = {};
 			option.callback && option.callback.call(ele, ele);
 			//检查是否有DOMchange监听事件
 			option.monitor && $(ele).DOMchange(option.monitor, function(){
-				option.callback && option.callback.call(ele, ele);
+				option.callback && option.callback.call(ele, ele, true);
 			});
 		}
 		//创建回调渲染
@@ -2753,20 +2753,26 @@ $.ksauiRenderTree = {};
 		},'html');
 
 		//自定义组件 卡片盒子
-		$.render('ks-card', function (ele) {
+		$.render('ks-card', function (ele, isMonitor) {
 			ele = $(ele);
 			var attrs = ele.attr();
-			//如果没有定义content则包裹
-			if (!ele.children('ks-card-content').length) {
-				ele.wrapInner('<ks-card-content></ks-card-content>');
-			}
 			var title = ele.children('ks-card-title');
+			var content = ele.children('ks-card-content');
+			//如果没有定义content则包裹
+			if (!content.length) {
+				ele.wrapInner('<ks-card-content></ks-card-content>');
+				title.length && ele.prepend(title);
+			}
+
 			//title存在 则附加title
 			if (title.length) {
-				if(attrs.label){
-					title.html(attrs.label);
-				}else{
-					title.remove();
+				//二次监听渲染时处理
+				if(isMonitor) {
+					if (attrs.label) {
+						title.html(attrs.label);
+					} else {
+						title.remove();
+					}
 				}
 			}else if(attrs.label){
 				ele.prepend($.tag('ks-card-title', {icon:attrs.icon}, attrs.label));

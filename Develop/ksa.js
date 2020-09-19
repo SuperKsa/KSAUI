@@ -884,7 +884,7 @@ function debugTime(key){
 		}else {
 			var t = [];
 			var ele = this[0];
-			if(!ele){
+			if(!ele || ele.disabled){
 				return;
 			}
 
@@ -893,11 +893,12 @@ function debugTime(key){
 				case 'INPUT':
 					var tp = ele.getAttribute('type');
 						tp = tp.indexOf('ks-') === 0 ? tp.substr(3) : tp;
-					var v = ele.value;
 					if($.inArray(tp, ['checkbox','radio'])){
-						v = $(ele).attr('value');
+						ele.checked && t.push(ele.value);
+					}else{
+						t.push(ele.value);
 					}
-					t.push(v);
+
 					break;
 				case 'SELECT':
 					$(ele).find('option:selected').map(function(e){
@@ -2830,8 +2831,8 @@ function debugTime(key){
 	}
 // ====================== TPL模板语法 ====================== //
 	$.tpl = function(Config){
-		if(!Config.template && Config.el){
-			Config.template = $(Config.el).html();
+		if(!Config.tpl && Config.el){
+			Config.tpl = $(Config.el).html();
 		}
 		//匹配模板变量正则 {xxx}
 		var variableReg = /\{\{((?:.|\r?\n)+?)\}\}/g;
@@ -2893,7 +2894,7 @@ function debugTime(key){
 			isMonitor : $.isset(Config.isMonitor) ? Config.isMonitor : true,
 			data : Config.data || {},
 			methods : Config.methods || {},
-			Template : Config.template,
+			Template : Config.tpl,
 			debug : Config.debug,
 			Html : '', //解析完成的HTML
 			cache : {},
@@ -2920,7 +2921,7 @@ function debugTime(key){
 				return {
 					el : ths.EL,
 					cache : ths.cache,
-					template : ths.Template,
+					tpl : ths.Template,
 					data : ths.data,
 					methods : ths.methods,
 					dom : newDom,

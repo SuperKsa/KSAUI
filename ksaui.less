@@ -114,7 +114,9 @@ ks-layout:after,
 ks-alert:after,
 .ks-row:after,
 .ks-ie9 ks-row[flex]:after,
-.ks-ie10 ks-row[flex]:after { content: ' '; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
+.ks-ie10 ks-row[flex]:after,
+ks-card-title:after,
+ks-card-content:after { content: ' '; clear: both; display: block; width: 100%; height: 0; overflow: hidden}
 
 //============== 自定义新元素 ==============
 	// 货币
@@ -282,7 +284,7 @@ ks-page {
 ks-list {
 	width: 100%; height: auto; overflow: hidden;
 	> * { display: block; padding: .71428em 0; position: relative; height: auto; overflow: hidden; list-style:none;}
-	> *:after {position: absolute; right: 0; bottom: 0; left:0; height: 1px; content: ''; background-color: #c8c7cc;}
+	> *:after {position: absolute; right: 0; bottom: 0; left:0; height: 1px; content: ''; background-color: @borderColor;}
 	> *:not(.ks-fl):last-of-type:after {display: none;}
 	> * > small { float: right; color: #898989;}
 }
@@ -542,10 +544,13 @@ ks-row {
 	&[spacing='4'] > ks-col { padding:15px}
 	&[spacing='5'] > ks-col { padding:20px}
 	&[spacing='6'] > ks-col { padding:25px}
+	//内容垂直居中 -4px未考虑多场景下
+	&[middle] > ks-col:before {height: 100%; display: inline-block; content: ''; vertical-align: middle; margin-left: -5px;}
 }
 
 ks-col {
 	flex:1 0 auto;
+	&[span] {flex: 0 0 auto}
 	&[span='1'] {width:8.33333%;}
 	&[span='2'] {width:16.66667%;}
 	&[span='3'] {width:25%;}
@@ -874,7 +879,6 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 //============== 单选、复选、开关 ==============
 .ks-checkbox, .ks-radio, .ks-switch {cursor:pointer; display: inline-block; font-weight: normal; position: relative; color: @textColor; user-select: none; vertical-align: middle;}
 .ks-checkbox input, .ks-radio input, .ks-switch input{display:none; }
-.ks-checkbox > i, .ks-switch > i { background: #efefef; font-style: normal; display: inline-block;}
 .ks-checkbox *, .ks-radio *, .ks-switch * { font-style: normal; box-sizing: border-box}
 
 
@@ -897,15 +901,15 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 //checkbox样式
 .ks-checkbox { 
 	height: 20px; line-height: 20px;
-	> i {font-style: normal; display: inline-block; position: relative; overflow: hidden; background: #fff}
-	> i:before {color:#ccc; text-align:center; font-family:"remixicon"; vertical-align:middle; font-size: 12px; width:18px; height:18px; line-height:16px; border-radius:2px; content:'\eb7b'; float: left; border: #ddd 1px solid; box-sizing: border-box;}
+	> i {font-style: normal; display: inline-block; position: relative; overflow: hidden;}
+	> i:before {color:#ccc; text-align:center; font-family:"remixicon"; vertical-align:middle; font-size: 12px; width:18px; height:18px; line-height:16px; border-radius:2px; content:'\eb7b'; float: left; border: #ddd 1px solid; box-sizing: border-box; background: #fff}
 	> input:checked ~ i:before {  background: @primary; color:#fff; border-color:@primary;}
 }
 
 .ks-checkbox-indeter > i:before { content: '\f1af'; color: @primary}
 //开关样式
 .ks-switch {
-	> i { position: relative; padding: 0 15px 0 26px; border-radius:100px; height: 24px; line-height: 24px; background: rgba(0,0,0,.3); color: #fff;}
+	> i { position: relative; padding: 0 15px 0 26px; border-radius:100px; height: 24px; line-height: 24px; background: rgba(0,0,0,.3); color: #fff; display: inline-block}
 	> i:before {content:''; display: inline-block; width: 18px; height: 18px; background: #fff; border-radius:20px; position: absolute; top: 3px; left: 3px;transition:all 0.2s ease-in-out;}
 	> input:active ~ i:before {width: 26px;}
 	> input:checked:active ~ i:before { margin-left: -30px;}
@@ -1561,6 +1565,12 @@ ks-empty:before { content: '\ecec'; font-size:3em; font-family: 'remixicon'; dis
 //默认动画 线性3ms
 .ks-transition {transition:all 0.2s ease-in-out;}
 
+//============== 附加样式 ==============
+.ks-click {cursor: pointer}
+//文字
+.ks-text-top {vertical-align: text-top}
+.ks-text-center {vertical-align: middle}
+.ks-text-bottom {vertical-align: text-bottom}
 /*
 	@media (max-width: 1000px) {
 		.ks-sidebar { width: 200px;}
