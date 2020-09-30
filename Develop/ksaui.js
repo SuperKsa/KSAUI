@@ -710,7 +710,7 @@ $.ksauiRenderTree = {};
             ]
         */
 			case type == 'form':
-				var H = $.newForm(p[2]);
+				var H = $.createForm(p[2]);
 
 				var callFun = p[3];
 				op.title = p[1];
@@ -719,13 +719,26 @@ $.ksauiRenderTree = {};
 				op.btn = {'cancel': '取消', 'confirm': (p[4] ? p[4] : '确认')};
 				op.outTime = 0;
 				op.cover = 1;
-				op.btnFun = function (a) {
-					if (a == 'confirm' && typeof (callFun) == 'function') {
-						return callFun.apply(this, arguments);
+				op.btnFun = function (a, layer) {
+					if (a == 'confirm') {
+						callFun && callFun.apply(this, arguments);
+						p[2].action && layer.find('form').submit();
+						return false;
 					}
 				};
 				op.class += '_' + type;
 				op.closeBtn = 1;
+				op.maxHeight = '80%';
+				op.show = function(layer){
+					 layer.find('form').submit(function(e){
+					 	e.stop();
+					 	$(this).formSubmit(function(d){
+							if(d.success) {
+								$.layerHide(layer.layerID);
+							}
+						});
+					 });
+				}
 
 				break;
 			//默认 参数： 1=标题 2=内容 3=自动关闭时间 4=按钮文字 5=按钮回调函数 6=关闭回调函数
@@ -869,6 +882,9 @@ $.ksauiRenderTree = {};
 				if (s && typeof (s) == 'object') {
 					//成功回调函数 只在API返回result字段时回调
 					if ($.isset(s.result)) {
+						if(s.result.KSAUI){
+							$[s.result.KSAUI.type].apply('', s.result.KSAUI.param)
+						}
 						typeof (fun) == 'function' && fun(s.result, s);
 					} else {
 						console.log('%cKSAUI-AJAX-ERROR API异常返回！URL：' + url + "\n", 'background:#f00; color:#fff', s);//debug
@@ -1406,7 +1422,7 @@ $.ksauiRenderTree = {};
 
 		var H = '<div class="' + cl.a + '" data-y="' + dt.Y + '" data-m="' + dt.m + '" data-d="' + dt.d + '">';
 		if (isymd) {
-			H += '<div class="' + cl.b + '"><i icon="first_page"></i><i icon="arrow_left"></i><em>' + dt.Y + '年</em><em>' + dt.m + '月</em><i icon="arrow_right"></i><i icon="last_page"></i></div><div class="' + cl.c + '">' + dt.html + '</div>';
+			H += '<div class="' + cl.b + '"><i icon="arrow-left-s-fill"></i><i icon="arrow-left-s"></i><em>' + dt.Y + '年</em><em>' + dt.m + '月</em><i icon="arrow-right-s"></i><i icon="arrow-right-s-fill"></i></div><div class="' + cl.c + '">' + dt.html + '</div>';
 		}
 		H += TimeHtml;
 		H += '</div>';
@@ -1495,7 +1511,7 @@ $.ksauiRenderTree = {};
 					return false;
 				});
 				//确认按钮
-				dom.find('button').click(function () {
+				dom.find('ks-btn').click(function () {
 					sput();//写值
 					$.layerHide(layer.layerID);
 					return false;
@@ -2036,48 +2052,52 @@ $.ksauiRenderTree = {};
 
 		return this;
 	}
+
+
 	/**
-	 * form表单生成
-	 * @param {JSON} data 配置参数参考：
-	 * [
-	 *        //一组一个表单
-	 *        {
-	 * 			name:'sex', //字段名
-	 * 			type:'select', //展现类型select/radio/checkbox/switch/text/date
-	 * 			label:'性别', //表单标题名称
-	 * 			value:'2',
-	 * 			option:{ //多个选项列表 键名=值 键值=名称
-	 * 		    	'0' : '不填写',
-	 * 		    	'male' : '男',
-	 * 		    	'female' : '女'
-	 * 			}
-	 * 		},
-	 *        ...
-	 *        ...
-	 * ]
+	 * 创建内置组件 - form表单
+	 * @param {JSON} option 配置参数参考：
+		{
+			action : '', //form action （可选）
+			field : [
+				//一组一个表单
+				{
+					name:'sex', //字段名
+					type:'select', //展现类型select/radio/checkbox/switch/text/date
+					label:'性别', //表单标题名称
+					value:'2', //表单值
+					option:{ //多个选项列表 键名=值 键值=名称
+						'0' : '不填写',
+						'male' : '男',
+						'female' : '女'
+					}
+				},
+				...
+				...
+			]
+		}
 	 * @returns {html}
 	 */
-	$.newForm = function (data) {
-		var $this = this;
+	$.createForm = function (option) {
 		var H = '';
-		H += '<form><ks-form>';
-		$.loop(data, function (value, key) {
+		H += '<form'+(option.action ? ' action="'+option.action+'"' :'')+'><ks-form>';
+		$.loop(option.field, function (value, key) {
 			if (value && $.isObject(value)) {
 				value.value = value.value ? value.value : '';
 				value.name = value.name ? value.name : key;
 				value.placeholder = value.placeholder ? value.placeholder : '请输入...';
 				value.style = value.style ? ' style="' + value.style + '"' : '';
-				if (value.type == 'hidden') {
-					H += '<input type="hidden" name="' + value.name + '" value="' + value.value + '">';
+				if (value.type === 'hidden') {
+					H += $.tag('input', {type:'hidden', name:value.name, value:value.value}, '', true);
 				} else {
-					H += '<ks-form-item label="' + (value.label || '') + '" ' + (value.required ? 'required' : '') + '>';
+					H += $.tag('ks-form-item', {label:value.label, required:value.required}, '', true);
 					if (value.after || value.before) {
-						H += '<div class="ks-input-group">';
+						H += '<ks-input-group>';
 						H += value.before ? value.before : '';
 					}
 					//数字 普通输入框 密码框
 					if ($.inArray(value.type, ['number', 'text', 'password'])) {
-						H += $this.tag('input', {
+						H += $.tag('input', {
 							type: 'ks-' + value.type,
 							name: value.name,
 							value: value.value,
@@ -2086,7 +2106,7 @@ $.ksauiRenderTree = {};
 						}, '', 1);
 						//多行输入框
 					} else if ($.inArray(value.type, ['textarea'])) {
-						H += $this.tag('textarea', {
+						H += $.tag('textarea', {
 							name: value.name,
 							placeholder: value.placeholder,
 							style: value.style,
@@ -2095,7 +2115,7 @@ $.ksauiRenderTree = {};
 						//开关
 					} else if (value.type == 'switch') {
 						value.value = value.value ? value.value : '';
-						H += $this.tag('input', {
+						H += $.tag('input', {
 							type: 'ks-switch',
 							name: value.name,
 							value: value.value,
@@ -2106,7 +2126,7 @@ $.ksauiRenderTree = {};
 						//单选框
 					} else if (value.type == 'radio') {
 						$.loop(value.option, function (v, k) {
-							H += $this.tag('input', {
+							H += $.tag('input', {
 								type: 'ks-radio',
 								name: value.name,
 								value: k,
@@ -2127,7 +2147,7 @@ $.ksauiRenderTree = {};
 										ch += check_x(v);
 										ch += '</p></div>';
 									} else {
-										ch += ' ' + $this.tag('input', {
+										ch += ' ' + $.tag('input', {
 											type: 'ks-checkbox',
 											name: value.name + '[]',
 											value: k,
@@ -2152,8 +2172,8 @@ $.ksauiRenderTree = {};
 						H += '</select>';
 						//日期
 					} else if (value.type == 'date') {
-						H += $this.tag('input', {
-							type: value.type,
+						H += $.tag('input', {
+							type: 'ks-date',
 							name: value.name,
 							value: value.value,
 							title: value.title,
@@ -2163,7 +2183,7 @@ $.ksauiRenderTree = {};
 						}, '', 1);
 						//地区选择
 					} else if (value.type == 'area') {
-						H += $this.tag('ks-area', {
+						H += $.tag('ks-area', {
 							'province': value.value.province,
 							'city': value.value.city,
 							'area': value.value.area,
@@ -2179,7 +2199,7 @@ $.ksauiRenderTree = {};
 					}
 					if (value.after || value.before) {
 						H += value.after ? value.after : '';
-						H += '</div>';
+						H += '</ks-input-group>';
 					}
 					H += '</ks-form-item>';
 				}
@@ -2464,7 +2484,7 @@ $.ksauiRenderTree = {};
 				t.before(clearbtn);
 				clearbtn.click(function () {
 					t.val('').focus();
-					clearbtn.active(false);
+					//clearbtn.active(false);
 				});
 				t.keyup(function () {
 					if (t.val().length > 0) {
@@ -2472,6 +2492,12 @@ $.ksauiRenderTree = {};
 					} else {
 						clearbtn.active(false);
 					}
+				}).focus(function(){
+					this.value.length > 0 && clearbtn.active(true);
+				}).blur(function(){
+					window.setTimeout(function(){
+						clearbtn.active(false);
+					},500)
 				});
 			},
 			'input[type="ks-password"]': function (ele) {

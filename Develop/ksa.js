@@ -38,20 +38,7 @@ function debugTime(key){
 			events.stop = function(){
 				this.stopPropagation();
 				this.preventDefault();
-			}/*
-			events.stopPropagation = function () {
-				//this.preventDefault();
-				this.cancelBubble = true;
-				window.event.cancelBubble = true;
-				this.returnValue = false;
-				window.event.returnValue = false;
 			}
-			events.startPropagation = function () {
-				this.cancelBubble = false;
-				window.event.cancelBubble = false;
-				this.returnValue = true;
-				window.event.returnValue = true;
-			}*/
 		}
 		return events;
 	}
@@ -3278,7 +3265,7 @@ function debugTime(key){
 							obj[key] = v;
 						});
 					}else if(tag ==='INPUT' || tag ==='TEXTAREA'){
-						ele.input(function(){
+						ele.on('inpu KSADOMchange', function(){
 							obj[key] = ele.val();
 						});
 					}else if(tag ==='SELECT'){
