@@ -495,12 +495,10 @@ ks-form {
 	> :last-child { margin-bottom: 0}
 	ks-form-label { float: left; width: 125px; text-align: right; height: @inputHeight; line-height: @inputHeight;}
 	ks-form-label:after { content: ':'; padding: 0 8px 0 5px; color: rgba(0,0,0,.4)}
-	ks-form-content {display: block; width: 100%; min-height: @inputHeight; line-height: @inputHeight;}
+	ks-form-content {min-height: @inputHeight;}
+	ks-form-extra { min-height: 24px; line-height: 24px; font-size: 14px; color: rgba(0,0,0,.4)}
 
-	ks-form-extra {display: block; width: 100%; min-height: 24px; line-height: 24px; font-size: 14px; color: rgba(0,0,0,.4)}
-
-	ks-form-label + ks-form-content,
-	ks-form-label + ks-form-extra {float: right; width: calc(100% - 125px);}
+	ks-form-content, ks-form-extra {display: block; width: 100%; float: right; width: calc(100% - 125px);}
 
 	ks-form-group { 
 		display: table; width: 100%;
@@ -525,6 +523,7 @@ ks-form[size='small']{
 	font-size: 12px;
 	ks-form-item {margin-bottom: 10px;}
 	ks-input-group > *:not([class*='ks-']) { padding: 0 5px;}
+	ks-form-label { height: 28px; line-height: 28px;}
 }
 
 //普通行
