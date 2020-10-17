@@ -828,7 +828,6 @@ $.ksauiRenderTree = {};
 			str = str.replace(/年|月/g, '-');
 			str = str.replace(/时|分|点/g, ':');
 			str = str.replace(/日|秒/g, '');
-
 		}
 
 		var date = str ? new Date(str) : new Date();
@@ -839,7 +838,8 @@ $.ksauiRenderTree = {};
 			'H': date.getHours(),
 			'i': date.getMinutes(),
 			's': date.getSeconds(),
-			'str': ''
+			'str': '',
+			'timestamp' : date.getTime()
 		};
 		obj.str = obj.Y + '-' + obj.m + '-' + obj.d + ' ' + obj.H + ':' + obj.i + ':' + obj.s;
 		$.loop(obj, function (val, k) {

@@ -986,7 +986,7 @@ function debugTime(key){
 			if(name){
 				if(type ==='file'){
 					formData[name] = el[0].files.length ? el[0].files[0] : '';
-				}else if($.isArray(type,['radio','checkbox'])){
+				}else if($.inArray(type,['radio','checkbox'])){
 					if(el.checked()){
 						formData[name] = val;
 					}
