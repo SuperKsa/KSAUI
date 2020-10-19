@@ -4215,6 +4215,37 @@ function debugTime(key){
 	K.outerHeight = function(){
 		return this.height(true,true);
 	}
+	
+	
+	var requireScript = document.currentScript ? document.currentScript : document.scripts[document.scripts.length-1];
+	var requireDir = requireScript.src.substr(0, requireScript.src.lastIndexOf('/')+1);
+	$.require = function(){
+		var args = arguments;
+		if(!args.length){
+			args = $.explode(' ', requireScript.getAttribute('module'),'');
+			if(!args.length){
+				return;
+			}
+		}
+		$.loop(args, function(value){
+			var exp = value.substr(value.lastIndexOf('.'));
+			exp = exp ? exp.toLowerCase() : exp;
+			var isCSS = exp === '.css';
+			value = 'module/'+value+(exp ? '' :  '.js');
+			var file = document.createElement(isCSS ? 'link' : 'script');
+			if(isCSS){
+				file.href = requireDir+value;
+				file.type = 'text/css';
+				file.rel = 'stylesheet';
+			}else{
+				file.src = requireDir+value;
+				file.type = 'text/javascript';
+			}
+			$(requireScript).after(file);
+		});
+	}
+	$.require();
+	
 	//插件钩子 $.plugin.xxx = xxx;
 	$.plugin = $.prototype;
 	window.KSA = window.$ = $;
