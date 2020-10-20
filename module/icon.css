@@ -10,12 +10,12 @@
 */
 @font-face {
     font-family: "remixicon";
-    src: url('fontsemixicon.eot?t=1590207869815');
-    src: url('fontsemixicon.eot?t=1590207869815#iefix') format('embedded-opentype'),
-    url("fontsemixicon.woff2?t=1590207869815") format("woff2"),
-    url("fontsemixicon.woff?t=1590207869815") format("woff"),
-    url('fontsemixicon.ttf?t=1590207869815') format('truetype'),
-    url('fontsemixicon.svg?t=1590207869815#remixicon') format('svg');
+    src: url('fonts/remixicon.eot?t=1590207869815');
+    src: url('fonts/remixicon.eot?t=1590207869815#iefix') format('embedded-opentype'),
+    url("fonts/remixicon.woff2?t=1590207869815") format("woff2"),
+    url("fonts/remixicon.woff?t=1590207869815") format("woff"),
+    url('fonts/remixicon.ttf?t=1590207869815') format('truetype'),
+    url('fonts/remixicon.svg?t=1590207869815#remixicon') format('svg');
     font-display: swap;
 }
 

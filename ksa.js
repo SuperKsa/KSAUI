@@ -4249,14 +4249,5 @@ function debugTime(key){
 	//插件钩子 $.plugin.xxx = xxx;
 	$.plugin = $.prototype;
 	window.KSA = window.$ = $;
-
-	/**
-	 * 兼容 AMD 模块
-	 **/
-	if (typeof define === 'function' && define.amd) {
-		define('KSA', [], function() {
-			return $;
-		});
-	}
 	return $;
 })(document);
