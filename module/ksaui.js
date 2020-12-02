@@ -302,7 +302,7 @@ $.ksauiRenderTree = {};
             setTimeout(function () {
                 o.active(false);
                 Fun && Fun(Id);
-                option.close && option.close();
+                !option.cancel && option.close && option.close();
                 if (option.cache) {
                     coverEle.length && coverEle.hide();
                     o.hide();
@@ -517,6 +517,7 @@ $.ksauiRenderTree = {};
                 //关闭事件 右上角按钮
                 Layer.find('.ks-layer-close').click(function () {
                     clearTimeout(AutoEvn);
+                    option.cancel = true;
                     $.layerHide(Id);
                 });
 
@@ -526,6 +527,7 @@ $.ksauiRenderTree = {};
                         var t = $(this);
                         if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), Layer) !== false))) {
                             clearTimeout(AutoEvn);
+                            option.cancel = t.data('btn-index') ==='cancel';
                             $.layerHide(Id);
 
                         }
@@ -2486,6 +2488,7 @@ $.ksauiRenderTree = {};
                 t.before(clearbtn);
                 clearbtn.click(function () {
                     t.val('').focus();
+                    clearbtn.active(false);
                 });
                 t.keyup(function () {
                     if (t.val().length > 0) {
@@ -2493,12 +2496,13 @@ $.ksauiRenderTree = {};
                     } else {
                         clearbtn.active(false);
                     }
-                }).focus(function () {
-                    this.value.length > 0 && clearbtn.active(true);
-                }).blur(function () {
+                });
+                t.parent().hover(function(){
+                    $(this).find('input[type=text]').val().length > 0 && clearbtn.active(true);
+                },function(){
                     window.setTimeout(function () {
                         clearbtn.active(false);
-                    }, 500)
+                    }, 10)
                 });
             },
             'input[type="ks-password"]' : function (ele) {
