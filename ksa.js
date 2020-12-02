@@ -1244,7 +1244,7 @@ function debugTime(key){
 	 */
 	K.show = function(){
 		this.map(function(e){
-			e.style.display = "block";
+			e.style.display = e.style.display ==='none' ? "block" : '';
 			$(e).trigger('KSADOMchange', ['show']);
 		});
 		return this;
@@ -3345,10 +3345,10 @@ function debugTime(key){
 					//绑定事件
 					$.loop(event, function(func, name){
 						$(ele).on(name, function(){
-							var R = func.apply(ele, arguments);
+							var R = func.call(this);
 							//可能绑定的是一个函数变量名 这时返回的就是一个函数 所以需要判断是否是沙箱内的函数
 							if(R && $.isFunction(R) && R._isKSAtplEvent){
-								R.apply(ele, arguments);
+								R.call(this);
 							}
 						})
 					});
@@ -3792,7 +3792,7 @@ function debugTime(key){
 				if(!this.cache.extractParamName[cacheK]) {
 					var strArr = [];
 					//滤掉转义引号、空白
-					str = str.replace(/\\'|\\"/g, '').replace(extractReg[0], '$1');
+					str = str.replace(/['"]/g, '').replace(extractReg[0], '$1');
 					//滤掉原生方法
 					str = str.replace(extractReg[1], '|$2');
 					var S = ''; //连续字符串
@@ -3867,7 +3867,7 @@ function debugTime(key){
 								var skv = keyName(v);
 								if(ths.isMonitor && !$.inArray(skv[0],['false','true','null','undefined'])){
 									if (skv[1]) {
-										variableList[skv[0]] = variableList[skv[0]] ? variableList[skv[0]] : {};
+										variableList[skv[0]] = $.isObject(variableList[skv[0]]) ? variableList[skv[0]] : {};
 										variableList[skv[0]][skv[1]] = 1;
 									} else {
 										variableList[skv[0]] = 1;
