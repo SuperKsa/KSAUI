@@ -56,13 +56,14 @@ function debugTime(key){
 	wrapMap.th = wrapMap.td;
 	var rtagName = ( /<([a-z][^\/\0>\x20\t\r\n\f]*)/i );
 
+
 	/**
 	 * 字符串转虚拟dom
 	 * @param code
 	 * @returns {ActiveX.IXMLDOMNodeList | NodeListOf<ChildNode>}
 	 */
 	function createDom(code, isEle){
-		var fragment = document.createDocumentFragment()
+		var fragment = document.createDocumentFragment();
 		var tag = ( rtagName.exec( code ) || [ "", "" ] )[ 1 ].toLowerCase();
 		var wrap = wrapMap[ tag ] || wrapMap._default;
 		//创建虚拟dom并写入字符串
@@ -73,14 +74,52 @@ function debugTime(key){
 		while ( j-- ) {
 			dom = dom.lastChild;
 		}
+		//script的处理
+		var globalScriptEvent = {}, //等待上一次script标签完成加载后需要执行的code
+			scriptLoadCallback = {}, //存在src属性的script标签 队列，load成功后自动删除
+			scriptSrcLast, scriptSrcLastID; //上一次存在src属性的script标签标记
+		$(dom).find('script').map(function(ele){
+			var script = document.createElement('script');
+			$.loop($.attrs(ele), function(v, k){
+				script[k] = v;
+			});
+			var scriptID = $.objectID(script);
+			if (ele.src) {
+				scriptLoadCallback[scriptID] = ele;
+				script.onload = function () {
+					delete scriptLoadCallback[scriptID];
+					//如果队列为空
+					if ($.isEmpty(scriptLoadCallback)) {
+						$.loop(globalScriptEvent[scriptID], function (elArr) {
+							elArr[0].text = elArr[1];
+						});
+					}
+				};
+				scriptSrcLast = script;
+				scriptSrcLastID = scriptID;
+			}
+			if(scriptSrcLastID) {
+				if (ele.text) {
+					globalScriptEvent[scriptSrcLastID] = globalScriptEvent[scriptSrcLastID] ? globalScriptEvent[scriptSrcLastID] : [];
+					globalScriptEvent[scriptSrcLastID].push([script, ele.text]);
+				}
+			}else{
+				script.text = ele.text;
+			}
+			$(ele).after(script).remove();
+		});
+
+
+
 		var eles = [];
 		$.loop(dom.childNodes, function (e) {
 			if(!isEle || (e.nodeType !== 3 && e.nodeType !== 8)){
 				eles.push(e);
 			}
-		})
+		});
 		return eles;
 	}
+
 
 	/**
 	 * 创建临时dom并回调
@@ -1026,7 +1065,7 @@ function debugTime(key){
 	 */
 	K.serialize = function(){
 		var dt = this.formData();
-		return $.urlParam(dt);
+		return $.urlGetString(dt, true);
 	}
 
 
@@ -1683,14 +1722,9 @@ function debugTime(key){
 	K.find = function(selector){
 		selector = selector || '*';
 		var rdom = $();
-		var doms = [];
 		this.map(function(ele){
 			$.loop(ele.querySelectorAll(selectorStr(selector)), function(el){
-				if(!$.inArray(el, doms)){
 					rdom.push(el);
-					doms.push(el);
-				}
-
 			});
 		});
 		return rdom;
@@ -2215,37 +2249,45 @@ function debugTime(key){
 		return {scale:bc, a:a, b:b, c:c, age:{ab:90, ac:ac, bc:bc}};
 	}
 // ====================== 当前或指定url格式化为对象 ====================== //
-	$.url = function(url){
-		var P = {}, u = [];
+	$.url = function(url, param){
+		var u = [];
 		if(url){
-			u = url.match(/(([a-z]+)\:\/\/)?([^:/]*?)(:(\d+)?)([^?]*)([^#]*)(#.*)?/i);
+			u = url.match(/^((\w+:)?\/\/)?(.+\.\w+)?(:\d+)?([^\?#]+)([^#]*)(#.*)?$/i);
 		}
-		P = {
+		var P = {
 			url : url ? url : location.href,
-			origin : url ? u[1] : location.origin,
-			https : url ? u[2] : location.protocol,
-			host : url ? u[3] : location.hostname,
-			port : url ? u[5] : location.port,
-			pathname : url ? u[6] : location.pathname,
-			search : url ? u[7] : location.search,
+			origin : url ? (u[1] || '') : location.origin,
+			https : url ? (u[2] && u[2] ==='https' ? true : false) : location.protocol,
+			host : url ? (u[3] || '') : location.hostname,
+			port : url ? (u[4] ? u[4].substr(1) : '') : location.port,
+			pathname : url ? (u[5] || '') : location.pathname,
+			search : url ? (u[6] || '') : location.search,
 			paths : [],
 			get : {},
-			hash : url ? u[8] : location.hash
+			hash : url ? (u[7] ? u[7] : '') : location.hash
+		};
+		P.get = $.urlGetObject(P.search);
+		var isParam = false;
+		if(param && !$.isEmpty(param)) {
+			param = $.isString(param) ? $.urlGetObject(param) : param;
+			isParam = true;
 		}
-		if(P.search) {
-			$.loop(P.search.substr(1).split("&"),function(val){
-				val = val.split('=');
-				P.get[val['0']] = val['1'];
-			});
+		if(isParam){
+			P.get = $.arrayMerge(P.get, param);
+			P.search = !$.isEmpty(P.get) ? ('?'+$.urlGetString(P.get)) : '';
 		}
+
 		if(P.pathname) {
 			var pn = P.pathname;
 			//去掉前后/
-			pn = pn.replace(/^\/+/,'');
-			pn = pn.replace(/\/+$/,'');
 			$.loop(pn.split("/"),function(val, k){
-				P.paths[k] = val;
+				if(val !== '') {
+					P.paths.push(val);
+				}
 			});
+		}
+		if(isParam) {
+			P.url = P.origin + P.host + (P.port ? (':' + P.port) : '') + P.pathname + P.search + P.hash;
 		}
 		return P;
 	}
@@ -2257,23 +2299,50 @@ function debugTime(key){
 	 * @returns {string}
 	 */
 	$.urlAdd = function(url, query){
-		return url + (url.indexOf('?') !== -1 ? '&' : '?') + query;
+		return $.url(url, query).url;
 	}
 
 	/**
-	 * 将一个对象格式化为url参数，并做urlencode
+	 * URL GET条件转对象
 	 * @param url
-	 * @returns {*}
+	 * @returns {{}}
 	 */
-	$.urlParam = function(url){
-		if($.isObject(url) || $.isArray(url)){
+	$.urlGetObject = function(url){
+		var param = {};
+		if($.isString(url)){
+			$.loop(url.substr(1).split("&"),function(val){
+				val = val.split('=');
+				if(val['1']){
+					val['1'] = decodeURIComponent(val['1']);
+					param[val['0']] = val['1'];
+				}
+			});
+		}
+		return param;
+	}
+
+	/**
+	 * 对象转为url GET条件
+	 * @param url
+	 * @param isEncode 是否需要urlencode
+	 * @returns {string}
+	 */
+	$.urlGetString = function(url, isEncode){
+		var str = '';
+		if($.isObject(url)){
 			var u = [];
 			$.loop(url, function(value, key){
-				u.push(encodeURIComponent(key) + "=" + encodeURIComponent(value == null ? "" : value));
+				if(value === undefined){
+					value = '';
+				}
+				if(isEncode){
+					value = encodeURIComponent(value);
+				}
+				key && value && u.push(key + "=" + value);
 			});
-			url = $.implode('&',u);
+			str = $.implode('&',u);
 		}
-		return url;
+		return str;
 	}
 
 // ====================== AJAX ====================== //
@@ -2289,9 +2358,9 @@ function debugTime(key){
 			dataType = option.dataType ? option.dataType.toLowerCase() : 'html',
 			jsonpCallback = option.jsonpCallback || '',
 			jsonp = option.jsonp,
-			responseData,
-			_data = {};
-
+			responseData;
+		option.data = option.data ? option.data : {};
+		option.data.KAJAX = true;
 		//JSONP直接创建script插入到dom后回调
 		if(dataType =='jsonp'){
 			//复制回调函数名
@@ -2300,9 +2369,9 @@ function debugTime(key){
 			window[copyCallback] = function () {
 				responseData = arguments;
 			}
-			option.url = $.urlAdd(option.url,'jsonpCallback='+copyCallback);
+			option.data.jsonpCallback = copyCallback;
 			var script = document.createElement('script');
-			script.src = option.url;
+			script.src = $.urlAdd(option.url, option.data);
 			script.type = 'text/javascript';
 			$(script).on('load', function(e){
 				var result = responseData[0];
@@ -2329,18 +2398,16 @@ function debugTime(key){
 		}else{
 
 			if(getType =='POST'){
-				if(option.data instanceof FormData) {
-					_data = option.data;
-				}else{
-					_data = new FormData();
+				if(!(option.data instanceof FormData)) {
+					var _data = new FormData();
 					$.loop(option.data, function(val, k){
 						_data.append(k, val);
 					});
+					option.data = _data;
+					_data = '';
 				}
 			}else if(getType =='GET'){
-				_data = $.urlParam(option.data);
-				option.url = $.urlAdd(option.url, _data);
-				_data = '';
+				option.url = $.urlAdd(option.url, option.data);
 			}
 
 			var A = new XMLHttpRequest();
@@ -2351,7 +2418,7 @@ function debugTime(key){
 				A.setRequestHeader(k,val);
 			});
 
-			A.send(_data);
+			!$.isEmpty(option.data) && A.send(option.data);
 
 			A.onreadystatechange = function(){
 				if(A.readyState === 4) {
@@ -4040,7 +4107,7 @@ function debugTime(key){
 	$.arrayMerge = function(){
 		var arr = arguments[0] || {};
 		$.loop(arguments, function(value, key){
-			if(key > 0){
+			if(key > 0 && $.isObject(value)){
 				$.loop(value,function(val, k){
 					arr[k] = val;
 				});

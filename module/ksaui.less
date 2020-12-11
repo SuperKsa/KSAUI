@@ -912,7 +912,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 //radio样式
 .ks-radio {
 	height: 20px; line-height: 20px;
-	>i:before { content: ''; width: 16px; height: 16px; border:#ddd 1px solid; background: #fff; display: inline-block; border-radius: 50%; box-sizing: border-box; vertical-align: middle;}
+	>i:before { content: ''; width: 16px; height: 16px; border:#ddd 1px solid; background: #fff; display: inline-block; border-radius: 50%; box-sizing: border-box; vertical-align: -2px;}
 	> input:checked ~ i { color: @primary}
 	> input:checked ~ i:before {border: @primary 5px solid;}
 }
@@ -923,7 +923,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-checkbox { 
 	height: 20px; line-height: 20px;
 	> i {font-style: normal; display: inline-block; position: relative; overflow: hidden;}
-	> i:before {color:#ccc; text-align:center; font-family:"remixicon"; vertical-align:middle; font-size: 12px; width:18px; height:18px; line-height:16px; border-radius:2px; content:'\eb7b'; float: left; border: #ddd 1px solid; box-sizing: border-box; background: #fff}
+	> i:before {color:#ccc; text-align:center; font-family:"remixicon"; vertical-align:0; font-size: 12px; width:18px; height:18px; line-height:16px; border-radius:2px; content:'\eb7b'; display: inline-block; border: #ddd 1px solid; box-sizing: border-box; background: #fff}
 	> input:checked ~ i:before {  background: @primary; color:#fff; border-color:@primary;}
 }
 
@@ -1239,6 +1239,11 @@ ks-dot {
 //============== 分割线 ==============
 .ks-hr { background: @borderColor; width: 100%; height: 1px; display: block;}
 
+//============== 分割线 ==============
+ks-line { position: relative; display: block; text-align: center}
+ks-line[label]:before { content: ''; height: 1px; background: #ddd; position: absolute; left: 0; right: 0; top: 50%; z-index: 1}
+ks-line[label]:after { content: attr(label); padding: 0 0.7em; background: #fff; position: relative; z-index: 2;}
+
 //============== 动画 ==============
 @keyframes spin {
 	0% {transform:rotate(0deg);}
@@ -1375,7 +1380,7 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 //============== 浮动提示窗口层 ==============
 .ks-body-layer-overflow { overflow: hidden}
 .ks-layer {
-	position: fixed; font-size: 14px; background:#fff; opacity:0; box-shadow: #444 0 0 5px; border-radius: 3px; min-width:360px;  top: 50%; left: 50%;
+	position: fixed; font-size: 14px; background:#fff; opacity:0; box-shadow: rgba(0,0,0, .28) 0 0 10px; border-radius: 3px; min-width:360px;  top: 50%; left: 50%;
 
 	//自由定位的layer样式调整 一般用于下拉选择
 	&[pos="0"] { border-radius: 3px; border: #e4eaf2 1px solid; box-shadow: 0 5px 5px 0 rgba(154,161,171,.17); position: absolute; min-width: 120px;}

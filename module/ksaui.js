@@ -293,7 +293,7 @@ $.ksauiRenderTree = {};
         if (!o.length) {
             return;
         }
-        var option = $.layerOption[Id] ? $.layerOption[Id] : {};
+        var option = LayerObject[Id] ? LayerObject[Id].option : {};
         if (Id) {
             var coverEle = o.next('[data-layer-key="' + Id + '"]');
             o.addClass('ks-anim-hide');
@@ -309,7 +309,7 @@ $.ksauiRenderTree = {};
                 } else {
                     coverEle.length && coverEle.remove();
                     o.remove();
-                    delete $.layerOption[Id];
+                    delete LayerObject[Id];
                 }
             }, 200);
         }
@@ -332,162 +332,188 @@ $.ksauiRenderTree = {};
      * @param {func} initFun 初始化后回调函数（可选，可在参数1通过json配置）
      * @returns {k.fn.init}
      */
-
+    var LayerObject = {};
     $.layer = function (option, pos, cover, showFun, closeFun, btnFun, initFun) {
-        $.layerOption = $.layerOption ? $.layerOption : {};
-        if (typeof (option) == 'string' || (option instanceof $ && option[0].innerHTML)) {
-            option = {content : option};
-        }
-
-        option = $.arrayMerge({
-            el : $.layerEL || 'body', //弹窗位置被限制在哪个元素中
-            title : null, //弹窗标题
-            content : null, //弹窗内容
-            class : '', //附加class 可以自定义样式
-            iframe : null, //iframe框架URL地址
-            ajaxUrl : null, //ajax地址 （注意ajax类型窗口调用不会返回任何数据）
-            ajaxPost : null,//ajaxPost 数据
-            type : '', //弹窗类型 与class组合 {class}_{type}
-            pos : pos ? pos : 5, //弹窗位置 参考layer pos介绍
-            btn : null, //按钮名称 数组
-            btnFun : btnFun, //按钮点击后回调 参数[index=按钮序号, txt=按钮文字, btnobj=按钮dom对象, dom=整个KSAUI对象]
-            cover : $.isset(cover) ? cover : 0, //是否遮罩层 0=否 1=是 2=是（带点击关闭窗口事件） 3=是（带双击关闭窗口事件） 坐标={top:0,right:0,bottom:0,left:0,event:click|dblclick}
-            outTime : 0,//自动关闭时间 秒
-            init : initFun, //初始化回调（还未添加到body中） 参数[layerDom]
-            show : showFun, //弹出后回调 参数[layerDom]
-            close : closeFun, //关闭后回调 无参数
-            closeBtn : 1, //是否需要右上角关闭按钮 1=是 0=否
-            backEvent : null, //是否需要监听后退事件 1=是 0=否
-            cache : null, //是否缓存 传入唯一缓存键名
-            maxHeight : 0, //内容区最大高度
-            height : null, //内容区固定高度
-        }, option);
 
         var EL = $(option.el || 'body');
         var ELoffset = EL.offset();
         //EL尺寸与位置
         var ELSize = {W : EL.width(true), H : EL.height(true), L : ELoffset.left, T : ELoffset.top};
-        var Layer;
 
-        //手机端默认监听后退事件
-        if (option.backEvent === null && $.isMobile) {
-            option.backEvent = 1;
-        }
-        //全屏强制去掉遮罩层
-        if (option.pos == '00') {
-            option.cover = 0;
-        }
+        //layer动画样式名称
+        var layerAnim = {
+            1 : 'ks-anim-right',
+            2 : 'ks-anim-down',
+            3 : 'ks-anim-left',
+            4 : 'ks-anim-right',
+            5 : 'ks-anim-scale',
+            6 : 'ks-anim-left',
+            7 : 'ks-anim-right',
+            8 : 'ks-anim-up',
+            9 : 'ks-anim-left',
+            '00' : 'ks-anim-left',
+        };
 
-        var tmpOption = option;//声明一个临时配置变量用于全局缓存
-        option.type = option.type ? option.class + ' ' + option.class + '_' + option.type : '';
-        option.cache = option.cache ? option.cache : null;
-        if (option.iframe) {
-            option.class += ' ks-layer-iframe';
-            option.content = '<iframe src="' + option.iframe + '" width="100%" height="100%"></iframe>';
-        }
+        var R = {
+            ID : 1,
+            layer : null, //当前layer KSA对象
+            obj : {},
+            isCache : false,
+            autoCloseObj : null, //自动关闭 setTimeout对象
+            init : function(){
+                var _this = this;
+                if(option.cache){
+                    //从缓存抽取layer
+                    $.loop(LayerObject, function(val){
+                        if(val.cache === option.cache){
+                            _this.obj = val;
+                            _this.isCache = true;
+                            _this.layer = $(_this.obj.dom);
+                        }
+                    });
+                }
+                _this.optionInit();
+                !_this.isCache && _this.createDom();
 
+                _this.sizeInit();
+                this.show();
 
-        //layer 尺寸、位置处理
-        function _pos() {
-            var style = {};
-            var pos = option.pos;
-            var w = Layer.width(true),
-                h = Layer.height(true);
-            if ($.inArray(pos, ['00', 1, 2, 3, 4, 5, 6, 7, 8, 9])) {
-                if ($.inArray(pos, [1, 4, 7])) {
-                    style.left = 0;
+                if (!_this.isCache && option.ajaxUrl) {
+                    $.API(option.ajaxUrl, option.ajaxPost, function (d) {
+                        _this.layer.children('.ks-layer-content').html(d);
+                        window.setTimeout(function(){
+                            _this.pos();
+                        })
+                    });
                 }
-                if ($.inArray(pos, [1, 2, 3])) {
-                    style.top = 0;
+                return this.obj;
+            },
+            //配置初始化
+            optionInit : function(){
+                if (typeof (option) == 'string' || (option instanceof $ && option[0].innerHTML)) {
+                    option = {content : option};
                 }
-                //X轴居中
-                if ($.inArray(pos, [2, 5, 8])) {
-                    style['margin-left'] = $.intval(0 - w / 2);
+                option = $.arrayMerge({
+                    el : $.layerEL || 'body', //弹窗位置被限制在哪个元素中
+                    title : null, //弹窗标题
+                    content : null, //弹窗内容
+                    class : '', //附加class 可以自定义样式
+                    iframe : null, //iframe框架URL地址
+                    ajaxUrl : null, //ajax地址 （注意ajax类型窗口调用不会返回任何数据）
+                    ajaxPost : null,//ajaxPost 数据
+                    type : '', //弹窗类型 与class组合 {class}_{type}
+                    pos : pos ? pos : 5, //弹窗位置 参考layer pos介绍
+                    btn : null, //按钮名称 数组
+                    btnFun : btnFun, //按钮点击后回调 参数[index=按钮序号, txt=按钮文字, btnobj=按钮dom对象, dom=整个KSAUI对象]
+                    cover : $.isset(cover) ? cover : 0, //是否遮罩层 0=否 1=是 2=是（带点击关闭窗口事件） 3=是（带双击关闭窗口事件） 坐标={top:0,right:0,bottom:0,left:0,event:click|dblclick}
+                    outTime : 0,//自动关闭时间 秒
+                    init : initFun, //初始化回调（还未添加到body中） 参数[layerDom]
+                    show : showFun, //弹出后回调 参数[layerDom]
+                    close : closeFun, //关闭后回调 无参数
+                    closeBtn : 1, //是否需要右上角关闭按钮 1=是 0=否
+                    backEvent : null, //是否需要监听后退事件 1=是 0=否
+                    cache : null, //是否缓存 传入唯一缓存键名
+                    maxHeight : 0, //内容区最大高度
+                    height : null, //内容区固定高度
+                }, option);
+                //手机端默认监听后退事件
+                if (option.backEvent === null && $.isMobile) {
+                    option.backEvent = 1;
                 }
-                //X轴居右
-                if ($.inArray(pos, [3, 6, 9])) {
-                    style.right = 0;
-                    style.left = 'initial';
-                }
-                //Y轴居中
-                if ($.inArray(pos, [4, 5, 6])) {
-                    style['margin-top'] = $.intval(0 - h / 2);
-                }
-                //Y轴底部
-                if ($.inArray(pos, [7, 8, 9])) {
-                    style.top = 'initial';
-                    style.bottom = '0';
-                }
-                //全屏
-                if (pos == '00') {
-                    style.top = '0';
-                    style.bottom = '0';
-                    style['margin-left'] = '-100%';
+                //全屏强制去掉遮罩层
+                if (option.pos == '00') {
+                    option.cover = 0;
                 }
 
-                //如果定位不是既定位置 则认为是一个选择器 自适应定位
-            } else {
-                var trigger = $(pos),
-                    teiggerW = trigger.width(true),
-                    teiggerH = trigger.height(true),
-                    layerW = Layer.width(true),
-                    layerH = Layer.height(true);
-                style.left = trigger.offset().left;
-                style.top = trigger.offset().top + teiggerH;
-
-                var seH = trigger.offset().top - $(document).scrollTop() + teiggerH + layerH;
-                if (ELSize.W - (style.left + layerW) < 0) {
-                    style.left = style.left - layerW + teiggerW;
+                option.type = option.type ? option.class + ' ' + option.class + '_' + option.type : '';
+                option.cache = option.cache ? option.cache : null;
+                if (option.iframe) {
+                    option.class += ' ks-layer-iframe';
+                    option.content = '<iframe src="' + option.iframe + '" width="100%" height="100%"></iframe>';
                 }
-                //如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
-                if ($.H - seH < 0) {
-                    style.top = trigger.offset().top - layerH;
-                    Layer.layerAnimKey = 2;
-                } else {
-                    Layer.layerAnimKey = 8;
-                }
-            }
-            Layer.css(style);
-        }
-
-
-        function __run() {
-
-            //层级序号自增
-            $.ZINDEX++;
-            var H, Id, cacheID;
-            //添加缓存键名
-            if (option.cache) {
-                $.loop($.layerOption, function (val, k) {
-                    if (val.cache == option.cache) {
-                        cacheID = '#ks-layer-' + k;
+            },
+            //layer 尺寸、位置处理
+            pos : function() {
+                var _this = this;
+                var style = {};
+                var pos = option.pos;
+                _this.countSize();
+                var w = _this.obj.width,
+                    h = _this.obj.height;
+                if ($.inArray(pos, ['00', 1, 2, 3, 4, 5, 6, 7, 8, 9])) {
+                    if ($.inArray(pos, [1, 4, 7])) {
+                        style.left = 0;
                     }
-                });
-            }
-            if (cacheID) {
-                Layer = $(cacheID);
-                Id = Layer.attr('key');
-            } else {
-                var pos = typeof (option.pos) == 'object' ? 0 : option.pos;
-                Id = $.ZINDEX + 1;
-                $.layerOption[Id] = tmpOption; //配置缓存到全局
-                H = $.tag('div', {
-                    class : ('ks-layer ' + option.class + ' ' + option.type),
-                    pos : pos,
-                    id : 'ks-layer-' + Id,
-                    style : 'z-index:' + Id,
-                    key : Id
-                }, '', true);
+                    if ($.inArray(pos, [1, 2, 3])) {
+                        style.top = 0;
+                    }
+                    //X轴居中
+                    if ($.inArray(pos, [2, 5, 8])) {
+                        style['margin-left'] = $.intval(0 - w / 2);
+                    }
+                    //X轴居右
+                    if ($.inArray(pos, [3, 6, 9])) {
+                        style.right = 0;
+                        style.left = 'initial';
+                    }
+                    //Y轴居中
+                    if ($.inArray(pos, [4, 5, 6])) {
+                        style['margin-top'] = $.intval(0 - h / 2);
+                    }
+                    //Y轴底部
+                    if ($.inArray(pos, [7, 8, 9])) {
+                        style.top = 'initial';
+                        style.bottom = '0';
+                    }
+                    //全屏
+                    if (pos == '00') {
+                        style.top = '0';
+                        style.bottom = '0';
+                        style['margin-left'] = '-100%';
+                    }
+                    //如果定位不是既定位置 则认为是一个选择器 自适应定位
+                } else {
+                    var trigger = $(pos),
+                        teiggerW = trigger.width(true),
+                        teiggerH = trigger.height(true),
+                        layerW = this.layer.width(true),
+                        layerH = this.layer.height(true);
+                    style.left = trigger.offset().left;
+                    style.top = trigger.offset().top + teiggerH;
 
+                    var seH = trigger.offset().top - $(document).scrollTop() + teiggerH + layerH;
+                    if (ELSize.W - (style.left + layerW) < 0) {
+                        style.left = style.left - layerW + teiggerW;
+                    }
+                    //如果弹出层Y坐标与自身高度超出可视区 则定位到基点上方
+                    if ($.H - seH < 0) {
+                        style.top = trigger.offset().top - layerH;
+                        _this.obj.pos = 2;
+                    } else {
+                        _this.obj.pos = 8;
+                    }
+                }
+                this.layer.css(style);
+            },
+            close : function(isCancel){
+                this.autoCloseObj && clearTimeout(this.autoCloseObj);
+                option.cancel = !!isCancel;
+                $.layerHide(this.ID);
+            },
+            //创建DOM
+            createDom : function(){
+                var _this = this;
+                var id = $.ZINDEX ++;
+                var dom = '';
                 //关闭按钮
                 if (option.closeBtn) {
-                    H += '<span class="ks-layer-close" icon="close"></span>';
+                    dom += '<span class="ks-layer-close" icon="close"></span>';
                 }
                 //标题栏
                 if (option.title) {
-                    H += '<div class="ks-layer-title">' + option.title + '</div>';
+                    dom += '<div class="ks-layer-title">' + option.title + '</div>';
                 }
-                H += '<div class="ks-layer-content"></div>';
+                dom += '<div class="ks-layer-content">'+option.content+'</div>';
                 //按钮处理
                 if (option.btn) {
                     var s = '';
@@ -499,44 +525,76 @@ $.ksauiRenderTree = {};
                             s += $.tag('ks-btn', {class : '_' + k, 'data-btn-index' : k, color : val[1]}, val[0]);
                         });
                     }
-                    H += s ? '<div class="ks-layer-bottom">' + s + '</div>' : '';
+                    dom += s ? '<div class="ks-layer-bottom">' + s + '</div>' : '';
                 }
-                H += '</div>';
-                Layer = $(H);
-            }
 
-            //添加layerID
-            Layer.layerID = Id;
-            if (!cacheID) {
-                //添加content
-                Layer.find('.ks-layer-content').html(option.content);
-            }
-            $(EL).append(Layer);
+                var pos = $.isObject(option.pos) ? 0 : option.pos;
+                dom = $.tag('div', {
+                    class : ('ks-layer ' + option.class + ' ' + option.type),
+                    pos : pos,
+                    id : 'ks-layer-' + id,
+                    style : 'z-index:' + id,
+                    key : id
+                }, dom);
+                dom = $(dom);
 
-            if (!cacheID) {
+                //创建当前layer对象到全局变量
+                LayerObject[id] = this.obj = {
+                    dom : dom[0],
+                    coverDom : '',
+                    id : id,
+                    selector : '#ks-layer-'+id,
+                    option : option,
+                    width : 0,
+                    height : 0,
+                    cache : option.cache,
+                    pos : pos,
+                    resize : function(){
+                        _this.pos();
+                    },
+                    close : function(){
+                        _this.close();
+                    },
+                    show : function(){
+                        _this.show();
+                    }
+                };
+
+                _this.ID = id;
+                _this.layer = dom;
+                //添加layerID
+                _this.layer.layerID = id;
+                //DOM插入到前台
+                $(EL).append(dom);
+
+                //iframe body加当前ID
+                if (option.iframe) {
+                    dom.iframe = null;
+                    dom.find('iframe')[0].onload = function () {
+                        dom.iframe = $(this.contentWindow.document.body);
+                        dom.iframe.attr('parentlayerid', id);
+                    };
+                }
+
                 //关闭事件 右上角按钮
-                Layer.find('.ks-layer-close').click(function () {
-                    clearTimeout(AutoEvn);
-                    option.cancel = true;
-                    $.layerHide(Id);
+                dom.find('.ks-layer-close').click(function () {
+                    _this.close(true);
                 });
 
                 //底部按钮处理
                 if (option.btn) {
-                    Layer.find('.ks-layer-bottom > ks-btn').click(function () {
+                    dom.find('.ks-layer-bottom > ks-btn').click(function () {
                         var t = $(this);
-                        if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), Layer) !== false))) {
-                            clearTimeout(AutoEvn);
-                            option.cancel = t.data('btn-index') ==='cancel';
-                            $.layerHide(Id);
-
+                        if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), dom) !== false))) {
+                            _this.close(t.data('btn-index') ==='cancel');
                         }
                     }).filter('ks-btn:last-child:not([color])').attr('color', 'primary');
                 }
 
                 //遮罩层点击关闭事件
                 if (option.cover) {
-                    var cover = $('<div class="ks-layer-cover" data-layer-key="' + Id + '" style="z-index: ' + (Id - 1) + '"></div>');
+                    var cover = $('<div class="ks-layer-cover" data-layer-key="' + id + '" style="z-index: ' + (id - 1) + '"></div>');
+                    _this.obj.coverDom = cover[0];
                     cover.css($.arrayMerge({
                         top : 0,
                         right : 0,
@@ -549,34 +607,24 @@ $.ksauiRenderTree = {};
                         var t = $(this);
                         if (!t.disabled()) {
                             t.disabled(1);
-                            clearTimeout(AutoEvn);
-                            $.layerHide(Id);
+                            _this.close(true);
                         }
                     });
-                    Layer.after(cover);
+                    _this.layer.after(cover);
                 }
-                //iframe body加当前ID
-                if (option.iframe) {
-                    Layer.iframe = null;
-                    Layer.find('iframe')[0].onload = function () {
-                        Layer.iframe = $(this.contentWindow.document.body);
-                        Layer.iframe.attr('parentlayerid', Id);
-                    };
-                }
+
                 //初始化回调
-                $.isFunction(option.init) && option.init(Layer, Id);
-            }
-            (function () {
+                $.isFunction(option.init) && option.init(dom, id);
+            },
+            sizeInit : function () {
                 var style = {};
                 //内容区最大高度处理
                 var cententMaxH = $.H;
-
-
                 if (option.title) {
-                    cententMaxH -= Layer.children('.ks-layer-title').height(true, true);
+                    cententMaxH -= this.layer.children('.ks-layer-title').height(true, true);
                 }
                 if (option.btn) {
-                    cententMaxH -= Layer.children('.ks-layer-bottom').height(true, true);
+                    cententMaxH -= this.layer.children('.ks-layer-bottom').height(true, true);
                 }
 
                 if (option.height) {
@@ -602,69 +650,67 @@ $.ksauiRenderTree = {};
                         style.width = ELSize.W * style.width / 100;
                     }
                 }
-                Layer.children('.ks-layer-content').css(style);
-            })();
+                this.layer.children('.ks-layer-content').css(style);
+            },
+            show : function() {
+                var _this = this;
 
-            //layer动画
-            var layerAnim = {
-                1 : 'ks-anim-right',
-                2 : 'ks-anim-down',
-                3 : 'ks-anim-left',
-                4 : 'ks-anim-right',
-                5 : 'ks-anim-scale',
-                6 : 'ks-anim-left',
-                7 : 'ks-anim-right',
-                8 : 'ks-anim-up',
-                9 : 'ks-anim-left',
-                '00' : 'ks-anim-left',
-            };
-            Layer.layerAnimKey = option.pos;
+                var pos = _this.obj.pos,
+                    id = _this.ID;
 
-            if (!$.isset(option.bodyOver) || option.bodyOver) {
-                $(EL).addClass('ks-body-layer-overflow');
-            }
-            var AutoEvn;
-            //延迟show 防止回调函数中click 同步响应
-            window.setTimeout(function () {
-                _pos();
-                Layer.layerAnimKey && Layer.addClass(layerAnim[Layer.layerAnimKey]);
-                Layer.active(true);
-                //后退事件监听
-                option.backEvent && $.BackEvent('KsaLayer' + Id, '#ks-layer-' + Id);
-
-                //show回调函数
-                typeof (option.show) == 'function' && option.show(Layer, Id);
-
-                //N秒自动关闭
-                if (option.outTime > 0) {
-                    AutoEvn = setTimeout(function () {
-                        $.layerHide(Id);
-                    }, option.outTime * 1000 + 50);
+                if (!$.isset(option.bodyOver) || option.bodyOver) {
+                    $(EL).addClass('ks-body-layer-overflow');
                 }
-            });
+                this.layer.removeClass('ks-anim-hide').show();
+                $(this.obj.coverDom).removeClass('ks-anim-fadeout').show();
+                //延迟show 防止回调函数中click 同步响应
+                window.setTimeout(function () {
 
-            //按ESC键处理
-            $(document).off('keydown.ks-layer').on('keydown.ks-layer', function (e) {
-                if (e.keyCode == 27) {
-                    //关闭浮动窗口
-                    var o = $('.ks-layer').last();
-                    if (o.length) {
-                        $.layerHide(o.attr('key'));
+                    pos && _this.layer.addClass(layerAnim[pos]);
+                    _this.layer.active(true);
+                    //后退事件监听
+                    option.backEvent && $.BackEvent('KsaLayer' + id, '#ks-layer-' + id);
+
+                    //show回调函数
+                    $.isFunction(option.show) && option.show(_this.layer, id);
+
+                    //N秒自动关闭
+                    if (option.outTime > 0) {
+                        _this.autoCloseObj = setTimeout(function () {
+                            _this.close(true);
+                        }, option.outTime * 1000 + 50);
                     }
-                }
-            });
-            return Layer;
-        }
+                    _this.pos();
+                    window.setTimeout(function(){
+                        _this.pos();
+                    }, 200);
 
-        var R = __run();
-        if (option.ajaxUrl) {
-            $.API(option.ajaxUrl, option.ajaxPost, function (d) {
-                R.children('.ks-layer-content').html(d);
-                _pos();
-            });
-        }
-        return R;
-    }
+                });
+
+
+
+                //按ESC键处理
+                $(document).off('keydown.ks-layer').on('keydown.ks-layer', function (e) {
+                    if (e.keyCode == 27) {
+                        //关闭浮动窗口
+                        var o = $('.ks-layer').last();
+                        if (o.length) {
+                            $.layerHide(o.attr('key'));
+                        }
+                    }
+                });
+                return _this.layer;
+            },
+            //计算当前layer宽高并写入obj
+            countSize : function(){
+                this.obj.width = this.layer.width(true);
+                this.obj.height = this.layer.height(true);
+            }
+        };
+
+
+        return R.init();
+    };
 
     /**
      * 对话框操作 (基于layer层)
@@ -2611,7 +2657,7 @@ $.ksauiRenderTree = {};
                     t.parent().disabled($(this).disabled());
                 });
 
-            },
+            }
         });
 
         //轮播图
