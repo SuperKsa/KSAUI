@@ -2286,6 +2286,7 @@ function debugTime(key){
 				}
 			});
 		}
+
 		if(isParam) {
 			P.url = P.origin + P.host + (P.port ? (':' + P.port) : '') + P.pathname + P.search + P.hash;
 		}
@@ -2310,7 +2311,7 @@ function debugTime(key){
 	$.urlGetObject = function(url){
 		var param = {};
 		if($.isString(url)){
-			$.loop(url.substr(1).split("&"),function(val){
+			$.loop(url.split("&"),function(val){
 				val = val.split('=');
 				if(val['1']){
 					val['1'] = decodeURIComponent(val['1']);
