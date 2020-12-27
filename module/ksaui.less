@@ -133,7 +133,7 @@ ks-card-content:after { content: ' '; clear: both; display: block; width: 100%; 
 ks {
 	display: flex; width: 100%; height: 100%; overflow: hidden; position: relative; flex-direction:column;
 	> ks-side {width: 220px; flex:0 0 auto}
-	> ks-content {flex: 1; flex-basis: auto; overflow:auto; }
+	> ks-content {flex: 1; flex-basis: auto; overflow:auto; width: 100%; height: 100%;}
 	> ks-navbar, > ks-footer, > ks-header { flex:0 0 auto;}
 
 	> ks-navbar {height: 50px; width: 100%; font-size: 12px; display: flex; position: relative;
@@ -152,8 +152,9 @@ ks {
 			}
 		}
 	}
-	ks-navbar-content { display: none; width: 100%; height: 100%; overflow: auto;}
+	ks-navbar-content { display: block;  width: 100%; height: 100%; overflow: auto;}
 	ks-navbar-content[active] { display: block;}
+	ks-navbar-content:not(:first-child) {display: none;}
 }
 
 
