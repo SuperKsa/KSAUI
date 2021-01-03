@@ -48,7 +48,10 @@ ks-collapse,
 ks-collapse-item,
 ks-collapse-title,
 ks-collapse-content,
-ks-collapse-block { display: block;}
+ks-collapse-block,
+ks-textarea,
+ks-pic,
+ks-pic-thumb { display: block;}
 
 //============== 全局样式整理 ==============
 :root {
@@ -93,7 +96,9 @@ table { border-collapse:collapse; border-spacing:0}
 pre, code { white-space:pre-wrap; word-wrap:break-word; overflow: auto; height: auto}
 textarea {overflow: auto;resize: vertical;}
 label {white-space: nowrap;}
- 
+html { font-size: 100px;}
+body { font-size: 0.14rem}
+
 //滚动条整体样式
 ::-webkit-scrollbar {width: 5px;height: 5px;}
 //滚动条里面小方块
@@ -118,9 +123,9 @@ ks-card-content:after { content: ' '; clear: both; display: block; width: 100%; 
 //============== 自定义新元素 ==============
 	// 货币
 	ks-price {
-		color: @red; font-size: 1.4285em; font-weight: bold; display: inline-block;
-		small { font-size: .7em; vertical-align: bottom; display: inline-block;}
-		unit { font-size: .7em; vertical-align: text-bottom; display: inline-block;}
+		color: @red; font-size: 1em; font-weight: bold; display: inline-block;
+		small { font-size: .7em; display: inline-block;}
+		unit { font-size: .7em; display: inline-block;}
 	}
 	// 卡片
 	ks-card {
@@ -130,32 +135,7 @@ ks-card-content:after { content: ' '; clear: both; display: block; width: 100%; 
 		ks-card-title { font-size: 1.14285em; font-weight: 500; border-bottom: @borderColor 1px solid;}
 	}
 //============== 主框架 Layout ==============
-ks {
-	display: flex; width: 100%; height: 100%; overflow: hidden; position: relative; flex-direction:column;
-	> ks-side {width: 220px; flex:0 0 auto}
-	> ks-content {flex: 1; flex-basis: auto; overflow:auto; width: 100%; height: 100%;}
-	> ks-navbar, > ks-footer, > ks-header { flex:0 0 auto;}
 
-	> ks-navbar {height: 50px; width: 100%; font-size: 12px; display: flex; position: relative;
-		&:before { content: ''; position: absolute; left: 0; top: 0; width: 200%; height: 1px; background: @borderColor; transform: scale(.5) translateX(-50%);}
-
-		> ks-navbar-item { padding-top:30px; text-align: center; flex: 1; position: relative; cursor: pointer;
-			//获得焦点
-			&[active] { color: @primary;}
-			//带图标的处理
-			&[icon]:before { display: block; width:100%; height: 27px; line-height: 27px; font-size: 20px; text-align: center; margin:-27px 0 0 0 !important;}
-			//消息处理 默认圆点
-			&[news]:after { content: '';  background: #ff381e; width:8px; height: 8px; position: absolute; left: 50%; top: 1px; border-radius: 20px; margin: 6px 0 0 15px; transform: scale(.8);}
-			//消息处理 属性值第一位包含数字1-9
-			&[news^="1"]:after, &[news^="2"]:after, &[news^="3"]:after, &[news^="4"]:after, &[news^="5"]:after, &[news^="6"]:after, &[news^="7"]:after, &[news^="8"]:after, &[news^="9"]:after {
-				content: ""attr(news)""; width:auto; height:auto; padding:2px 6px; font-size: 12px; font-weight: bold; color: #fff; border:#fff 2px solid; margin: 0 0 0 5px;
-			}
-		}
-	}
-	ks-navbar-content { display: block;  width: 100%; height: 100%; overflow: auto;}
-	ks-navbar-content[active] { display: block;}
-	ks-navbar-content:not(:first-child) {display: none;}
-}
 
 
 
@@ -228,15 +208,13 @@ ks-tab {
 
 	ks-tab-title {
 		width: 100%; height: 40px; line-height: 40px; position: relative;
-		ks-tab-title-status,
-		ks-tab-title-item:hover:after {
+		ks-tab-title-status {
 			height: 4px; width:40px; position: absolute; left:30px; bottom: 0; background: @primary; border-radius: 4px; transition: all 0.3s; margin:0 0 0 -20px; z-index: 10;
 		}
 		ks-tab-title-item {
 			float: left; padding: 0 10px; min-width: 60px; user-select: none; text-align: center;  margin-right: 10px; cursor: pointer; position: relative;
 			&[active], &[active] a { color: #495057}
 			&:last-of-type { margin-right: 0}
-			&:hover:after { content:''; background: #ccc; left: 50%; z-index: 1}
 		}
 	}
 
@@ -489,20 +467,31 @@ ks-avatar {
 //处理表单布局
 ks-form {
 	display: block;
-	ks-form-item {margin-bottom: 25px; display: block;}
+	ks-form-item {margin-bottom: 0.25rem; display: block;}
 	> :last-child { margin-bottom: 0}
-	ks-form-label { float: left; width: 125px; text-align: right; height: @inputHeight; line-height: @inputHeight;}
-	ks-form-label:after { content: ':'; padding: 0 8px 0 5px; color: rgba(0,0,0,.4)}
-	ks-form-content {min-height: @inputHeight;}
+	ks-form-label { float: left; width: 125px; height: @inputHeight; line-height: @inputHeight;}
+	
+	ks-form-content {min-height: @inputHeight; width: 100%; display: block}
 	ks-form-extra { min-height: 24px; line-height: 24px; font-size: 14px; color: rgba(0,0,0,.4)}
-
-	ks-form-content, ks-form-extra {display: block; width: 100%; float: right; width: calc(100% - 125px);}
+	
+	ks-form-label + ks-form-content,
+	ks-form-label ~ ks-form-extra {display: block; float: right; width: calc(100% - 125px);}
+	
 
 	ks-form-group { 
 		display: table; width: 100%;
 		> *  { display: table-cell; width:auto; padding: 0 10px;}
 		> :first-child { padding-left: 0;}
 		> :last-child { padding-right: 0;}
+	}
+}
+
+html:not([mobile]) {
+	ks-form {
+		ks-form-label {
+			text-align: right;
+			&:after { content: ':'; padding: 0 8px 0 5px; color: rgba(0,0,0,.4)}
+		}
 	}
 }
 
@@ -751,8 +740,8 @@ ks-btn-group {
 
 //============== ks-tag标记 ==============
 ks-tag {
-	display:inline-block; white-space:nowrap; padding:0 10px ; height: 30px; line-height: 28px; font-size: 14px; border-radius:3px; vertical-align: middle; background: #ecf5ff; color: @primary; position: relative;
-	&[close] {padding:0 28px 0 10px ;}
+	display:inline-block; white-space:nowrap; padding:2px 5px ; font-size: 14px; border-radius:3px; vertical-align: middle; background: #ecf5ff; color: @primary; position: relative;
+	&[close] {padding:0 18px 0 5px ;}
 	&[cap] { border-radius: 1em;}//圆角
 	&:not([line]) {
 		.loop(@i) when (@i =< @ColorListLength) {
@@ -793,7 +782,7 @@ input[type='number']::-webkit-inner-spin-button {-webkit-appearance: none;appear
 
 //默认边框 背景色
 input.ks-input, textarea.ks-input, .ks-input input, .ks-textarea textarea, ks-input-group > input,
-.ks-select, .ks-date, ks-area {vertical-align: middle;  text-align:left; display: inline-block; border: @borderColor 1px solid; border-radius:3px; background: #fff;}
+.ks-select, .ks-date, ks-area {vertical-align: middle;  text-align:inherit; display: inline-block; border: @borderColor 1px solid; border-radius:3px; background: #fff;}
 
 
 
@@ -807,7 +796,6 @@ ks-area,
 .ks-textarea {width: 100%;}
 
 ks-input-group > *,
-.ks-input,
 .ks-input > input,
 .ks-input-arrow input,
 .ks-select,
@@ -895,8 +883,8 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 
 //多行输入框 textarea 
 .ks-textarea {position: relative}
-.ks-textarea textarea {width:100%; transition: none; padding:10px !important; line-height: 20px !important; min-height: 100px; max-width: 100%; max-height: 400px; resize:vertical;}
-.ks-textarea-maxtit { position: absolute; right:1px; bottom: 1px; background: #fff; padding: 4px 10px; z-index: 11; font-size: 13px; color: rgba(0,0,0,.35)}
+.ks-textarea textarea {width:100%; transition: none; padding:0.1rem; line-height:initial; height: 100px; max-width: 100%; resize:vertical;}
+.ks-textarea-maxtit { position: absolute; right:1px; bottom: 1px; z-index: 11; color: rgba(0,0,0,.35)}
 
 //============== 单选、复选、开关 ==============
 .ks-checkbox, .ks-radio, .ks-switch {cursor:pointer; display: inline-block; font-weight: normal; position: relative; color: @textColor; user-select: none; vertical-align: middle;}
@@ -958,25 +946,29 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 
 
 //============== 表单焦点状态 ==============
-//hover 经过
-.ks-input input:not(:disabled):hover,
-.ks-input textarea:not(:disabled):hover,
-input.ks-input:not(:disabled):hover,
-.ks-textarea textarea:not(:disabled):hover,
-ks-input-group > input:not(:disabled):hover,
-ks-input-group > textarea:not(:disabled):hover,
-.ks-select:hover,
-ks-area:not([disabled]):hover { border-color: #a2cfff; border-width: 1px !important; }
+html:not([mobile]) {
+	//hover 经过
+	.ks-input input:not(:disabled):hover,
+	.ks-input textarea:not(:disabled):hover,
+	input.ks-input:not(:disabled):hover,
+	.ks-textarea textarea:not(:disabled):hover,
+	ks-input-group > input:not(:disabled):hover,
+	ks-input-group > textarea:not(:disabled):hover,
+	.ks-select:hover,
+	ks-area:not([disabled]):hover { border-color: #a2cfff; border-width: 1px !important; }
+	
+	//focus 获得焦点
+	.ks-input input:not(:disabled):focus,
+	.ks-input textarea:not(:disabled):focus,
+	input.ks-input:not(:disabled):focus,
+	.ks-textarea textarea:not(:disabled):focus,
+	ks-input-group > input:focus,
+	ks-input-group > textarea:focus,
+	.ks-select[active],
+	ks-area:not([disabled])[active] { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
+}
 
-//focus 获得焦点
-.ks-input input:not(:disabled):focus,
-.ks-input textarea:not(:disabled):focus,
-input.ks-input:not(:disabled):focus,
-.ks-textarea textarea:not(:disabled):focus,
-ks-input-group > input:focus,
-ks-input-group > textarea:focus,
-.ks-select[active],
-ks-area:not([disabled])[active] { border-color: @primary; color: #495057 !important; box-shadow: 0 0 0 2px rgba(45,140,240,.2); position: relative; z-index: 9}
+
 
 //被禁用 disabled
 .ks-input[disabled] > input,
@@ -990,6 +982,22 @@ ks-area[disabled] {
 .ks-radio > input[disabled] ~ i,
 .ks-switch > input[disabled] ~ i { cursor: not-allowed; opacity: 0.75;}
 
+
+//图片上传组件
+ks-pic {
+	display:inline-block; width: 1rem; height: 1rem; border-radius: 0.05rem; overflow: hidden; background: #f2f2f2; position: relative; margin: 0 0.1rem 0.1rem 0;
+	> label {
+		display: block; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 10; cursor: pointer; text-align: center; font-size: 0.56rem; color: #9e9e9e;
+		&[icon]:before { position: absolute; left: 50%; top: 50%; margin: -0.23rem 0 0 -0.23rem; font-size: 0.46rem}
+		> input[type=file] { display: none;}
+	}
+	ks-pic-thumb {
+		height: 100%;
+		img { width: 100%;}
+	}
+	ks-pic-thumb ~ label {display: none; background: rgba(0,0,0, .3); color: rgba(255,255,255, .6);}
+	&:hover ks-pic-thumb ~ label { display: block}
+}
 
 //============== H5标题栏 ==============
 .ks-hdbar { height: 45px; line-height: 45px; font-size: 16px; background: #fff; position: relative}
@@ -1020,20 +1028,16 @@ ks-area[disabled] {
 
 
 //============== 圆角 ==============
-.ks-o { border-radius: 100%; overflow: hidden}
-.ks-o-1 { border-radius: 3px}
-.ks-o-2 { border-radius: 5px}
-.ks-o-3 { border-radius: 10px}
-.ks-o-4 { border-radius: 15px}
-.ks-o-5 { border-radius: 20px}
-.ks-o-6 { border-radius: 25px}
-.ks-o-7 { border-radius: 30px}
+.ks-o, .ks-o-sub > * { border-radius: 100%; overflow: hidden}
+.ks-o-1, .ks-o-1-sub > * { border-radius: 0.03rem}
+.ks-o-2, .ks-o-2-sub > * { border-radius: 0.05rem}
+.ks-o-3, .ks-o-3-sub > * { border-radius: 0.1rem}
+.ks-o-4, .ks-o-4-sub > * { border-radius: 0.15rem}
+.ks-o-5, .ks-o-5-sub > * { border-radius: 0.2rem}
+.ks-o-6, .ks-o-6-sub > * { border-radius: 0.25rem}
+.ks-o-7, .ks-o-7-sub > * { border-radius: 0.3rem}
 
 //============== 常用属性 ==============
-//价格 红色
-.ks-price {color: #ef1c00; font-weight: bold; font-size: 1.142857em}
-.ks-price:before {content: attr(symbol); font-size: .75em;} //symbol属性值表示左边价格类型
-.ks-price[line] { text-decoration: line-through;}
 
 //必须属性 占用before给一个红星
 *[data-required]:before, [required]:before { content: '*'; color:@red; margin-right: 5px; font-family: SimSun; font-size: 14px;}
@@ -1044,8 +1048,11 @@ ks-area[disabled] {
 .ks-clear:after { content: ''; width: 100%; clear: both; display: block; overflow: hidden}
 //左浮动
 .ks-fl {float: left}
+.ks-fl-sub > * { float: left}
 //右浮动
 .ks-fr {float: right}
+.ks-fr-sub > * { float: right}
+
 //文字方向
 .ks-tl { text-align: left}
 .ks-tc { text-align: center}
@@ -1095,7 +1102,36 @@ ks-dot {
 .ks-f17 { font-size: 50px;}
 
 
-
+ks {
+	display: flex; width: 100%; height: 100%; overflow: hidden; position: relative; flex-direction:column;
+	> ks-side {width: 2.2rem; flex:0 0 auto}
+	> ks-content {
+		flex: 1; flex-basis: auto; overflow: hidden; overflow-y:auto; width: 100%; height: 100%;
+		ks-navbar-content {
+			display: block;  width: 100%; height: 100%; overflow: auto;
+			&[active] { display: block;}
+		}
+	}
+	> ks-navbar, > ks-footer, > ks-header { flex:0 0 auto;}
+	
+	> ks-navbar {height: 1.1rem; width: 100%; display: flex; position: relative;
+		&:before { content: ''; position: absolute; left: 0; top: 0; width: 200%; height: 1px; background: #ddd; transform: scale(.5) translateX(-50%);}
+		
+		> ks-navbar-item { padding-top:0.3rem; text-align: center; flex: 1; position: relative; cursor: pointer;
+			//获得焦点
+			&[active] { color: @primary;}
+			//带图标的处理
+			&[icon]:before { display: block; width:100%; height: 0.54rem; line-height: 0.54rem; font-size: 0.54rem; text-align: center; margin:-0.2rem 0 0 0 !important;}
+			//消息处理 默认圆点
+			&[news]:after { content: '';  background: #ff381e; width:0.12rem; height: 0.12rem; position: absolute; left: 50%; top: 1px; border-radius: 0.2rem; margin: 0.06rem 0 0 0.15rem; transform: scale(.8);}
+			//消息处理 属性值第一位包含数字1-9
+			&[news^="1"]:after, &[news^="2"]:after, &[news^="3"]:after, &[news^="4"]:after,
+			&[news^="5"]:after, &[news^="6"]:after, &[news^="7"]:after, &[news^="8"]:after, &[news^="9"]:after {
+				content: ""attr(news)""; width:auto; height:auto; padding:0.02rem 0.06rem; font-size: 0.12rem; font-weight: bold; color: #fff; border:#fff 0.02rem solid; margin: 0 0 0 0.05rem;
+			}
+		}
+	}
+}
 
 //============== 内边距 -sub后缀表示所有直接子级 ==============
 .ks-p { padding: 20px;}	.ks-p-sub > * {padding: 20px;}
@@ -1231,14 +1267,17 @@ ks-dot {
 .loop(1);
 
 //============== 边框 ==============
-.ks-border { border: @borderColor 1px solid;}
-.ks-border-t { border-top: @borderColor 1px solid;}
-.ks-border-r { border-right: @borderColor 1px solid;}
-.ks-border-b { border-bottom: @borderColor 1px solid;}
-.ks-border-l { border-left: @borderColor 1px solid;}
+
+.ks-bd { border: @borderColor 1px solid;}
+.ks-bd0 {border: 0 !important;}
+.ks-bd-t { border-top: @borderColor 1px solid;}
+.ks-bd-r { border-right: @borderColor 1px solid;}
+.ks-bd-b { border-bottom: @borderColor 1px solid;}
+.ks-bd-l { border-left: @borderColor 1px solid;}
+
 
 //============== 分割线 ==============
-.ks-hr { background: @borderColor; width: 100%; height: 1px; display: block;}
+ks-hr { background: @borderColor; width: 100%; height: 1px; display: block;}
 
 //============== 分割线 ==============
 ks-line { position: relative; display: block; text-align: center}
@@ -1326,30 +1365,37 @@ ks-line[label]:after { content: attr(label); padding: 0 0.7em; background: #fff;
 
 //============== 输入框组 ==============
 ks-input-group {
-	display: inline-table; width:100%; border-collapse:separate; vertical-align:middle; background: #f2f2f2;
+	display: inline-table; width:100%; border-collapse:separate; vertical-align:middle;
 	> * { width: 1px; display: table-cell !important; vertical-align:middle; font-style: normal;  white-space:nowrap; transition:all 0.2s ease-in-out;}
 	> *:not([class*='ks-']) {padding: 0 10px;}
 	> input,
 	> .ks-input {width: 100%; float: left;}
-	//默认所有去圆角
-	> *, > ks-btn, input, > .ks-input, > .ks-input input {border-radius: 0;}
-	> .ks-input:not(input):not(ks-btn) { border: 0}
-
-	//非hover focus的所有子元素默认边线
-	> *:not(input):not(ks-btn) { border: @borderColor 1px solid; border-left-width: 0; border-right-width: 0}
-
-	> *:first-child,
-	> *:first-child > input {border-left-width:1px; border-radius: 3px 0 0 3px;}
-	> *:last-child,
-	> *:last-child > input {border-right-width:1px; border-radius: 0 3px 3px 0;}
-
-	> *:first-child:not(:hover):not(:focus):not(.a):not([active]):not(input) { border-right-color: transparent}
-	> *:last-child:not(:hover):not(:focus):not(.a):not([active]):not(input) { border-left-color: transparent}
+	
 
 	//按钮高度继承
 	> ks-btn { height: inherit; line-height: inherit}
 
 	.ks-select { min-width: 100px;}
+}
+//PC专用样式
+html:not([mobile]) {
+	ks-input-group {
+		background: #f2f2f2;
+		//默认所有去圆角
+		> *, > ks-btn, input, > .ks-input, > .ks-input input {border-radius: 0;}
+		> .ks-input:not(input):not(ks-btn) { border: 0}
+		
+		//非hover focus的所有子元素默认边线
+		> *:not(input):not(ks-btn) { border: @borderColor 1px solid; border-left-width: 0; border-right-width: 0}
+		
+		> *:first-child,
+		> *:first-child > input {border-left-width:1px; border-radius: 3px 0 0 3px;}
+		> *:last-child,
+		> *:last-child > input {border-right-width:1px; border-radius: 0 3px 3px 0;}
+		
+		> *:first-child:not(:hover):not(:focus):not(.a):not([active]):not(input) { border-right-color: transparent}
+		> *:last-child:not(:hover):not(:focus):not(.a):not([active]):not(input) { border-left-color: transparent}
+	}
 }
 
 
@@ -1381,7 +1427,7 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 //============== 浮动提示窗口层 ==============
 .ks-body-layer-overflow { overflow: hidden}
 .ks-layer {
-	position: fixed; font-size: 14px; background:#fff; opacity:0; box-shadow: rgba(0,0,0, .28) 0 0 10px; border-radius: 3px; min-width:360px;  top: 50%; left: 50%;
+	position: fixed;  background:#fff; opacity:0; box-shadow: rgba(0,0,0, .28) 0 0 10px; border-radius: 3px; min-width:360px;  top: 50%; left: 50%;
 
 	//自由定位的layer样式调整 一般用于下拉选择
 	&[pos="0"] { border-radius: 3px; border: #e4eaf2 1px solid; box-shadow: 0 5px 5px 0 rgba(154,161,171,.17); position: absolute; min-width: 120px;}
@@ -1450,7 +1496,7 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 
 //表单框
 .ks-Dialog_form{
-	.ks-layer-content { min-width: 450px;  padding:24px 80px 24px 24px;}
+	.ks-layer-content { min-width: 4.5rem;  padding:0.24rem 0.4rem;}
 }
 //toast 提示框
 .ks-Dialog_toast.ks-layer{

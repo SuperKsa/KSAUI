@@ -1017,44 +1017,35 @@ function debugTime(key){
 	K.formData = function(isFormData){
 		var formData = {};
 		var ele = this[0];
-		$(ele).find('input, textarea, select').each(function(i,el){
-			el = $(el);
-			var name = el.attr('name');
-			var val = el.val();
-			var type = el.attr('type');
-			if(name){
-				if(type ==='file'){
-					formData[name] = el[0].files.length ? el[0].files[0] : '';
-				}else if($.inArray(type,['radio','checkbox'])){
-					if(el.checked()){
-						formData[name] = val;
-					}
-				}else{
-					if($.isArray(val)){
-						formData[name] = [];
-						$.loop(val,function(v){
-							formData[name].push(v);
-						})
-					}else{
-						formData[name] = val;
-					}
-				}
-			}
-		});
-
 		if(isFormData){
-			var newformData = new FormData();
-			$.loop(formData, function(value, key){
-				if($.isArray(value)){
-					$.loop(value, function(val){
-						newformData.append(key, val);
-					})
-				}else{
-					newformData.append(key, value);
+			formData = new FormData(ele);
+		}else {
+			$(ele).find('input, textarea, select').each(function (i, el) {
+				el = $(el);
+				var name = el.attr('name');
+				var val = el.val();
+				var type = el.attr('type');
+				if (name) {
+					if (type === 'file') {
+						formData[name] = el[0].files.length ? el[0].files[0] : '';
+					} else if ($.inArray(type, ['radio', 'checkbox'])) {
+						if (el.checked()) {
+							formData[name] = val;
+						}
+					} else {
+						if ($.isArray(val)) {
+							formData[name] = [];
+							$.loop(val, function (v) {
+								formData[name].push(v);
+							})
+						} else {
+							formData[name] = val;
+						}
+					}
 				}
 			});
-			formData = newformData;
 		}
+
 		return formData;
 	}
 
@@ -2311,6 +2302,9 @@ function debugTime(key){
 	$.urlGetObject = function(url){
 		var param = {};
 		if($.isString(url)){
+			if(url.substr(0,1) == '?'){
+				url = url.substr(1);
+			}
 			$.loop(url.split("&"),function(val){
 				val = val.split('=');
 				if(val['1']){

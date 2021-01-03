@@ -420,10 +420,6 @@ $.ksauiRenderTree = {};
                 if (option.backEvent === null && $.isMobile) {
                     option.backEvent = 1;
                 }
-                //全屏强制去掉遮罩层
-                if (option.pos == '00') {
-                    option.cover = 0;
-                }
 
                 option.type = option.type ? option.class + ' ' + option.class + '_' + option.type : '';
                 option.cache = option.cache ? option.cache : null;
@@ -779,7 +775,7 @@ $.ksauiRenderTree = {};
                 };
                 op.class += '_' + type;
                 op.closeBtn = 1;
-                op.maxHeight = '80%';
+                op.maxHeight = '100%';
                 op.show = function (layer) {
                     layer.find('form').submit(function (e) {
                         e.stop();
@@ -789,8 +785,8 @@ $.ksauiRenderTree = {};
                             }
                         });
                     });
-                }
-
+                };
+                op.pos = $.isMobile ? '00' : 5;
                 break;
             //默认 参数： 1=标题 2=内容 3=自动关闭时间 4=按钮文字 5=按钮回调函数 6=关闭回调函数
             default:
@@ -923,7 +919,7 @@ $.ksauiRenderTree = {};
      */
     $.API = function (url, postdata, fun, errfun, datatype, isBflow) {
         datatype = datatype ? datatype : 'json';
-        url += (url.indexOf('?') == -1 ? '?' : '&') + 'ajax=1';
+        url = $.urlAdd(url, {ajax:1});
         var option = {
             type : postdata ? 'POST' : 'GET',
             url : url,
@@ -1011,6 +1007,8 @@ $.ksauiRenderTree = {};
                     callFun(dt);
                 }
                 btn.removeClass('btn-load').disabled(false).html(btnTxt);
+                //如果当前是一个iframeLayer 则关闭当前layer
+                $.isObject(dt) && dt.success && $('body').attr('parentlayerid') && $.layerHideF();
             }, function () {
                 btn.removeClass('btn-load').disabled(false).html(btnTxt);
             }, 'json', 1);
@@ -2136,8 +2134,8 @@ $.ksauiRenderTree = {};
      * @returns {html}
      */
     $.createForm = function (option) {
-        var H = '';
-        H += '<form' + (option.action ? ' action="' + option.action + '"' : '') + '><ks-form>';
+        var H = $.tag('form', {action:option.action, class:option.class}, '', true);
+        H += '<ks-form>';
         $.loop(option.field, function (value, key) {
             if (value && $.isObject(value)) {
                 value.value = value.value ? value.value : '';
@@ -2154,21 +2152,22 @@ $.ksauiRenderTree = {};
                     }
                     //数字 普通输入框 密码框
                     if ($.inArray(value.type, ['number', 'text', 'password'])) {
-                        H += $.tag('input', {
-                            type : 'ks-' + value.type,
-                            name : value.name,
-                            value : value.value,
-                            placeholder : value.placeholder,
-                            style : value.style
-                        }, '', 1);
+                        value.type = !value.unit ? 'ks-'+value.type : value.type;
+                        delete value.label;
+                        if(value.unit){
+                            H += '<ks-input-group>';
+                        }
+                        H += $.tag('input', value, '', 1);
+                        if(value.unit){
+                            H += '<i>'+value.unit+'</i>';
+                            H += '</ks-input-group>';
+                        }
                         //多行输入框
                     } else if ($.inArray(value.type, ['textarea'])) {
-                        H += $.tag('textarea', {
-                            name : value.name,
-                            placeholder : value.placeholder,
-                            style : value.style,
-                            class : 'ks-input'
-                        }, value.value);
+                        value.type = 'ks-'+value.type;
+                        var v = value.value;
+                        delete value.value;
+                        H += $.tag('textarea', value, v);
                         //开关
                     } else if (value.type == 'switch') {
                         value.value = value.value ? value.value : '';
@@ -2250,6 +2249,14 @@ $.ksauiRenderTree = {};
                         if ($.isset(value.value.address)) {
                             H += '<input type="text" name="address"  value="' + value.value.address + '" placeholder="请输入街道地址" class="ks-input ks-mt1">';
                         }
+                    }else if($.inArray(value.type, ['pic','pics','file','files'])){
+                        H += $.tag('input', {
+                            type : 'ks-'+value.type,
+                            name : value.name,
+                            placeholder : value.placeholder,
+                            style : value.style,
+                            api : value.api
+                        }, '', 1);
                         //HTML
                     } else {
                         H += value.value;
@@ -2397,7 +2404,7 @@ $.ksauiRenderTree = {};
                 //计算 并写input  x[0=+ 1=-]
                 function r(x) {
                     var v =  ele.val();
-                    var isZ = v.substr(0,1) === '0';
+                    var isZ = v.length >1 && v.substr(0,1) === '0';
                     v = $.floatval(v) || 0;
                     if (x == 'up') {
                         if (step) {
@@ -2530,26 +2537,28 @@ $.ksauiRenderTree = {};
 
                 (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
                 at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
-                var clearbtn = $('<right class="ks-input-clear" icon="close-circle-fill" style="z-index:99"></right>');
-                t.before(clearbtn);
-                clearbtn.click(function () {
-                    t.val('').focus();
-                    clearbtn.active(false);
-                });
-                t.keyup(function () {
-                    if (t.val().length > 0) {
-                        clearbtn.active(true);
-                    } else {
+                if($.isset(at.clear)) {
+                    var clearbtn = $('<right class="ks-input-clear" icon="close-circle-fill" style="z-index:99"></right>');
+                    t.before(clearbtn);
+                    clearbtn.click(function () {
+                        t.val('').focus();
                         clearbtn.active(false);
-                    }
-                });
-                t.parent().hover(function(){
-                    $(this).find('input[type=text]').val().length > 0 && clearbtn.active(true);
-                },function(){
-                    window.setTimeout(function () {
-                        clearbtn.active(false);
-                    }, 10)
-                });
+                    });
+                    t.keyup(function () {
+                        if (t.val().length > 0) {
+                            clearbtn.active(true);
+                        } else {
+                            clearbtn.active(false);
+                        }
+                    });
+                    t.parent().hover(function () {
+                        $(this).find('input[type=text]').val().length > 0 && clearbtn.active(true);
+                    }, function () {
+                        window.setTimeout(function () {
+                            clearbtn.active(false);
+                        }, 10)
+                    });
+                }
             },
             'input[type="ks-password"]' : function (ele) {
                 var t = $(ele), at = t.attr();
@@ -2574,18 +2583,26 @@ $.ksauiRenderTree = {};
                 }
             },
             'textarea[type="ks-textarea"]' : function (ele) {
-                var t = $(ele);
+                var t = $(ele), at = t.attr();
                 t.removeAttr('type');
                 t.wrap($.tag('ks-textarea', {class:'ks-textarea'}));
                 var maxlength = parseInt(t.attr('maxlength'));
                 if (maxlength) {
-                    t.after('<div class="ks-textarea-maxtit">字数限制 <span>' + t.val().length + '</span>/' + maxlength + '</div>');
+                    t.after('<div class="ks-textarea-maxtit"> <span>' + t.val().length + '</span>/' + maxlength + '</div>');
                     t.keyup(function () {
                         var n = t.val().length;
                         if (n > maxlength) {
                             t.val(t.val().substr(0, maxlength));
                         }
                         t.next('.ks-textarea-maxtit').children('span').text(t.val().length);
+                    });
+                }
+                //高度自适应
+                if($.isset(at.auto)){
+                    t.height(t[0].scrollHeight);
+                    t.input(function(){
+                        t.height(0);
+                        t.height(t[0].scrollHeight);
                     });
                 }
             },
@@ -2657,9 +2674,101 @@ $.ksauiRenderTree = {};
                     t.parent().disabled($(this).disabled());
                 });
 
+            },
+            'input[type="ks-pic"]' : function(t){
+                var t = $(t), attrs = t.attr();
+                t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
+                if(attrs.value){
+                    t.before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
+                }
+                t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
+                t.change(function(){
+                    if(!attrs.api){
+                        $.toast('组件缺少api属性');
+                        return false;
+                    }
+                    $.upload('upload', t[0], attrs.api, function(dt){
+                        var h = '';
+                        $.loop(dt.List,function(value){
+                            h += '<ks-pic-thumb>'+
+                                 '<img src="'+value.src+'">'+
+                                 '<input type="hidden" name="'+attrs.name+'" value="'+value.aid+'">'+
+                                 '</ks-pic-thumb>';
+                        });
+                        t.val('');
+                        var label = t.parent();
+                        label.prev().remove();
+                        label.before(h);
+                    });
+                });
+            },
+            'input[type="ks-pics"]' : function(t){
+                var t = $(t), attrs = t.attr();
+                var fname = attrs.name;
+                fname = fname ? fname+'[]' : '';
+                t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
+                attrs.value = attrs.value.replace(/'/g,'"');
+                if(attrs.value){
+                    try {
+                        $.loop(JSON.parse(attrs.value), function(val){
+
+                            if(val.id){
+                                t.before('<ks-pic><ks-pic-thumb>'+
+                                         '<img src="'+val.src+'">'+
+                                         '<span icon="delete-bin-2-fill"></span>'+
+                                         '<input type="hidden" name="'+fname+'" value="'+val.id+'">'+
+                                         '</ks-pic-thumb></ks-pic>');
+                            }
+                        });
+                    }catch (e) {
+                    }
+                }
+                t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
+                t.change(function(){
+                    if(!attrs.api){
+                        $.toast('组件缺少api属性');
+                        return false;
+                    }
+                    $.upload('upload', t[0], attrs.api, function(dt){
+                        var h = '';
+                        $.loop(dt.List,function(value){
+                            h += '<ks-pic><ks-pic-thumb>'+
+                                 '<img src="'+value.src+'">'+
+                                 '<input type="hidden" name="'+fname+'" value="tmp:'+value.aid+'">'+
+                                 '<span icon="delete-bin-2-fill" delapi="'+attrs.api+'Del?aid='+value.aid+'"></span>'+
+                                 '</ks-pic-thumb></ks-pic>';
+                        });
+                        t.val('');
+                        t.parent().parent().before(h);
+                    });
+                });
+            },
+            'input[type="ks-file"]' : function(t){
+                var t = $(t), attrs = t.attr();
+                t.attr('type', 'file').css('display','none');
+                t.wrap('<ks-btn upload></ks-btn>').wrap('<label icon="upload-cloud-fill" style="display:block"></label>');
+            },
+            'input[type="ks-files"]' : function(t){
+                var t = $(t), attrs = t.attr();
+                var fname = attrs.name;
+                fname = fname ? fname+'[]' : '';
+                t.attr('type', 'file').css('display','none').attr('name', fname+'[]');
+                t.wrap('<ks-btn upload></ks-btn>').wrap('<label icon="upload-cloud-fill" style="display:block"></label>');
             }
         });
-
+        //上传文件删除按钮绑定事件
+        $(document).on('click', 'ks-pic-thumb > span[icon*=delete]', function(){
+            var ths = $(this), delApi = ths.attr('delapi');
+            $.Dialog('confirm','操作提示','确认要删除该文件吗？',function(){
+                if(delApi){
+                    $.API(delApi, '', function(res){
+                        res.success && ths.parent().parent().remove();
+                    });
+                }else{
+                    ths.parent().parent().remove();
+                }
+            })
+        });
         //轮播图
         $.render('.ks-slide', function (ele) {
             ele = $(ele);
@@ -3082,6 +3191,9 @@ $.ksauiRenderTree = {};
 
             titleItem.click(function () {
                 _play($(this).attr('index'));
+            }).DOMchange('attr.active', function () {
+                var ths = $(this);
+                ths.active() && _play(ths.attr('index'));
             });
 
             if (isTouch) {
