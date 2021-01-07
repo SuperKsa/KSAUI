@@ -36,7 +36,7 @@ $.ksauiRenderTree = {};
     }
 
     $.isMobile = false;
-
+    $.isWechat = false;
     $.W = window.innerWidth;
     $.H = window.innerHeight;
 
@@ -46,6 +46,7 @@ $.ksauiRenderTree = {};
         $.device = 'MOBILE';
         $.isMobile = true;
         $('html').attr('mobile', 'true');
+        $.isWechat = agent.match(/MicroMessenger/i) === 'micromessenger';
     }
     if ($.device == 'PC') {
         //监听鼠标坐标
@@ -303,6 +304,7 @@ $.ksauiRenderTree = {};
                 o.active(false);
                 Fun && Fun(Id);
                 !option.cancel && option.close && option.close();
+                option.hide && option.hide();
                 if (option.cache) {
                     coverEle.length && coverEle.hide();
                     o.hide();
@@ -509,7 +511,7 @@ $.ksauiRenderTree = {};
                 if (option.title) {
                     dom += '<div class="ks-layer-title">' + option.title + '</div>';
                 }
-                dom += '<div class="ks-layer-content">'+option.content+'</div>';
+                dom += '<div class="ks-layer-content"></div>';
                 //按钮处理
                 if (option.btn) {
                     var s = '';
@@ -533,6 +535,7 @@ $.ksauiRenderTree = {};
                     key : id
                 }, dom);
                 dom = $(dom);
+                dom.find('.ks-layer-content').html(option.content);
 
                 //创建当前layer对象到全局变量
                 LayerObject[id] = this.obj = {
@@ -597,15 +600,13 @@ $.ksauiRenderTree = {};
                         bottom : 0,
                         left : 0
                     }, $.isObject(option.cover) ? option.cover : {}));
-                    var coverEvent = ($.isMobile ? 'touchend' : option.cover == 3 ? 'dblclick' : option.cover == 2 ? 'click' : '');
-                    //触发事件
-                    coverEvent && cover.on(coverEvent, function () {
-                        var t = $(this);
-                        if (!t.disabled()) {
-                            t.disabled(1);
-                            _this.close(true);
-                        }
-                    });
+                    if(option.cover >1){
+                        var coverEvent = ($.isMobile ? 'touchend' : option.cover == 3 ? 'dblclick' : option.cover == 2 ? 'click' : '');
+                        //触发事件
+                        coverEvent && cover.on(coverEvent, function () {
+                                _this.close(true);
+                        });
+                    }
                     _this.layer.after(cover);
                 }
 
@@ -1316,8 +1317,9 @@ $.ksauiRenderTree = {};
         data.value = data.value && !$.isArray(data.value) ? [data.value] : data.value;
         layerOption = layerOption || {};
         layerOption = $.arrayMerge({
-            pos : btn,
-            cover : 0,
+            title : data.label ? data.label : false, //弹窗标题
+            pos : $.isMobile ? '8' : btn,
+            cover : $.isMobile ? 2 : 0,
             content : select_json_html(data, data.value, data.multiple),
             closeBtn : 0,
             bodyOver : false, //body不需要裁切
@@ -1354,15 +1356,17 @@ $.ksauiRenderTree = {};
                 });
             },
             show : function (layer) {
-                //监听点击事件 自动关闭
-                $(document).on('click.KSAUI-select', function (e) {
-                    if (!$.inArray(e.target, [btn[0], layer[0]])) {
-                        $(document).off('click.KSAUI-select');
-                        _close();
-                    }
-                });
+                if(!$.isMobile){
+                    //监听点击事件 自动关闭
+                    $(document).on('click.KSAUI-select', function (e) {
+                        if (!$.inArray(e.target, [btn[0], layer[0]])) {
+                            $(document).off('click.KSAUI-select');
+                            _close();
+                        }
+                    });
+                }
             },
-            close : _close
+            hide : _close
         }, layerOption, {class : 'ks-layer-select'});
 
         return $.layer(layerOption);
@@ -2250,13 +2254,8 @@ $.ksauiRenderTree = {};
                             H += '<input type="text" name="address"  value="' + value.value.address + '" placeholder="请输入街道地址" class="ks-input ks-mt1">';
                         }
                     }else if($.inArray(value.type, ['pic','pics','file','files'])){
-                        H += $.tag('input', {
-                            type : 'ks-'+value.type,
-                            name : value.name,
-                            placeholder : value.placeholder,
-                            style : value.style,
-                            api : value.api
-                        }, '', 1);
+                        value.type = 'ks-'+value.type;
+                        H += $.tag('input', value, '', 1);
                         //HTML
                     } else {
                         H += value.value;
@@ -2678,10 +2677,11 @@ $.ksauiRenderTree = {};
             'input[type="ks-pic"]' : function(t){
                 var t = $(t), attrs = t.attr();
                 t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
-                if(attrs.value){
-                    t.before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
-                }
+
                 t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
+                if(attrs.value){
+                    t.parent().before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
+                }
                 t.change(function(){
                     if(!attrs.api){
                         $.toast('组件缺少api属性');
@@ -2707,8 +2707,8 @@ $.ksauiRenderTree = {};
                 var fname = attrs.name;
                 fname = fname ? fname+'[]' : '';
                 t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
-                attrs.value = attrs.value.replace(/'/g,'"');
                 if(attrs.value){
+                    attrs.value = attrs.value.replace(/'/g,'"');
                     try {
                         $.loop(JSON.parse(attrs.value), function(val){
 
@@ -2926,17 +2926,22 @@ $.ksauiRenderTree = {};
 
         //自定义组件 价格标签
         $.render('ks-price', function (ele) {
-            var txt = ele.innerHTML.trim();
-            txt = txt.replace(/([^0-9\.\,]+)/gi, '<unit>$1</unit>');
-            txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
+            function _inup(){
+                var txt = ele.innerHTML.trim();
+                txt = txt.replace(/([^0-9\.\,]+)/gi, '<unit>$1</unit>');
+                txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
 
-            if ($.isset($(ele).attr('split'))) {
-                txt = txt.replace(/([0-9]+)\.?/, function (v) {
-                    v = v.replace(/([0-9])([0-9]{3})$/g, '$1,$2');
-                    return '<strong>' + v + '</strong>';
-                });
+                if ($.isset($(ele).attr('split'))) {
+                    txt = txt.replace(/([0-9]+)\.?/, function (v) {
+                        v = v.replace(/([0-9])([0-9]{3})$/g, '$1,$2');
+                        return '<strong>' + v + '</strong>';
+                    });
+                }
+                ele.innerHTML = txt;
             }
-            ele.innerHTML = txt;
+            $(ele).DOMchange('html', function(){
+                _inup();
+            });
         }, 'html');
 
         //自定义组件 卡片盒子
@@ -3144,52 +3149,83 @@ $.ksauiRenderTree = {};
         //自定义组件 tab
         $.render('ks-tab', function (ele) {
             ele = $(ele);
-            var title = ele.children('ks-tab-title');
-            var item = ele.children('ks-tab-item');
-            var itemLength = item.length;
-            var isTouch = $.isset(ele.attr('touch'));
-            var itemTitle = '<ks-tab-title-status></ks-tab-title-status>';
-            item.each(function (i, el) {
-                el = $(el);
-                itemTitle += '<ks-tab-title-item index="' + i + '">' + (el.attr('label') || '') + '</ks-tab-title-item>';
-                el.attr({index : i});
-            });
-            if (title.length) {
-                title.prepend(itemTitle);
-            } else {
-                ele.prepend('<ks-tab-title>' + itemTitle + '</ks-tab-title>');
-                title = ele.children('ks-tab-title');
-            }
-            itemTitle = null;
-            item.wrapAll('<ks-tab-content></ks-tab-content>');
 
-            var titleStatus = title.children('ks-tab-title-status');
-            var titleItem = title.children('ks-tab-title-item');
+
+            function _titleStatus(N) {
+                var el = title_item.eq(N);
+                var left = (el[0].offsetLeft + el.width(true) / 2);
+                titleStatus.css('left', left < 30 ? 30 : left);
+                title_item.eq(N).active(true).siblings().active(false);
+            }
+
+
+            var isTouch = $.isset(ele.attr('touch'));
+
+            var title = ele.children('ks-tab-title');
+            var title_item = title.children('ks-tab-title-item');
+
+            var currIndex = 0;
+            var code_title_status = '<ks-tab-title-status></ks-tab-title-status>';
 
 
             var contentBox = ele.children('ks-tab-content');
+            //是否为自定义模式 存在标题与内容框
+            var isCustom = title.length && contentBox.length;
+
+            //dom准备
+            if (isCustom) {
+                title.append(code_title_status);
+            }else{
+                var item = ele.children('ks-tab-item');
+                var itemLength = item.length;
+                var itemTitle = '';
+                item.each(function (i, el) {
+                    el = $(el);
+                    itemTitle += '<ks-tab-title-item index="' + i + '">' + (el.attr('label') || '') + '</ks-tab-title-item>';
+                    el.attr({index : i});
+                });
+                ele.prepend('<ks-tab-title>' + itemTitle + code_title_status + '</ks-tab-title>');
+                title = ele.children('ks-tab-title');
+                itemTitle = null;
+            }
+            var titleStatus = title.children('ks-tab-title-status');
+
+            if(isCustom){
+                currIndex = title_item.filter('[active]').index();
+                _titleStatus(currIndex);
+                title_item.click(function(){
+                    _titleStatus($(this).index());
+                });
+                return; //自定义模式渲染结束 直接退出
+            }
+
+
+            item.wrapAll('<ks-tab-content></ks-tab-content>');
+            contentBox = ele.children('ks-tab-content');
+
+
+            var title_item = title.children('ks-tab-title-item');
+
+
+
             var eleWidth = contentBox.width(true);
 
 
             var moveX = 0, currIndex = item.filter('[active]').index();
             currIndex = currIndex === -1 ? 0 : currIndex;
 
-            function _titleStatus(N) {
-                var el = titleItem.eq(N);
-                var left = (el[0].offsetLeft + el.width(true) / 2);
-                titleStatus.css('left', left < 30 ? 30 : left);
-            }
+
 
             function _play(N) {
                 N = parseInt(N);
-                titleItem.eq(N).active(true).siblings().active(false);
+
                 moveX = (0 - eleWidth * N);
                 isTouch ? contentBox.removeClass('ks-no-transition').css({transform : 'translateX(' + moveX + 'px)'}) : item.eq(N).show().active(true).siblings().hide().active(false);
                 _titleStatus(N);
             }
 
 
-            titleItem.click(function () {
+            title_item.click(function () {
                 _play($(this).attr('index'));
             }).DOMchange('attr.active', function () {
                 var ths = $(this);

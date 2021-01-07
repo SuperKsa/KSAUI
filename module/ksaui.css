@@ -403,7 +403,6 @@ ks-tab {
 }
 ks-tab ks-tab-content {
   transition: all 0.1s ease-in-out;
-  padding-top: 15px;
 }
 ks-tab ks-tab-title {
   width: 100%;
@@ -2588,6 +2587,21 @@ ks-pic ks-pic-thumb {
 }
 ks-pic ks-pic-thumb img {
   width: 100%;
+}
+ks-pic ks-pic-thumb > *[icon*=delete] {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  padding: 0.04rem 0;
+}
+ks-pic ks-pic-thumb:hover > *[icon*=delete] {
+  display: block;
 }
 ks-pic ks-pic-thumb ~ label {
   display: none;

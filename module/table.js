@@ -66,7 +66,7 @@ $.table = function(options){
                 p = $.arrayMerge(p, $(options.search).formData());
             }
             ths.$data.ksauiLoading = 1;
-            $.API($.urlAdd(options.listAPI, 'page='+ths.page), p,function(dt){
+            $.API($.urlAdd(options.listAPI, {page:ths.page}), p, function(dt){
                 if(options.lineSelect){
                     ths.el.find('tr > td:first-child input[type=checkbox], tr > th:first-child input[type=checkbox]').checked(false);
                 }
@@ -85,6 +85,7 @@ $.table = function(options){
                 });
                 callFun && callFun.call(ths, dt);
                 ths.$data.ksauiLoading = 0;
+                debug(ths.$data.List);
             });
         },
         createBtn : function(dt, clickEvent, eventParm){
@@ -138,7 +139,7 @@ $.table = function(options){
             }
             html += '</tr></thead>';
             html += '<tbody>';
-            html += '{{if !$.count(List)}}';
+            html += '{{if !Counts}}';
             html += '<tr><td colspan="999"><ks-empty>暂无数据</ks-empty></td></tr>';
             html += '{{else}}';
             html += '{{loop List key value}}';

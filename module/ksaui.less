@@ -204,7 +204,7 @@ ks-tab-touch-content {overflow: hidden}
 ks-tab {
 	display: block;
 
-	ks-tab-content {transition:all 0.1s ease-in-out; padding-top: 15px;}
+	ks-tab-content {transition:all 0.1s ease-in-out;}
 
 	ks-tab-title {
 		width: 100%; height: 40px; line-height: 40px; position: relative;
@@ -994,8 +994,10 @@ ks-pic {
 	ks-pic-thumb {
 		height: 100%;
 		img { width: 100%;}
+		> *[icon*=delete] {display: none; position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0, .9); color: #fff; text-align: center; cursor: pointer; padding: 0.04rem 0}
+		&:hover > *[icon*=delete] { display: block}
+		& ~ label {display: none; background: rgba(0,0,0, .3); color: rgba(255,255,255, .6);}
 	}
-	ks-pic-thumb ~ label {display: none; background: rgba(0,0,0, .3); color: rgba(255,255,255, .6);}
 	&:hover ks-pic-thumb ~ label { display: block}
 }
 

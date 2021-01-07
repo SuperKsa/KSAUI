@@ -2413,7 +2413,7 @@ function debugTime(key){
 				A.setRequestHeader(k,val);
 			});
 
-			!$.isEmpty(option.data) && A.send(option.data);
+			A.send(option.data);
 
 			A.onreadystatechange = function(){
 				if(A.readyState === 4) {
@@ -2484,7 +2484,13 @@ function debugTime(key){
 						}
 
 						if ($.def.debug) {
-							debug('def['+ac+'] / objID:' +$.objectID(newObj)+' / '+keyName+' / 值:'+JSON.stringify(newV));
+							debug({
+								action : '创建监听链',
+								def : ac,
+								objID : $.objectID(newObj),
+								keyName : keyName,
+								value : newV
+							});
 						}
 					}
 				}
@@ -2590,10 +2596,20 @@ function debugTime(key){
 			var ths = this,
 				objID = $.objectID(obj), //当前对象ID
 				events = ths.Event[objID]; //当前对象监听事件
+
 			//触发对象add事件 父级关联的
 			events && events.run('add', obj, keyName, dt);
 			//给对象赋值
 			obj[keyName] = dt;
+			/*
+			if($.isObject(dt)){
+				var dtid = $.objectID(dt);
+				var dtEvn = ths.Event[dtid];
+
+				$.loop(dt, function(val, k){
+					dtEvn && dtEvn.run('add', dt, k, val);
+				});
+			}*/
 		},
 
 		/**
@@ -2625,8 +2641,23 @@ function debugTime(key){
 				//触发对象reset事件
 				originalID && ths.Event[originalID] && ths.Event[originalID].run('reset', obj, keyName, dt);
 
+				var oldObj = obj[keyName];
+				//新增的数据
+				$.loop(dt, function(value, key){
+					if(!oldObj[key]){
+						ths.add(oldObj, key, value);
+					}
+				});
+				//删除的数据
+				$.loop(oldObj, function(value, key){
+					if(!dt[key]){
+						ths.delete(oldObj, key);
+					}
+				});
+
+			}else{
+				ths.add(obj, keyName, dt);
 			}
-			ths.add(obj, keyName, dt);
 		},
 		update : function(obj, keyName, dt){
 			if(!$.isObject(obj)){
@@ -2660,6 +2691,7 @@ function debugTime(key){
 
 			//值新增 空值、已删除、类型不同
 			if($.isEmpty(setObj) || (delObj && delObj[keyName]) || ($.isObject(setObj) && $.isObject(dt) && setObj.__proto__.constructor !== dt.__proto__.constructor)){
+
 				ths.reset(obj, keyName, dt);
 
 				delObj && delObj[keyName] && delete delObj[keyName];
@@ -2675,7 +2707,6 @@ function debugTime(key){
 							$.def.delete(setObj, k);
 						}
 					});
-
 					//遍历新数据，判断增删改
 					$.loop(dt, function(newV, k){
 						//旧数据存在 则更新
@@ -2710,29 +2741,30 @@ function debugTime(key){
 			if(!$.isObject(obj) || !$.isset(keyName)){
 				return;
 			}
+
 			var ths = this;
 			var objID = $.objectID(obj);
 			var objEvent = ths.Event[objID];
-
-			$.loop($.explode(' ', keyName, ''), function(key){
+			$.loop($.explode(' ', keyName.toString(), ''), function(key){
 				var delObj = obj[key];
+
 				var delID = $.objectID(delObj);
 				if(!delID){
 					return;
 				}
+
 				//如果被删除的是一个对象 则保存它的ID 以便重新给它赋值时使用
 				if($.isObject(delObj)){
 					ths.deleteObjectIdList[objID] = ths.deleteObjectIdList[objID] || {};
-					ths.deleteObjectIdList[objID][keyName] = delID;
+					ths.deleteObjectIdList[objID][key] = delID;
 				}
 
 				var thsE = ths.Event[delID];
 				if(thsE){
 					thsE.run('delete', obj, key);
 				}
-				var eventDt = objEvent && objEvent.monitor[key] ? objEvent.monitor[key] : null;
-				if(eventDt){
-					eventDt.run('delete', obj, key);
+				if(objEvent.delete){
+					objEvent.run('delete', obj, key);
 				}
 				//删除对象所有的监听事件
 				ths.clearGobalEvent(obj,key);
@@ -2966,7 +2998,7 @@ function debugTime(key){
 						}
 					}
 				}
-
+				Config.init && Config.init(ths);
 				return {
 					el : ths.EL,
 					cache : ths.cache,
@@ -3586,7 +3618,7 @@ function debugTime(key){
 				//收集监控变量
 				Es.prototype.G = function (obj, objKey, func){
 					if(func) {
-						$.def.createEvent('set reset add delete', obj, objKey, func);
+						$.def.createEvent('set add delete reset', obj, objKey, func);
 					}
 				}
 
@@ -3647,7 +3679,6 @@ function debugTime(key){
 					}
 
 
-
 					$.loop(dt, function(value, key){
 						cache[key] = cache[key] || [];
 						var node = pushNode(value, key);
@@ -3666,59 +3697,77 @@ function debugTime(key){
 
 
 
-					//监听 loop添加数据动作
-					$.def.createEvent('add', dt, function(value, key){
+
+					function _addFun(value, key){
 						var lastDom = cache.Placeholder;
-							//跳过无变化的数据
-							if(value === dt[key] && cache[key]){
-								return;
-							}
+						//跳过无变化的数据
+						if(value === dt[key] && cache[key]){
+							return;
+						}
+						cache[key] = [];
+						//根据数据创建节点
+						var node = pushNode(value, key);
 
-							cache[key] = [];
-							//根据数据创建节点
-							var node = pushNode(value, key);
-							//节点信息push到缓存
-							if (node.nodeType === 11) {
-								$.loop(node.childNodes, function (v) {
-									cache[key].push(v);
-								});
-							} else {
-								cache[key].push(node);
-							}
+						//节点信息push到缓存
+						if (node.nodeType === 11) {
+							$.loop(node.childNodes, function (v) {
+								cache[key].push(v);
+							});
+						} else {
+							cache[key].push(node);
+						}
 
-							if (!lastDom) {
-								//重新遍历cache在对应位置节点上添加 目的是保持顺序
-								var objKeys = Object.keys(cache);
-								var prevV;
-								$.loop(objKeys, function (sv, sk) {
-									if (sv == key) {//找到当前顺序
-										if (sk === 0) {
-											lastDom = cache[objKeys[sk + 1]][0]; //添加位置 取 下一个列表第一个
+						if (!lastDom) {
+							//重新遍历cache在对应位置节点上添加 目的是保持顺序
+							var objKeys = Object.keys(cache);
+							var prevV;
+							$.loop(objKeys, function (sv, sk) {
+								if (sv == key) {//找到当前顺序
+									if (sk === 0) {
+										var currCache = cache[objKeys[sk + 1]];
+										if(currCache){
+											lastDom = currCache[0]; //添加位置 取 下一个列表第一个
 											$(lastDom).before(cache[key]);
-										} else {
-											lastDom = prevV[prevV.length - 1]; //添加位置 取 上一个列表最后一个
+										}
+
+									} else {
+										var currCache = prevV[prevV.length - 1];
+										if(currCache){
+											lastDom = currCache; //添加位置 取 上一个列表最后一个
 											$(lastDom).after(cache[key]);
 										}
-										return true; //跳出循环
 									}
-									prevV = cache[sv];//记录上一次的元素列表
-								});
-								prevV = null;
-							} else {
-								$(lastDom).after(cache[key]);
-							}
+									return true; //跳出循环
+								}
+								prevV = cache[sv];//记录上一次的元素列表
+							});
+							prevV = null;
+						} else {
+							$(lastDom).after(cache[key]);
+						}
 
-							//如果存在占位节点则删除
-							if (cache.Placeholder) {
-								$(lastDom).remove();
-								delete cache.Placeholder;
-							}
+						//如果存在占位节点则删除
+						if (cache.Placeholder) {
+							$(lastDom).remove();
+							delete cache.Placeholder;
+						}
+					}
+
+					//监听 loop添加数据动作
+					$.def.createEvent('add', dt, _addFun);
+					$.def.createEvent('delete', dt, function(){
+						$.loop(cache, function(v, k){
+							$(v).remove();
+							delete cache[k];
+						});
+						ths.cache.loopscope[loopKey] = cache;
 					});
-
+/*
 					$.def.createEvent('reset', dt, function(value){
 						var newKey = [];
 						$.loop(value, function(val, k){
 							newKey.push(k);
+							_addFun(val, k);
 						});
 						$.loop(cache, function(v, k){
 							if(!$.inArray(k, newKey)){
@@ -3728,13 +3777,8 @@ function debugTime(key){
 						});
 						ths.cache.loopscope[loopKey] = cache;
 					});
-					$.def.createEvent('delete', dt, function(){
-						$.loop(cache, function(v, k){
-							$(v).remove();
-							delete cache[k];
-						});
-						ths.cache.loopscope[loopKey] = cache;
-					});
+					*/
+
 					//如果loop没有数据 则创建一个占位符
 					if(!$.count(cache)){
 						newEle.appendChild(_loopcreateCom());
@@ -4039,10 +4083,8 @@ function debugTime(key){
 
 
 	$.isEmpty = function(v){
-		if($.isObjectPlain(v)){
+		if($.isObject(v)){
 			return Object.keys(v).length === 0;
-		}else if($.isArray(v)){
-			return v.length === 0;
 		}else{
 			return v === '' || v === undefined;
 		}
