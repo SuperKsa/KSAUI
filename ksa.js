@@ -2471,27 +2471,39 @@ function debugTime(key){
 						$.loop(ths[ac], function (f) {
 							f(newV, keyName, newObj);//添加数据回调键名与数据 第一个回调参数必须是新值
 						});
-						//删除操作 重置监听列表 只保留重置reset
-						if(ac ==='delete'){
+						//删除与重置操作 清理监听列表 重置后必须重新添加监听事件
+						if(ac ==='delete' || ac ==='reset'){
 							delete ths.set;
 							delete ths.get;
 							delete ths.add;
 							delete ths.delete;
 							delete ths.monitor;
-						//重置事件回调后删除回调队列
-						}else if(ac ==='reset'){
-							delete ths.reset;
 						}
+					}
+					if(ths.monitor && ths.monitor[keyName]){
+						$.loop(ths.monitor[keyName][ac], function (f) {
+							f(newV, keyName, newObj);//添加数据回调键名与数据 第一个回调参数必须是新值
+						});
+						//删除操作 重置监听列表 只保留重置reset
+						if(ac ==='delete' || ac ==='reset'){
+							delete ths.monitor[keyName].set;
+							delete ths.monitor[keyName].get;
+							delete ths.monitor[keyName].add;
+							delete ths.monitor[keyName].delete;
+							delete ths.monitor[keyName].monitor;
+							//重置事件回调后删除回调队列
+						}
+					}
 
-						if ($.def.debug) {
-							debug({
-								action : '创建监听链',
-								def : ac,
-								objID : $.objectID(newObj),
-								keyName : keyName,
-								value : newV
-							});
-						}
+
+					if ($.def.debug) {
+						debug({
+							txt : '触发监听链',
+							action : ac,
+							objID : $.objectID(newObj),
+							keyName : keyName,
+							value : newV
+						});
 					}
 				}
 			};
@@ -2524,7 +2536,7 @@ function debugTime(key){
 
 			$.loop($.explode(' ', action, ''), function(ac){
 				if($.isset(keyName)){
-					$.loop($.explode(' ', keyName,''),  function(val){
+					$.loop($.explode(' ', keyName.toString(),''),  function(val){
 						evnObj.monitor = evnObj.monitor || {};
 						if(!evnObj.monitor[val]){
 							evnObj.monitor[val] = ths.newQueue();
@@ -2611,7 +2623,6 @@ function debugTime(key){
 				});
 			}*/
 		},
-
 		/**
 		 * 值被删除后的重写
 		 * @param obj
@@ -2741,7 +2752,6 @@ function debugTime(key){
 			if(!$.isObject(obj) || !$.isset(keyName)){
 				return;
 			}
-
 			var ths = this;
 			var objID = $.objectID(obj);
 			var objEvent = ths.Event[objID];
@@ -2758,14 +2768,12 @@ function debugTime(key){
 					ths.deleteObjectIdList[objID] = ths.deleteObjectIdList[objID] || {};
 					ths.deleteObjectIdList[objID][key] = delID;
 				}
+				//待删除对象
+
 
 				var thsE = ths.Event[delID];
-				if(thsE){
-					thsE.run('delete', obj, key);
-				}
-				if(objEvent.delete){
-					objEvent.run('delete', obj, key);
-				}
+				thsE && thsE.run('delete', obj, key);
+				objEvent && objEvent.run('delete', obj, key);
 				//删除对象所有的监听事件
 				ths.clearGobalEvent(obj,key);
 				delete obj[key];
@@ -3644,7 +3652,6 @@ function debugTime(key){
 							node = _ts.C(node);
 						}
 						//loop删除数据监听
-
 						$.def.createEvent('delete', dt, key, function(){
 
 							//如果缓存中只有一个循环时 先创建占位节点
@@ -3755,6 +3762,7 @@ function debugTime(key){
 
 					//监听 loop添加数据动作
 					$.def.createEvent('add', dt, _addFun);
+					/*
 					$.def.createEvent('delete', dt, function(){
 						$.loop(cache, function(v, k){
 							$(v).remove();
@@ -3762,7 +3770,7 @@ function debugTime(key){
 						});
 						ths.cache.loopscope[loopKey] = cache;
 					});
-/*
+
 					$.def.createEvent('reset', dt, function(value){
 						var newKey = [];
 						$.loop(value, function(val, k){
@@ -3810,9 +3818,10 @@ function debugTime(key){
 					//解析当前域的条件 返回 为真的条件顺序
 					function _factor(){
 						var index = null;
+
 						$.loop(Args, function(value , i){
 							//如果是else 或者条件结果为真 则跳出循环 不再执行下一个if条件
-							if(value[0] ==='else' || value[0]()){
+							if($.isNull(index) && (value[0] ==='else' || value[0]())){
 								index = i;
 								return true; //跳出loop循环
 							}
@@ -3863,6 +3872,7 @@ function debugTime(key){
 					var pushDom = _parse(ifIndex);
 
 					function monFunc(){
+
 						var index = _factor(); //得到当前为真的条件顺序
 						if(index !== ifIndex){
 							var lastDom = pushDom[pushDom.length-1];
