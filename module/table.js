@@ -21,6 +21,7 @@ $.table = function(options){
             });
             ths.dom = ths.createHtml();
             this.get(1, function(dt){
+                ths.$data.List = dt.List ? dt.List : {};
                 if($.isset(dt.Counts)) {
                     ths.dom += '{{if Counts && Math.ceil(Counts / limit) >1}}<div class="ks-tc ks-mt"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.Counts / dt.limit) + '" @change="toPages(this.value)"></ks-page></div>{{/if}}';
                 }
@@ -85,7 +86,6 @@ $.table = function(options){
                 });
                 callFun && callFun.call(ths, dt);
                 ths.$data.ksauiLoading = 0;
-                debug(ths.$data.List);
             });
         },
         createBtn : function(dt, clickEvent, eventParm){

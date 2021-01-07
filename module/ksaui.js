@@ -125,7 +125,7 @@ $.ksauiRenderTree = {};
                 }
             });
         }
-    }
+    };
 
     $.render = function (selector, func, monitor) {
         if ($.isObject(selector) && !func) {
@@ -135,7 +135,7 @@ $.ksauiRenderTree = {};
         } else {
             $.ksauiRenderTree[selector] = {callback : func, monitor : monitor};
         }
-    }
+    };
 
     /**
      * 移动端 不转页后退事件监听
@@ -191,7 +191,7 @@ $.ksauiRenderTree = {};
                 $this.BackEventData.doms = newevn;
             });
         }
-    }
+    };
 
     /**
      * 监听窗口变化并在窗口变化后回调
@@ -212,7 +212,7 @@ $.ksauiRenderTree = {};
             Fun && typeof (Fun) == 'function' && Fun(window.innerWidth, window.innerHeight);
             $this.deviceView = typeof (window.orientation) && $.inArray(window.orientation, [0, -90]) ? 0 : 1;
         });
-    }
+    };
 
     /**
      * 本地缓存操作
@@ -247,7 +247,7 @@ $.ksauiRenderTree = {};
         } else {
             return false;
         }
-    }
+    };
     /**
      * 定位浮动层 限制在当前窗口内自适应围绕
      * @param centerObj 相对DOM对象
@@ -265,7 +265,7 @@ $.ksauiRenderTree = {};
             offset.top = offset.top - fellows.height(true) - centerObj.height(true);
         }
         fellows.css(offset);
-    }
+    };
 
     /**
      * 关闭当前iframe所在的父级layer
@@ -278,7 +278,7 @@ $.ksauiRenderTree = {};
         if (id) {
             window.parent.$.layerHide(id);
         }
-    }
+    };
 
     /**
      * 删除弹出层
@@ -315,7 +315,7 @@ $.ksauiRenderTree = {};
                 }
             }, 200);
         }
-    }
+    };
 
     /**
      * 创建一个弹窗（所有弹出层 底层驱动）
@@ -707,7 +707,7 @@ $.ksauiRenderTree = {};
 
 
         return R.init();
-    };
+    };;
 
     /**
      * 对话框操作 (基于layer层)
@@ -743,6 +743,7 @@ $.ksauiRenderTree = {};
                 op.btn = btn;
                 op.outTime = 0;
                 op.cover = 1;
+                op.maxWidth = '80%';
                 op.btnFun = function (a) {
                     if (a == 'confirm' && typeof (callFun) == 'function') {
                         return callFun.apply(this, arguments);
@@ -802,7 +803,7 @@ $.ksauiRenderTree = {};
                 break;
         }
         return $.layer(op);
-    }
+    };
 
     /**
      * mini提示框
@@ -833,7 +834,7 @@ $.ksauiRenderTree = {};
             outTime : outTime,
             backEvent : false
         });
-    }
+    };
 
     /**
      * 创建一个新的全屏页面
@@ -856,7 +857,7 @@ $.ksauiRenderTree = {};
             pos : '00',
             class : 'openWindow'
         }));
-    }
+    };
 
 
     /**
@@ -895,18 +896,18 @@ $.ksauiRenderTree = {};
             F && (F = F.replace(k, val));
         });
         return F ? F : obj;
-    }
+    };
 
 //指定月份多少天
     $.days = function (y, m) {
         return new Date(y, m, 0).getDate();
-    }
+    };
 
 //指定日期星期几
     $.week = function (y, m, d) {
         var w = new Date(y + '-' + m + '-' + d).getDay();
         return w == 0 ? 7 : w; //周日序号为7
-    }
+    };
 
     /**
      * AJAX请求
@@ -969,7 +970,7 @@ $.ksauiRenderTree = {};
         }
         $.ajax(option);
         return false;
-    }
+    };
 
     /**
      * AJAX url 并弹出一个远端内容框
@@ -985,7 +986,7 @@ $.ksauiRenderTree = {};
                 cover : 1
             });
         });
-    }
+    };
 
     /**
      * 表单AJAX提交
@@ -1021,7 +1022,7 @@ $.ksauiRenderTree = {};
         });
 
         return false;
-    }
+    };
 
     /**
      * 快速上传函数
@@ -1032,20 +1033,27 @@ $.ksauiRenderTree = {};
      */
     $.upload = function (name, files, url, callFun) {
         name = name ? name : 'upload';
-        files = files.files;
-        if (files.length > 1 && name.indexOf('[]') === -1) {
-            name += '[]';
-        }
         var formData = new FormData();
-        $.loop(files, function (val) {
-            if (val.size && val.type) {
-                formData.append(name, val);
+        debug(files);
+        if(files instanceof Blob) {
+            formData.append(name, files);
+        }else{
+            files = files.files;
+            if (files.length > 1 && name.indexOf('[]') === -1) {
+                name += '[]';
             }
-        });
+            $.loop(files, function (val) {
+                if (val.size && val.type) {
+                    formData.append(name, val);
+                }
+            });
+        }
+
+
         this.API(url, formData, function (data) {
             callFun(data);
         }, null, 'json', 1);
-    }
+    };
 
     /**
      * html标签生成
@@ -1068,7 +1076,7 @@ $.ksauiRenderTree = {};
             h += '</' + tp + '>';
         }
         return h;
-    }
+    };
 
 
     /**
@@ -1111,7 +1119,7 @@ $.ksauiRenderTree = {};
             return false;
         });
         return this;
-    }
+    };
 
 
     /**
@@ -1196,7 +1204,7 @@ $.ksauiRenderTree = {};
         }
 
         return [select, multiple, '<ks-list class="ks-list-select" ' + (multiple ? ' multiple="multiple"' : '') + '>' + options(data) + '</ks-list>'];
-    }
+    };
 
 
 //将JSON数据转换为HTML菜单列表
@@ -1223,7 +1231,7 @@ $.ksauiRenderTree = {};
             }
         });
         return '<ks-list class="ks-list-select" ' + (multiple ? ' multiple="multiple"' : '') + '>' + h + '</ks-list>';
-    }
+    };
 
     function select_html_json(select, defValue, Nums) {
         Nums = Nums || 0;
@@ -1246,7 +1254,7 @@ $.ksauiRenderTree = {};
             json.option.push(v);
         });
         return json;
-    }
+    };
 
     /**
      * select下拉菜单模拟
@@ -1370,7 +1378,7 @@ $.ksauiRenderTree = {};
         }, layerOption, {class : 'ks-layer-select'});
 
         return $.layer(layerOption);
-    }
+    };
 
     /**
      * 弹出一个日期输入框
@@ -1595,7 +1603,7 @@ $.ksauiRenderTree = {};
 
             }
         });
-    }
+    };
     /**
      * 弹出菜单
      * @param {document} obj 触发元素
@@ -1694,7 +1702,7 @@ $.ksauiRenderTree = {};
         }
 
         this.on(action === 'hover' ? 'mouseenter' : action, _funShow);
-    }
+    };
 
     /**
      * 地区选择组件
@@ -1877,7 +1885,7 @@ $.ksauiRenderTree = {};
                 });
             }
         });
-    }
+    };
 
 //title提示文字处理
     $.showTip = function (obj, txt, click) {
@@ -1907,7 +1915,7 @@ $.ksauiRenderTree = {};
                 tip.remove();
             }, 10);
         });
-    }
+    };
     /**
      * 幻灯轮播
      * @param options
@@ -2110,7 +2118,7 @@ $.ksauiRenderTree = {};
         }
 
         return this;
-    }
+    };
 
 
     /**
@@ -2227,7 +2235,11 @@ $.ksauiRenderTree = {};
                     } else if (value.type == 'select') {
                         H += '<select name="' + value.name + '" class="ks-select" ' + value.style + '>';
                         $.loop(value.option, function (v, k) {
-                            H += '<option value="' + k + '" ' + (value.value == k ? ' selected' : '') + '>' + v + '</option>';
+                            if($.isObject(v)){
+                                k = v.id;
+                                v = v.value;
+                            }
+                            H += $.tag('option', {value:k, selected: value.value == k ? true : null}, v);
                         });
                         H += '</select>';
                         //日期
@@ -2272,8 +2284,46 @@ $.ksauiRenderTree = {};
         });
         H += '</ks-form></form>';
         return H;
-    }
-    ;
+    };
+
+    $.imgZoom = function(file, maxWidth, maxHeight, callFun){
+        file = file.files[0];
+        var reader = new FileReader();
+        reader.readAsDataURL(file);
+        var img = new Image();
+        reader.onload = function(e) {
+            img.src = e.target.result
+        }
+        img.onload = function(e){
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('2d');
+            var originWidth = this.width,
+                originHeight = this.height,
+                width = originWidth,
+                height = originHeight;
+            if (originWidth > maxWidth || originHeight > maxHeight) {
+                if (originWidth / originHeight > 1) {
+                    // 宽图片
+                    width = maxWidth;
+                    height = Math.round(maxWidth * (originHeight / originWidth));
+                } else {
+                    // 高图片
+                    height = maxHeight;
+                    width = Math.round(maxHeight * (originWidth / originHeight));
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            context.clearRect(0, 0, width, height);
+            // 图片绘制
+            context.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(function(blob) {
+                blob = new File([blob], file.name, file);
+                callFun && callFun(blob);
+            }, file.type, 1);
+        }
+
+    };
 
     (function () {
 
@@ -2677,31 +2727,91 @@ $.ksauiRenderTree = {};
             'input[type="ks-pic"]' : function(t){
                 var t = $(t), attrs = t.attr();
                 t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
-
+                //多图片上传模式 name最后存在[]
+                var isMultiple = /^.+\[\]$/g.test(attrs.name);
                 t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
                 if(attrs.value){
-                    t.parent().before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
-                }
-                t.change(function(){
-                    if(!attrs.api){
-                        $.toast('组件缺少api属性');
-                        return false;
+                    try {
+                        //多图模式
+                        if(isMultiple){
+                            //解析value值 必须传入(必须单引号) {'id'123, src:'图片地址'}
+                            attrs.value = JSON.parse(attrs.value.replace(/'/g,'"'));
+                            $.loop(attrs.value, function(val){
+                                if(val.id){
+                                    t.parent().parent().before('<ks-pic><ks-pic-thumb>'+
+                                             '<img src="'+val.src+'">'+
+                                             '<span icon="delete-bin-2-fill"></span>'+
+                                             '<input type="hidden" name="'+attrs.name+'" value="'+val.id+'">'+
+                                             '</ks-pic-thumb></ks-pic>');
+                                }
+                            });
+                        //单图模式
+                        }else{
+                            t.parent().before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
+                        }
+                    }catch (e) {
                     }
-                    $.upload('upload', t[0], attrs.api, function(dt){
-                        var h = '';
-                        $.loop(dt.List,function(value){
+
+                }
+
+                function _inset(picList){
+                    var h = '';
+                    if(isMultiple){
+                        $.loop(picList,function(value){
+                            h += '<ks-pic><ks-pic-thumb>'+
+                                 '<img src="'+value.src+'">'+
+                                 '<input type="hidden" name="'+attrs.name+'" value="tmp:'+value.aid+'">'+
+                                 '<span icon="delete-bin-2-fill" delapi="'+attrs.api+'Del?aid='+value.aid+'"></span>'+
+                                 '</ks-pic-thumb></ks-pic>';
+                        });
+                        t.parent().parent().before(h);
+                    }else{
+                        $.loop(picList,function(value){
                             h += '<ks-pic-thumb>'+
                                  '<img src="'+value.src+'">'+
                                  '<input type="hidden" name="'+attrs.name+'" value="'+value.aid+'">'+
                                  '</ks-pic-thumb>';
                         });
-                        t.val('');
                         var label = t.parent();
                         label.prev().remove();
                         label.before(h);
-                    });
+                    }
+                    t.val('');
+                }
+
+                t.change(function(){
+                    if(!attrs.api){
+                        $.toast('组件缺少api属性');
+                        return false;
+                    }
+                    //如果存在缩放属性时 则缩放后再上传
+                    if(attrs.zoomhidth || attrs.zoomheight || attrs.zoom){
+                        $.imgZoom(this, (attrs.zoomwidth || 1920), (attrs.zoomweight || 1080), function(blob){
+                            $.upload('upload', blob, attrs.api, function(dt){
+                                _inset(dt.List);
+                            });
+                        });
+                    }else{
+                        $.upload('upload', t[0], attrs.api, function(dt){
+                            _inset(dt.List);
+                            /*
+                            var h = '';
+                            $.loop(dt.List,function(value){
+                                h += '<ks-pic-thumb>'+
+                                     '<img src="'+value.src+'">'+
+                                     '<input type="hidden" name="'+attrs.name+'" value="'+value.aid+'">'+
+                                     '</ks-pic-thumb>';
+                            });
+                            t.val('');
+                            var label = t.parent();
+                            label.prev().remove();
+                            label.before(h);
+                            */
+                        });
+                    }
                 });
             },
+            /*
             'input[type="ks-pics"]' : function(t){
                 var t = $(t), attrs = t.attr();
                 var fname = attrs.name;
@@ -2743,6 +2853,7 @@ $.ksauiRenderTree = {};
                     });
                 });
             },
+            */
             'input[type="ks-file"]' : function(t){
                 var t = $(t), attrs = t.attr();
                 t.attr('type', 'file').css('display','none');

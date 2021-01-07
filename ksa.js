@@ -2653,18 +2653,21 @@ function debugTime(key){
 				originalID && ths.Event[originalID] && ths.Event[originalID].run('reset', obj, keyName, dt);
 
 				var oldObj = obj[keyName];
-				//新增的数据
-				$.loop(dt, function(value, key){
-					if(!oldObj[key]){
-						ths.add(oldObj, key, value);
-					}
-				});
-				//删除的数据
-				$.loop(oldObj, function(value, key){
-					if(!dt[key]){
-						ths.delete(oldObj, key);
-					}
-				});
+				if(oldObj){
+					//新增的数据
+					$.loop(dt, function(value, key){
+						if(!oldObj[key]){
+							ths.add(oldObj, key, value);
+						}
+					});
+					//删除的数据
+					$.loop(oldObj, function(value, key){
+						if(!dt[key]){
+							ths.delete(oldObj, key);
+						}
+					});
+				}
+
 
 			}else{
 				ths.add(obj, keyName, dt);
