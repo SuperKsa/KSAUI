@@ -520,7 +520,7 @@ $.ksauiRenderTree = {};
                     } else {
                         $.loop(option.btn, function (val, k) {
                             val = val.split(':');
-                            s += $.tag('ks-btn', {class : '_' + k, 'data-btn-index' : k, color : val[1]}, val[0]);
+                            s += $.tag('ks-btn', {class : '_' + k, 'data-btn-index' : k, color : val[1], cap:$.isMobile}, val[0]);
                         });
                     }
                     dom += s ? '<div class="ks-layer-bottom">' + s + '</div>' : '';
