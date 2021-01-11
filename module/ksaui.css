@@ -4503,6 +4503,13 @@ ks-area[maxlevel='4'] span {
   padding-left: 10px;
   padding-right: 10px;
 }
+ks-star {
+  color: #FFA101;
+}
+ks-star[value='0'] > *,
+ks-star > [active] ~ * {
+  color: #ccc;
+}
 .ks-menu > * {
   padding: 10px;
   display: block;

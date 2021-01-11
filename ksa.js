@@ -2758,24 +2758,21 @@ function debugTime(key){
 			var ths = this;
 			var objID = $.objectID(obj);
 			var objEvent = ths.Event[objID];
+
 			$.loop($.explode(' ', keyName.toString(), ''), function(key){
 				var delObj = obj[key];
 
 				var delID = $.objectID(delObj);
-				if(!delID){
-					return;
+				if(delID) {
+					//如果被删除的是一个对象 则保存它的ID 以便重新给它赋值时使用
+					if ($.isObject(delObj)) {
+						ths.deleteObjectIdList[objID] = ths.deleteObjectIdList[objID] || {};
+						ths.deleteObjectIdList[objID][key] = delID;
+						//待删除对象
+						ths.Event[delID] && ths.Event[delID].run('delete', obj, key);
+					}
 				}
 
-				//如果被删除的是一个对象 则保存它的ID 以便重新给它赋值时使用
-				if($.isObject(delObj)){
-					ths.deleteObjectIdList[objID] = ths.deleteObjectIdList[objID] || {};
-					ths.deleteObjectIdList[objID][key] = delID;
-				}
-				//待删除对象
-
-
-				var thsE = ths.Event[delID];
-				thsE && thsE.run('delete', obj, key);
 				objEvent && objEvent.run('delete', obj, key);
 				//删除对象所有的监听事件
 				ths.clearGobalEvent(obj,key);

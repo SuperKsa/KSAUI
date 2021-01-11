@@ -1654,6 +1654,13 @@ ks-area {
 	}
 }
 
+//============== 星星评分显示组件 ==============
+ks-star {
+	color: #FFA101;
+	&[value='0'] > *,
+	> [active] ~ * { color: #ccc;}
+}
+
 //============== 菜单 ==============
 .ks-menu > * { padding: 10px; display: block;}
 .ks-menu > .ks-label { margin-bottom: 0}

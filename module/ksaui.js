@@ -1325,7 +1325,7 @@ $.ksauiRenderTree = {};
         data.value = data.value && !$.isArray(data.value) ? [data.value] : data.value;
         layerOption = layerOption || {};
         layerOption = $.arrayMerge({
-            title : data.label ? data.label : false, //弹窗标题
+            title : data.label ? (data.title || data.label) : false, //弹窗标题
             pos : $.isMobile ? '8' : btn,
             cover : $.isMobile ? 2 : 0,
             content : select_json_html(data, data.value, data.multiple),
@@ -2233,16 +2233,20 @@ $.ksauiRenderTree = {};
 
                         //下拉选择
                     } else if (value.type == 'select') {
-                        H += '<select name="' + value.name + '" class="ks-select" ' + value.style + '>';
+
+                        var opth = '';
                         $.loop(value.option, function (v, k) {
                             if($.isObject(v)){
                                 k = v.id;
                                 v = v.value;
                             }
-                            H += $.tag('option', {value:k, selected: value.value == k ? true : null}, v);
+                            opth += $.tag('option', {value:k}, v);
                         });
-                        H += '</select>';
-                        //日期
+                        value.type = 'ks-'+value.type;
+                        delete value.option;
+                        H += $.tag('select', value, opth);
+
+                    //日期
                     } else if (value.type == 'date') {
                         H += $.tag('input', {
                             type : 'ks-date',
@@ -2811,49 +2815,6 @@ $.ksauiRenderTree = {};
                     }
                 });
             },
-            /*
-            'input[type="ks-pics"]' : function(t){
-                var t = $(t), attrs = t.attr();
-                var fname = attrs.name;
-                fname = fname ? fname+'[]' : '';
-                t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
-                if(attrs.value){
-                    attrs.value = attrs.value.replace(/'/g,'"');
-                    try {
-                        $.loop(JSON.parse(attrs.value), function(val){
-
-                            if(val.id){
-                                t.before('<ks-pic><ks-pic-thumb>'+
-                                         '<img src="'+val.src+'">'+
-                                         '<span icon="delete-bin-2-fill"></span>'+
-                                         '<input type="hidden" name="'+fname+'" value="'+val.id+'">'+
-                                         '</ks-pic-thumb></ks-pic>');
-                            }
-                        });
-                    }catch (e) {
-                    }
-                }
-                t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
-                t.change(function(){
-                    if(!attrs.api){
-                        $.toast('组件缺少api属性');
-                        return false;
-                    }
-                    $.upload('upload', t[0], attrs.api, function(dt){
-                        var h = '';
-                        $.loop(dt.List,function(value){
-                            h += '<ks-pic><ks-pic-thumb>'+
-                                 '<img src="'+value.src+'">'+
-                                 '<input type="hidden" name="'+fname+'" value="tmp:'+value.aid+'">'+
-                                 '<span icon="delete-bin-2-fill" delapi="'+attrs.api+'Del?aid='+value.aid+'"></span>'+
-                                 '</ks-pic-thumb></ks-pic>';
-                        });
-                        t.val('');
-                        t.parent().parent().before(h);
-                    });
-                });
-            },
-            */
             'input[type="ks-file"]' : function(t){
                 var t = $(t), attrs = t.attr();
                 t.attr('type', 'file').css('display','none');
@@ -2880,6 +2841,18 @@ $.ksauiRenderTree = {};
                 }
             })
         });
+
+        //星星评分显示
+        $.render('ks-star', function(ele){
+            var ele = $(ele), attr = ele.attr(), value = parseInt(attr.value || 0);
+            var h = '';
+            $.loop(parseInt(attr.max || 5), function(i){
+                h += '<i icon="star-fill" '+(value == i ? 'active' : '')+'></i>';
+            });
+            ele.html(h);
+
+        }, 'attr.value');
+
         //轮播图
         $.render('.ks-slide', function (ele) {
             ele = $(ele);
