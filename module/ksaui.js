@@ -1010,9 +1010,10 @@ $.ksauiRenderTree = {};
      * @returns {Boolean}
      */
     $.plugin.formSubmit = function (callFun) {
+        var loadingLayerID = $.toast('请稍后','','','',0).id;
         this.map(function (obj) {
             obj = $(obj);
-            var btn = obj.find('button[type=submit]');
+            var btn = obj.find('button[type=submit], input[type=submit], ks-btn[submit]');
             var btnTxt = btn.html();
             btn.addClass('btn-load').disabled(true).text(btnTxt);
             var formData = obj.formData(true);
@@ -1024,15 +1025,18 @@ $.ksauiRenderTree = {};
                     callFun(dt);
                 }
                 btn.removeClass('btn-load').disabled(false).html(btnTxt);
+                $.layerHide(loadingLayerID);
                 //如果当前是一个iframeLayer 则关闭当前layer
                 $.isObject(dt) && dt.success && $('body').attr('parentlayerid') && $.layerHideF();
             }, function () {
                 btn.removeClass('btn-load').disabled(false).html(btnTxt);
+                $.layerHide(loadingLayerID);
             }, 'json', 1);
 
             //30秒后解除提交按钮限制
             setTimeout(function () {
                 btn.removeClass('btn-load').disabled(false).html(btnTxt);
+                $.layerHide(loadingLayerID);
             }, 30 * 1000);
         });
 
@@ -2965,12 +2969,10 @@ $.ksauiRenderTree = {};
         $.render('ks-btn[submit]', function (dom) {
             dom = $(dom);
             var submits = dom.attr('submit');
-            dom.attr('submit', '');
             var form = submits ? $(submits) : dom.parents('form');
-
             if (form.length) {
                 dom.click(function () {
-                    form.submit();
+                    !dom.disabled() && form.submit();
                 });
             }
         });
