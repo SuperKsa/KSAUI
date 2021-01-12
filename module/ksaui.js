@@ -383,9 +383,10 @@ $.ksauiRenderTree = {};
                 if (!_this.isCache && option.ajaxUrl) {
                     $.API(option.ajaxUrl, option.ajaxPost, function (d) {
                         _this.layer.children('.ks-layer-content').html(d);
+                        option.ajaxCall && option.ajaxCall.call(_this.layer, _this.layer.children('.ks-layer-content').children('*'));
                         window.setTimeout(function(){
                             _this.pos();
-                        })
+                        });
                     });
                 }
                 return this.obj;
@@ -394,6 +395,10 @@ $.ksauiRenderTree = {};
             optionInit : function(){
                 if (typeof (option) == 'string' || (option instanceof $ && option[0].innerHTML)) {
                     option = {content : option};
+                }
+                //如果layer是一个远程url 则提示稍后
+                if(option.ajaxUrl){
+                    option.content = '请稍后';
                 }
                 option = $.arrayMerge({
                     el : $.layerEL || 'body', //弹窗位置被限制在哪个元素中
@@ -418,6 +423,7 @@ $.ksauiRenderTree = {};
                     maxHeight : 0, //内容区最大高度
                     height : null, //内容区固定高度
                 }, option);
+
                 //手机端默认监听后退事件
                 if (option.backEvent === null && $.isMobile) {
                     option.backEvent = 1;
@@ -770,8 +776,11 @@ $.ksauiRenderTree = {};
                 op.cover = 1;
                 op.btnFun = function (a, layer) {
                     if (a == 'confirm') {
-                        callFun && callFun.apply(this, arguments);
-                        p[2].action && layer.find('form').submit();
+                        if(p[2].action){
+                            layer.find('form').submit();
+                        }else{
+                            callFun && callFun.apply(this, arguments);
+                        }
                         return false;
                     }
                 };
@@ -781,14 +790,20 @@ $.ksauiRenderTree = {};
                 op.show = function (layer) {
                     layer.find('form').submit(function (e) {
                         e.stop();
-                        $(this).formSubmit(function (d) {
+                        var ts = this;
+                        $(ts).formSubmit(function (d) {
+                            callFun && callFun.call(ts, d);
                             if (d.success) {
                                 $.layerHide(layer.layerID);
                             }
                         });
                     });
                 };
-                op.pos = $.isMobile ? '00' : 5;
+                op.pos = 5;
+                if($.isMobile){
+                    op.pos = 8;
+                    op.width = '100%';
+                }
                 break;
             //默认 参数： 1=标题 2=内容 3=自动关闭时间 4=按钮文字 5=按钮回调函数 6=关闭回调函数
             default:
@@ -2163,7 +2178,7 @@ $.ksauiRenderTree = {};
                         H += value.before ? value.before : '';
                     }
                     //数字 普通输入框 密码框
-                    if ($.inArray(value.type, ['number', 'text', 'password'])) {
+                    if ($.inArray(value.type, ['number', 'text', 'password', 'tel'])) {
                         value.type = !value.unit ? 'ks-'+value.type : value.type;
                         delete value.label;
                         if(value.unit){
@@ -2582,9 +2597,9 @@ $.ksauiRenderTree = {};
                     $.showDate(t);
                 });
             },
-            'input[type="ks-text"]' : function (ele) {
+            'input[type="ks-text"], input[type="ks-tel"]' : function (ele) {
                 var t = $(ele), at = t.attr();
-                t.attr('type', 'text');
+                t.attr('type', at.type.substr(3));
 
                 t.wrap($.tag('label',{type : 'text', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
 
@@ -3023,6 +3038,7 @@ $.ksauiRenderTree = {};
                 }
                 ele.innerHTML = txt;
             }
+            _inup();
             $(ele).DOMchange('html', function(){
                 _inup();
             });

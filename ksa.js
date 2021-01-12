@@ -210,9 +210,20 @@ function debugTime(key){
 
 	function selectorStr(selector){
 		if(selector){
+			selector = selector.trim();
 			selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
 		}
 		return selector;
+	}
+
+	function selectorAll(dom, selector){
+		selector = selectorStr(selector);
+		var ele = dom.querySelectorAll(selector);
+		//如果选择器没有找到 尝试查找ks-selector属性
+		if(!ele.length && selector.indexOf('[') === -1){
+			ele = dom.querySelectorAll('[ks-selector="'+selector+'"]');
+		}
+		return ele;
 	}
 
 	function $(selector){
@@ -228,12 +239,15 @@ function debugTime(key){
 			} else if ($.isWindow(selector) || $.isDomAll(selector)) {
 				selector = [selector];
 
-			}else if($.isString(selector) && (selector = selector.trim()) && selector.indexOf('<') ==0 && selector.lastIndexOf('>') == selector.length-1 && selector.length >=3){
-				selector = createDom(selector, true);
-
 			}else if($.isString(selector)) {
-				selector = selector.replace(/(\:selected)/g, ':checked');//option需要使用checked选中
-				selector = [].slice.call(document.querySelectorAll(selectorStr(selector)));
+				selector = selectorStr(selector);
+				//选择器存在左尖括号并且大于3个字符 则认为是html源码 = 创建虚拟dom
+				if(selector.indexOf('<') ===0 && selector.length >=3){
+					selector = createDom(selector, true);
+				}else{
+					selector = [].slice.call(selectorAll(document, selector));
+				}
+
 			}else if($.isFunction(selector)){
 				$.ready(selector);
 				return;
@@ -1714,7 +1728,7 @@ function debugTime(key){
 		selector = selector || '*';
 		var rdom = $();
 		this.map(function(ele){
-			$.loop(ele.querySelectorAll(selectorStr(selector)), function(el){
+			$.loop(selectorAll(ele, selector), function(el){
 					rdom.push(el);
 			});
 		});
@@ -1917,14 +1931,34 @@ function debugTime(key){
 		this.each(function (_, ele) {
 			var kid = $.objectID(ele);
 			bindEventData[kid] = bindEventData[kid] || {};
+
 			$.loop(event, function (evn) {
+
 				if (evn == 'ready'){
 					return $(document).ready(callback);
 				}
 				var useCapture = false;
 
 				var func = function(e){
-						eventAddstopPropagation(e);
+					eventAddstopPropagation(e);
+					if(selector){
+						var selectEL = selectorAll(ele, selector);
+						$.loop(e.path, function(sel){
+							if($.inArray(sel, selectEL)){
+								//this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
+								if(callback.apply(sel, arguments) === false){
+									e.stop();
+								}
+							}
+						});
+					}else{
+						//this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
+						if(callback.apply(e.target, arguments) === false){
+							e.stop();
+						}
+					}
+
+					/*
 						//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
 						if(!selector || (selector && $.inArray(e.target, ele.querySelectorAll(selectorStr(selector))))){
 							//回调函数并获取返回值，若返回值为false则阻止冒泡
@@ -1933,6 +1967,7 @@ function debugTime(key){
 								e.stop();
 							}
 						}
+						*/
 				};
 				bindEventData[kid][evn] = bindEventData[kid][evn] || [];
 				bindEventData[kid][evn].push({callback:callback, selector:selector, useCapture:useCapture, addCallback:func});
@@ -1944,7 +1979,6 @@ function debugTime(key){
 				 */
 				evn = evn.replace(/\..*/,'');
 				ele.addEventListener(evn, func, useCapture);
-
 			})
 		});
 		return this;
@@ -2395,8 +2429,14 @@ function debugTime(key){
 			if(getType =='POST'){
 				if(!(option.data instanceof FormData)) {
 					var _data = new FormData();
-					$.loop(option.data, function(val, k){
-						_data.append(k, val);
+					$.loop(option.data, function(val, key){
+						if($.isObject(val)){
+							$.loop(val, function(v, k){
+								_data.append(key+'['+k+']', v);
+							});
+						}else{
+							_data.append(key, val);
+						}
 					});
 					option.data = _data;
 					_data = '';

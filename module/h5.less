@@ -106,7 +106,11 @@ ks-card {
     .ks-layer-bottom { border-top: 0; text-align: center;}
 }
 .ks-layer-select { width: 100%;
-    .ks-list-select > ks-list-item { padding: 0.3rem 0; font-size: 0.28rem}
+    .ks-list-select > ks-list-item {
+        padding: 0.3rem 0; font-size: 0.28rem; text-align: center;
+        &:after, &:before {content: ''; display: none}
+    }
+    .ks-layer-title ~ .ks-layer-content {padding-top: 0}
 }
 
 
