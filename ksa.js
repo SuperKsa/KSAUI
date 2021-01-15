@@ -3024,6 +3024,7 @@ function debugTime(key){
 
 		var ksaTpl = {
 			EL : $(Config.el)[0],
+			DOM : '',
 			isMonitor : $.isset(Config.isMonitor) ? Config.isMonitor : true,
 			data : Config.data || {},
 			methods : Config.methods || {},
@@ -3035,14 +3036,19 @@ function debugTime(key){
 			init : function(){
 				var ths = this;
 				ths.markMethods(ths.methods);
+				var codeIsScript = ths.EL && ths.EL.tagName === 'SCRIPT';
 				if(ths.Template) {
+					if(codeIsScript){
+						ths.Template = ths.Template.trim();
+					}
 					ths.ECODE = ths.vdom(ths.formatHTML());
 					var newDom = ths.parseVDOMcode(ths.ECODE);
+					ths.DOM = newDom;
 					ths.Html = $(newDom).html();
 					if (newDom) {
 						delete ths.ECODE;
 						if (ths.EL) {
-							if (ths.EL.tagName === 'SCRIPT') {
+							if (codeIsScript) {
 								$(ths.EL).after(newDom).remove();
 							} else {
 								$(ths.EL).html(newDom);

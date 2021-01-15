@@ -3265,6 +3265,7 @@ $.ksauiRenderTree = {};
 
 
             function _titleStatus(N) {
+                N = N || 0;
                 var el = title_item.eq(N);
                 var left = (el[0].offsetLeft + el.width(true) / 2);
                 titleStatus.css('left', left < 30 ? 30 : left);
@@ -3273,73 +3274,53 @@ $.ksauiRenderTree = {};
 
 
             var isTouch = $.isset(ele.attr('touch'));
-
             var title = ele.children('ks-tab-title');
-            var title_item = title.children('ks-tab-title-item');
+            var title_item = title.children('ks-tab-title-item'); //子级标题
+            var contentBox = ele.children('ks-tab-content'); //主内容框
+            var content_item = ele.find('ks-tab-item');
+            var itemLength = content_item.length;
 
-            var currIndex = 0;
             var code_title_status = '<ks-tab-title-status></ks-tab-title-status>';
-
-
-            var contentBox = ele.children('ks-tab-content');
-            //是否为自定义模式 存在标题与内容框
-            var isCustom = title.length && contentBox.length;
-
-            //dom准备
-            if (isCustom) {
-                title.append(code_title_status);
-            }else{
-                var item = ele.children('ks-tab-item');
-                var itemLength = item.length;
-                var itemTitle = '';
-                item.each(function (i, el) {
+            //如果标题栏不存在 则新建
+            if(!title.length){
+                title = $('<ks-tab-title></ks-tab-title>');
+                content_item.each(function (i, el) {
                     el = $(el);
-                    itemTitle += '<ks-tab-title-item index="' + i + '">' + (el.attr('label') || '') + '</ks-tab-title-item>';
+                    title.append($.tag('ks-tab-title-item', {index:i, active : el.active()}, (el.attr('label') || i) ));
                     el.attr({index : i});
                 });
-                ele.prepend('<ks-tab-title>' + itemTitle + code_title_status + '</ks-tab-title>');
-                title = ele.children('ks-tab-title');
-                itemTitle = null;
+                ele.prepend(title);
+                title_item = title.children('ks-tab-title-item');
             }
+            title.append(code_title_status);
             var titleStatus = title.children('ks-tab-title-status');
 
-            if(isCustom){
-                currIndex = title_item.filter('[active]').index();
-                _titleStatus(currIndex);
-                title_item.click(function(){
-                    _titleStatus($(this).index());
-                });
-                return; //自定义模式渲染结束 直接退出
+            //如果主内容框不存在 则创建
+            if(!contentBox.length){
+                content_item.wrapAll('<ks-tab-content></ks-tab-content>');
+                contentBox = ele.children('ks-tab-content');
             }
 
 
-            item.wrapAll('<ks-tab-content></ks-tab-content>');
-            contentBox = ele.children('ks-tab-content');
 
-
-            var title_item = title.children('ks-tab-title-item');
-
-
-
-            var eleWidth = contentBox.width(true);
-
-
-            var moveX = 0, currIndex = item.filter('[active]').index();
-            currIndex = currIndex === -1 ? 0 : currIndex;
+            var currIndex = title_item.filter('[active]').index() || 0,
+                moveX = 0,
+                eleWidth = contentBox.width(true),
+                touchMaxWidth = itemLength * eleWidth;
 
 
 
-            function _play(N) {
-                N = parseInt(N);
 
+
+            function  _play(N) {
+                N = parseInt(N || 0);
                 moveX = (0 - eleWidth * N);
-                isTouch ? contentBox.removeClass('ks-no-transition').css({transform : 'translateX(' + moveX + 'px)'}) : item.eq(N).show().active(true).siblings().hide().active(false);
-                _titleStatus(N);
+                isTouch ? contentBox.removeClass('ks-no-transition').css({transform : 'translateX(' + moveX + 'px)'}) : content_item.eq(N).show().active(true).siblings().hide().active(false);
             }
 
 
             title_item.click(function () {
-                _play($(this).attr('index'));
+                _titleStatus($(this).attr('index'));
             }).DOMchange('attr.active', function () {
                 var ths = $(this);
                 ths.active() && _play(ths.attr('index'));
@@ -3347,23 +3328,28 @@ $.ksauiRenderTree = {};
 
             if (isTouch) {
                 contentBox.wrap('<ks-tab-touch-content></ks-tab-touch-content>')
-                contentBox.width(itemLength * eleWidth);
-                item.width(eleWidth);
+                contentBox.width(touchMaxWidth);
+                content_item.width(eleWidth);
 
                 ele.children('ks-tab-touch-content').touch(function () {
 
                 }, function (evn, touch) {
                     if (touch.action === 'left' || touch.action === 'right') {
-                        contentBox.addClass('ks-no-transition').css({transform : 'translateX(' + (moveX + touch.moveX) + 'px)'})
+                        var mx = (moveX + touch.moveX);
+                        var max = 0 - (touchMaxWidth - eleWidth);
+                        mx = mx > 0 ? 0 : (mx < max ?  max : mx);
+                        contentBox.addClass('ks-no-transition').css({transform : 'translateX(' + mx + 'px)'})
                     }
                 }, function (evn, touch) {
                     //横向移动距离超过10%才触发 x
                     if (currIndex < itemLength - 1 && touch.action == 'left') {
                         currIndex++;
-                        _play(currIndex);
+                        //_play(currIndex);
+                        title_item.eq(currIndex).trigger('click'); //触发标题当前项click事件
                     } else if (currIndex > 0 && touch.action == 'right') {
                         currIndex--;
-                        _play(currIndex);
+                        //_play(currIndex);
+                        title_item.eq(currIndex).trigger('click'); //触发标题当前项click事件
                     } else {
                         contentBox.removeClass('ks-no-transition').css({transform : 'translateX(' + moveX + 'px)'})
                     }
@@ -3371,6 +3357,7 @@ $.ksauiRenderTree = {};
             }
 
             _play(currIndex);
+            _titleStatus(currIndex);
         });
 
         //自定义组件 tag标签关闭
