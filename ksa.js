@@ -486,7 +486,7 @@ function debugTime(key){
 						var old = ele[k];
 						if(old !== value){
 							ele[k] = value;
-							$(ele).trigger('KSADOMchange',['attr.'+k]);
+							$(ele).trigger('KSADOMchange',['attr.'+k, value, old]);
 						}
 					}
 				});
@@ -973,6 +973,10 @@ function debugTime(key){
 						ele.textContent = $.isFunction(value) ? value.call(ele, index, oldtxt) : value;
 						$(ele).trigger('KSADOMchange', ['html', value, oldtxt]);
 					}
+				}else if(ele.nodeType === 3){
+					var oldtxt = ele.textContent;
+					ele.textContent = $.isFunction(value) ? value.call(ele, index, oldtxt) : value;
+					$(ele).trigger('KSADOMchange', ['html', value, oldtxt]);
 				}
 			});
 			return this;
@@ -1010,7 +1014,7 @@ function debugTime(key){
 		if($.isset(value)){
 			this.map(function(ele, index){
 				$(ele).empty().append($.isFunction(value) ? value.call(ele, index, ele.innerHTML) : value);
-				$(ele).trigger('KSADOMchange', ['html']);
+				$(ele).trigger('KSADOMchange', ['html', value]);
 			});
 			return this;
 		}else{
@@ -1099,7 +1103,7 @@ function debugTime(key){
 		return tempDom.call(this, html, function(ele, node){
 			if(ele.parentNode){
 				ele.parentNode.insertBefore(node, ele.nextSibling);
-				$(ele).trigger('KSADOMchange', ['after']);
+				$(ele).trigger('KSADOMchange', ['after', html]);
 			}
 		}, true);
 	}
@@ -1114,7 +1118,7 @@ function debugTime(key){
 		return tempDom.call(this, html, function(ele, node){
 			if(ele.parentNode){
 				ele.parentNode.insertBefore(node, ele);
-				$(ele).trigger('KSADOMchange', ['before']);
+				$(ele).trigger('KSADOMchange', ['before', html]);
 			}
 		});
 	}
@@ -1131,7 +1135,7 @@ function debugTime(key){
 				return;
 			}
 			ele.appendChild(node);
-			$(ele).trigger('KSADOMchange', ['append']);
+			$(ele).trigger('KSADOMchange', ['append', html]);
 		});
 	}
 
@@ -1144,7 +1148,7 @@ function debugTime(key){
 	K.prepend = function (html) {
 		return tempDom.call(this, html, function(ele, node){
 			ele.insertBefore(node, ele.firstChild);
-			$(ele).trigger('KSADOMchange', ['prepend']);
+			$(ele).trigger('KSADOMchange', ['prepend', html]);
 		}, true);
 	}
 
@@ -3407,7 +3411,7 @@ function debugTime(key){
 							obj[key] = v;
 						});
 					}else if(tag ==='INPUT' || tag ==='TEXTAREA'){
-						ele.on('inpu KSADOMchange', function(){
+						ele.on('input KSADOMchange', function(){
 							obj[key] = ele.val();
 						});
 					}else if(tag ==='SELECT'){
@@ -3518,6 +3522,7 @@ function debugTime(key){
 					}
 					if($.isObject(tag) && tag.nodeType){
 						tag.textContent = textContent;
+						$(tag.parentElement).trigger('KSADOMchange',['html', textContent]);
 						return tag;
 					}
 					var ele;
@@ -3802,30 +3807,6 @@ function debugTime(key){
 
 					//监听 loop添加数据动作
 					$.def.createEvent('add', dt, _addFun);
-					/*
-					$.def.createEvent('delete', dt, function(){
-						$.loop(cache, function(v, k){
-							$(v).remove();
-							delete cache[k];
-						});
-						ths.cache.loopscope[loopKey] = cache;
-					});
-
-					$.def.createEvent('reset', dt, function(value){
-						var newKey = [];
-						$.loop(value, function(val, k){
-							newKey.push(k);
-							_addFun(val, k);
-						});
-						$.loop(cache, function(v, k){
-							if(!$.inArray(k, newKey)){
-								$(v).remove();
-								delete cache[k];
-							}
-						});
-						ths.cache.loopscope[loopKey] = cache;
-					});
-					*/
 
 					//如果loop没有数据 则创建一个占位符
 					if(!$.count(cache)){

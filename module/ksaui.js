@@ -1021,16 +1021,20 @@ $.ksauiRenderTree = {};
                 formData.append('FORMID', obj.attr('id'));
             }
             $.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function (dt) {
+                $.layerHide(loadingLayerID);
                 if (typeof callFun == 'function') {
                     callFun(dt);
                 }
                 btn.removeClass('btn-load').disabled(false).html(btnTxt);
-                $.layerHide(loadingLayerID);
+
                 //如果当前是一个iframeLayer 则关闭当前layer
-                $.isObject(dt) && dt.success && $('body').attr('parentlayerid') && $.layerHideF();
+                if($.isObject(dt) && dt.success && $('body').attr('parentlayerid')){
+                    $.layerHideF();
+                    window.parent.$.layerHide(loadingLayerID);
+                }
             }, function () {
-                btn.removeClass('btn-load').disabled(false).html(btnTxt);
                 $.layerHide(loadingLayerID);
+                btn.removeClass('btn-load').disabled(false).html(btnTxt);
             }, 'json', 1);
 
             //30秒后解除提交按钮限制
@@ -3027,22 +3031,29 @@ $.ksauiRenderTree = {};
 
         //自定义组件 价格标签
         $.render('ks-price', function (ele) {
-            function _inup(){
-                var txt = ele.innerHTML.trim();
-                txt = txt.replace(/([^0-9\.\,]+)/gi, '<unit>$1</unit>');
+            var ele = $(ele);
+            function _inup(v){
+
+                var txtele = ele.contents();
+                var txt = v ? v : txtele.eq(0).text().trim();
+                txtele.map(function(){
+                    this.textContent = '';
+                });
+                txtele.nextAll('', 1).remove();
+                txt = txt.replace(/([^0-9]+)/gi, '<unit>$1</unit>');
                 txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
 
-                if ($.isset($(ele).attr('split'))) {
+                if ($.isset(ele.attr('split'))) {
                     txt = txt.replace(/([0-9]+)\.?/, function (v) {
                         v = v.replace(/([0-9])([0-9]{3})$/g, '$1,$2');
                         return '<strong>' + v + '</strong>';
                     });
                 }
-                ele.innerHTML = txt;
+                ele.append(txt);
             }
             _inup();
-            $(ele).DOMchange('html', function(){
-                _inup();
+            ele.DOMchange('html', function(str){
+                _inup(str);
             });
         }, 'html');
 
