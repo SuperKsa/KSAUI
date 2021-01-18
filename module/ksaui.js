@@ -3286,8 +3286,7 @@ $.ksauiRenderTree = {};
                 title = $('<ks-tab-title></ks-tab-title>');
                 content_item.each(function (i, el) {
                     el = $(el);
-                    title.append($.tag('ks-tab-title-item', {index:i, active : el.active()}, (el.attr('label') || i) ));
-                    el.attr({index : i});
+                    title.append($.tag('ks-tab-title-item', {active : el.active()}, (el.attr('label') || i) ));
                 });
                 ele.prepend(title);
                 title_item = title.children('ks-tab-title-item');
@@ -3303,13 +3302,13 @@ $.ksauiRenderTree = {};
 
 
 
-            var currIndex = title_item.filter('[active]').index() || 0,
+            var currIndex = title_item.filter('[active]').index() >=0 || 0,
                 moveX = 0,
                 eleWidth = contentBox.width(true),
                 touchMaxWidth = itemLength * eleWidth;
 
 
-
+            contentBox.addClass('ks-clear');
 
 
             function  _play(N) {
@@ -3320,10 +3319,14 @@ $.ksauiRenderTree = {};
 
 
             title_item.click(function () {
-                _titleStatus($(this).attr('index'));
+                _titleStatus($(this).index());
             }).DOMchange('attr.active', function () {
                 var ths = $(this);
-                ths.active() && _play(ths.attr('index'));
+                if(ths.active()){
+                    var i = ths.index();
+                    _play(i);
+                    ths.trigger('click'); //触发标题当前项click事件
+                }
             });
 
             if (isTouch) {

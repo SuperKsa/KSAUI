@@ -2516,7 +2516,7 @@ function debugTime(key){
 							f(newV, keyName, newObj);//添加数据回调键名与数据 第一个回调参数必须是新值
 						});
 						//删除与重置操作 清理监听列表 重置后必须重新添加监听事件
-						if(ac ==='delete' || ac ==='reset'){
+						if(ac ==='reset'){
 							delete ths.set;
 							delete ths.get;
 							delete ths.add;
@@ -2529,7 +2529,7 @@ function debugTime(key){
 							f(newV, keyName, newObj);//添加数据回调键名与数据 第一个回调参数必须是新值
 						});
 						//删除操作 重置监听列表 只保留重置reset
-						if(ac ==='delete' || ac ==='reset'){
+						if(ac ==='reset'){
 							delete ths.monitor[keyName].set;
 							delete ths.monitor[keyName].get;
 							delete ths.monitor[keyName].add;
@@ -2657,15 +2657,6 @@ function debugTime(key){
 			events && events.run('add', obj, keyName, dt);
 			//给对象赋值
 			obj[keyName] = dt;
-			/*
-			if($.isObject(dt)){
-				var dtid = $.objectID(dt);
-				var dtEvn = ths.Event[dtid];
-
-				$.loop(dt, function(val, k){
-					dtEvn && dtEvn.run('add', dt, k, val);
-				});
-			}*/
 		},
 		/**
 		 * 值被删除后的重写
@@ -2722,6 +2713,17 @@ function debugTime(key){
 				return;
 			}
 			var ths = this;
+
+			if($.isObject(obj[keyName])){
+				//遍历旧数据 不存在的直接删除
+				$.loop(obj[keyName], function(v, k){
+					//如果新数据不存在 则删除
+					if(!$.isset(dt[k])){
+						$.def.delete(obj[keyName], k);
+					}
+				});
+			}
+
 			if($.isObject(dt)){
 				$.loop(dt, function(val, key){
 					ths.update(obj[keyName], key, val);
@@ -2738,6 +2740,10 @@ function debugTime(key){
 		 */
 		set : function(obj, keyName, dt){
 			if(!$.isObject(obj)){
+				return;
+			}
+			//新旧值完全相同则不做任何处理
+			if(obj[keyName] === dt){
 				return;
 			}
 			var ths = this,
@@ -2761,7 +2767,7 @@ function debugTime(key){
 					//遍历旧数据 不存在的直接删除
 					$.loop(setObj, function(oldV, k){
 						//如果新数据不存在 则删除
-						if(!dt[k]){
+						if(!$.isset(dt[k])){
 							$.def.delete(setObj, k);
 						}
 					});
@@ -2781,7 +2787,7 @@ function debugTime(key){
 				}
 			//原来的值不存在 添加
 			}else if(!$.isset(setObj)){
-				$.def.add(obj, keyName, dt);
+				ths.add(obj, keyName, dt);
 			}else if(obj[keyName] !== dt){
 				obj[keyName] = dt;
 			}
@@ -2805,14 +2811,13 @@ function debugTime(key){
 
 			$.loop($.explode(' ', keyName.toString(), ''), function(key){
 				var delObj = obj[key];
-
 				var delID = $.objectID(delObj);
 				if(delID) {
 					//如果被删除的是一个对象 则保存它的ID 以便重新给它赋值时使用
 					if ($.isObject(delObj)) {
 						ths.deleteObjectIdList[objID] = ths.deleteObjectIdList[objID] || {};
 						ths.deleteObjectIdList[objID][key] = delID;
-						//待删除对象
+						//触发删除事件
 						ths.Event[delID] && ths.Event[delID].run('delete', obj, key);
 					}
 				}

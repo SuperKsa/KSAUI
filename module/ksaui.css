@@ -442,6 +442,8 @@ ks-tab ks-tab-title ks-tab-title-item:last-of-type {
 ks-tab[touch] > ks-tab-touch-content > ks-tab-content > ks-tab-item {
   float: left;
   display: block;
+  height: 100%;
+  min-height: 0.1rem;
 }
 ks-page {
   text-align: center;
