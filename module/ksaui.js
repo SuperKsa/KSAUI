@@ -98,20 +98,31 @@ $.ksauiRenderTree = {};
             });
         }
 
+        var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
         //监听节点变动 HTML5
-        if (window.MutationObserver) {
+        if (MutationObserver) {
             var observer = new MutationObserver(function (Mut) {
+
                 $.loop(Mut, function (val) {
-                    if (val.type === 'childList' && val.addedNodes.length) {
+                    //if(val.target.tagName ==='KS'){
+                        //debug(val, val.target, val.target.clientWidth);
+                    //}
+                    if ((val.type === 'childList' || val.type ==='attributes') && val.addedNodes.length) {
                         $.loop(val.addedNodes, function (ele) {
-                            if (ele.nodeType === 1) {
+                            if (ele.nodeType === 1 && $.isIndom(ele)) {
+                                //debug(ele, ele.clientWidth);
                                 _documentRender(ele);
                             }
                         });
                     }
                 });
             });
-            observer.observe(document, {childList : true, subtree : true});
+            observer.observe(document, {
+                attributes : true , //检测属性变动
+                childList : true , //检测子节点变动
+                subtree : true , //整个子孙节点变动
+                attributeFilter : ['style', 'clientWidth', 'clientHeight', 'offsetWidth', 'offsetHeight']
+            });
             //监听节点变动 低版本浏览器
         } else {
 
@@ -2352,6 +2363,23 @@ $.ksauiRenderTree = {};
 
     };
 
+    function ks_input_group(ele){
+        ele = $(ele);
+        var attr = ele.attr();
+        var dom = $(ele).wrap($.tag('ks-input-group',{class:attr.class, id:attr.id}));
+        if(attr.icon){
+            ele.before('<i>'+attr.icon+'</i>');
+        }
+        if(attr.label){
+            ele.before('<i>'+attr.label+'</i>');
+        }
+        if(attr.unit){
+            ele.after('<i>'+attr.unit+'</i>');
+        }
+        ele.attr({class:'', id:'', icon:''});
+        return dom;
+    }
+
     (function () {
 
         //自动渲染DOM
@@ -2608,8 +2636,12 @@ $.ksauiRenderTree = {};
             'input[type="ks-text"], input[type="ks-tel"]' : function (ele) {
                 var t = $(ele), at = t.attr();
                 t.attr('type', at.type.substr(3));
+                if(at.label){
+                    ks_input_group(t);
+                }else{
+                    t.wrap($.tag('label',{type : 'text', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
+                }
 
-                t.wrap($.tag('label',{type : 'text', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
 
                 (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
                 at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
@@ -2821,19 +2853,6 @@ $.ksauiRenderTree = {};
                     }else{
                         $.upload('upload', t[0], attrs.api, function(dt){
                             _inset(dt.List);
-                            /*
-                            var h = '';
-                            $.loop(dt.List,function(value){
-                                h += '<ks-pic-thumb>'+
-                                     '<img src="'+value.src+'">'+
-                                     '<input type="hidden" name="'+attrs.name+'" value="'+value.aid+'">'+
-                                     '</ks-pic-thumb>';
-                            });
-                            t.val('');
-                            var label = t.parent();
-                            label.prev().remove();
-                            label.before(h);
-                            */
                         });
                     }
                 });
@@ -3222,7 +3241,10 @@ $.ksauiRenderTree = {};
             }
 
             var navbar = ele.children('ks-navbar');
+
             if (navbar.length) {
+                ele.attr('navbar', true);
+
                 var navbarItem = navbar.children('ks-navbar-item');
                 var contents = ele.children('ks-content').children('ks-navbar-content');
 
@@ -3252,6 +3274,13 @@ $.ksauiRenderTree = {};
             }
         });
 
+        $(document).on('click', 'ks-navbar-item[href]', function(){
+            var href = $(this).attr('href');
+            if(href){
+                window.location.href = href;
+            }
+        });
+
         //自定义组件 栅格
         $.render('ks-row', function (ele) {
             ele = $(ele);
@@ -3259,19 +3288,18 @@ $.ksauiRenderTree = {};
                 ele.attr('flex', true);
             }
         });
+
         //自定义组件 tab
         $.render('ks-tab', function (ele) {
             ele = $(ele);
 
-
             function _titleStatus(N) {
-                N = N || 0;
+                N = N >= 0 ? N : 0;
                 var el = title_item.eq(N);
                 var left = (el[0].offsetLeft + el.width(true) / 2);
                 titleStatus.css('left', left < 30 ? 30 : left);
                 title_item.eq(N).active(true).siblings().active(false);
             }
-
 
             var isTouch = $.isset(ele.attr('touch'));
             var title = ele.children('ks-tab-title');
@@ -3293,7 +3321,6 @@ $.ksauiRenderTree = {};
             }
             title.append(code_title_status);
             var titleStatus = title.children('ks-tab-title-status');
-
             //如果主内容框不存在 则创建
             if(!contentBox.length){
                 content_item.wrapAll('<ks-tab-content></ks-tab-content>');
@@ -3301,10 +3328,9 @@ $.ksauiRenderTree = {};
             }
 
 
-
-            var currIndex = title_item.filter('[active]').index() >=0 || 0,
+            var currIndex = title_item.filter('[active]').index() || 0,
                 moveX = 0,
-                eleWidth = contentBox.width(true),
+                eleWidth = ele.width(true),
                 touchMaxWidth = itemLength * eleWidth;
 
 
@@ -3319,13 +3345,15 @@ $.ksauiRenderTree = {};
 
 
             title_item.click(function () {
-                _titleStatus($(this).index());
+                if(!$(this).active()) {
+                    _titleStatus($(this).index());
+                }
             }).DOMchange('attr.active', function () {
                 var ths = $(this);
                 if(ths.active()){
                     var i = ths.index();
                     _play(i);
-                    ths.trigger('click'); //触发标题当前项click事件
+                    //ths.trigger('click'); //触发标题当前项click事件 暂时注释 会与tpl @事件冲突造成2次触发2021年1月23日 03:15:16
                 }
             });
 
@@ -3358,10 +3386,10 @@ $.ksauiRenderTree = {};
                     }
                 }, 'X');
             }
-
             _play(currIndex);
             _titleStatus(currIndex);
         });
+
 
         //自定义组件 tag标签关闭
         $.render('ks-tag[close], ks-tag[edit]', function (ele) {
