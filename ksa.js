@@ -36,9 +36,11 @@ function debugTime(key) {
      */
     function eventAddstopPropagation(events) {
         if (events) {
+            events.isStop = false;
             events.stop = function () {
                 this.stopPropagation();
                 this.preventDefault();
+                this.isStop = true;
             }
         }
         return events;
@@ -1922,6 +1924,11 @@ function debugTime(key) {
 
 
 // ====================== 事件处理 ====================== //
+    //分割事件的命名空间
+    function eventParse(event) {
+        event = (''+event).split('.');
+        return {evn : event[0], scope : event[1] || ''}
+    }
 
     /**
      * 绑定事件
@@ -1939,7 +1946,7 @@ function debugTime(key) {
             return false
         };
         event = event.split(/\s/);
-        this.each(function (_, ele) {
+        return this.each(function (_, ele) {
             var kid = $.objectID(ele);
             bindEventData[kid] = bindEventData[kid] || {};
 
@@ -1949,43 +1956,39 @@ function debugTime(key) {
                     return $(document).ready(callback);
                 }
                 var useCapture = false;
-
-                var func = function (e) {
+                //得到事件对象
+                var handler = eventParse(evn);
+                handler.fun = callback;
+                handler.selector = selector;
+                //触发事件函数
+                handler.call = function(e){
+                    //注册冒泡事件 e.stop
                     eventAddstopPropagation(e);
-                    if (selector) {
-                        var selectEL = selectorAll(ele, selector);
-                        $.loop(e.path, function (sel) {
-                            if ($.inArray(sel, selectEL)) {
-                                //this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
-                                if (callback.apply(sel, arguments) === false) {
+                    var args = arguments;
+                    if(e.isStop){
+                        return;
+                    }
+                    //如果存在选择器则遍历所有触发路径
+                    if(selector){
+                        var els = selectorAll(ele, selector);
+                        $.loop(e.path, function(val){
+                            if($.inArray(val, els)){
+                                if (callback.apply(val, args) === false) {
                                     e.stop();
                                 }
                             }
                         });
-                    } else {
-                        //this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
-                        if (callback.apply(e.target, arguments) === false) {
-                            e.stop();
-                        }
+                    }else if (callback.apply(ele, args) === false) {
+                        e.stop();
                     }
-
-                    /*
-						//如果存在子级选择器，则检查当前事件是被哪个元素触发 如在选择器范围内则回调函数
-						if(!selector || (selector && $.inArray(e.target, ele.querySelectorAll(selectorStr(selector))))){
-							//回调函数并获取返回值，若返回值为false则阻止冒泡
-							//this指向为 被选择器选中时为触发元素 否则为绑定事件的元素
-							if(callback.apply((selector ? e.target : ele), arguments) === false){
-								e.stop();
-							}
-						}
-						*/
                 };
+
                 bindEventData[kid][evn] = bindEventData[kid][evn] || [];
                 bindEventData[kid][evn].push({
                     callback : callback,
                     selector : selector,
                     useCapture : useCapture,
-                    addCallback : func
+                    handler : handler
                 });
                 /*
 				addEventListener
@@ -1993,11 +1996,10 @@ function debugTime(key) {
 				参数2 = 回调函数
 				参数3 = true = 事件句柄在捕获阶段执行 false = 默认。事件句柄在冒泡阶段执行
 				 */
-                evn = evn.replace(/\..*/, '');
-                ele.addEventListener(evn, func, useCapture);
+                var realEvn = evn.replace(/\..*/, '');
+                ele.addEventListener(realEvn, handler.call, useCapture);
             })
         });
-        return this;
     };
     /**
      * 解除绑定事件
@@ -2021,7 +2023,7 @@ function debugTime(key) {
                     var delN = 0;
                     $.loop(evnDt, function (val, i) {
                         if (val && (!isCall || val.callback === callback)) {
-                            ele.removeEventListener(evn, val.addCallback, val.useCapture);
+                            ele.removeEventListener(evn, val.handler.call, val.useCapture);
                             evnDt[i] = null;
                             delN++;
                         }
