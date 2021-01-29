@@ -10,7 +10,7 @@ $.AddTags = ['ks-date','ks-datetime','ks-button','ks-menu','ks-window','ks-input
  * @returns {url}
  */
 $.adminUrl = function(url){
-    url += (url.indexOf('?') == -1 ? '?' : '&') +'_adminiframe_';
+    url = $.urlAdd(url, {_adminiframe_:1});
     return url;
 };
 
@@ -85,6 +85,7 @@ function KSAadminIframe(homeUrl){
                 });
                 ele.find('[data-url]').click(function(){
                     var t = $(this);
+                    //debug(t, t.attr(), t.data());
                     ths.open(t.text(), t.data('url'), t.attr('icon'), 1);
                     ths.taskbarMove();
                 });

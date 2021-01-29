@@ -355,6 +355,7 @@ $.ksauiRenderTree = {};
 
         //layer动画样式名称
         var layerAnim = {
+            0 : 'ks-anim-up',
             1 : 'ks-anim-right',
             2 : 'ks-anim-down',
             3 : 'ks-anim-left',
@@ -679,8 +680,7 @@ $.ksauiRenderTree = {};
                 $(this.obj.coverDom).removeClass('ks-anim-fadeout').show();
                 //延迟show 防止回调函数中click 同步响应
                 window.setTimeout(function () {
-
-                    pos && _this.layer.addClass(layerAnim[pos]);
+                    layerAnim[pos] && _this.layer.addClass(layerAnim[pos]);
                     _this.layer.active(true);
                     //后退事件监听
                     option.backEvent && $.BackEvent('KsaLayer' + id, '#ks-layer-' + id);

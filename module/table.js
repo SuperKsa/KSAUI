@@ -63,7 +63,10 @@ $.table = function (options) {
                             });
                             fun = $.isObject(fun) && fun.event ? fun.event : fun;
                             $.isFunction(fun) && fun.apply(ths, arg.slice(1));
-                            return false;
+
+                            if(key.indexOf('lineBtn') !== -1 || key.indexOf('lineSelect') !== -1){
+                                return false;
+                            }
                         },
                         refresh : function () {
                             ths.refresh();
