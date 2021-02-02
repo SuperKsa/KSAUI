@@ -20,13 +20,14 @@ $.table = function (options) {
                 ele.KS_TABLE = ths;
             });
             ths.dom = ths.createHtml();
+            ths.el.html('<div class="ks-tc ks-p5 ks-text-gray">数据加载中！请稍后...</div>');
             this.get(1, function (dt) {
-                ths.$data.List = dt.List ? dt.List : {};
-                if ($.isset(dt.Counts)) {
-                    ths.dom += '{{if Counts && Math.ceil(Counts / limit) >1}}<div class="ks-tc ks-mt"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.Counts / dt.limit) + '" @change="toPages(this.value)"></ks-page></div>{{/if}}';
+                ths.$data.list = dt.list ? dt.list : {};
+                if ($.isset(dt.count)) {
+                    ths.dom += '{{if count && Math.ceil(count / limit) >1}}<div class="ks-tc ks-mt"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.count / dt.limit) + '" @change="toPages(this.value)"></ks-page></div>{{/if}}';
                 }
                 ths.tplObj = $.tpl({
-                    //debug : 1,
+                    debug : options.debug,
                     el : options.el,
                     tpl : ths.dom,
                     data : ths.$data,
@@ -38,6 +39,7 @@ $.table = function (options) {
                             $.loop(btnIndex.split('.'), function(v){
                                     obj = obj[v];
                             });
+                            //hover菜单处理
                             if(obj.menu){
                                 var hoverEvn = [];
                                 $.loop(obj.menu, function(val){
@@ -62,13 +64,18 @@ $.table = function (options) {
                                 fun = fun[val];
                             });
                             fun = $.isObject(fun) && fun.event ? fun.event : fun;
-                            $.isFunction(fun) && fun.apply(ths, arg.slice(1));
 
-                            if(key.indexOf('lineBtn') !== -1 || key.indexOf('lineSelect') !== -1){
+                            $.isFunction(fun) && fun.apply(ths, arg.slice(1));
+                            if($.strpos(key, ['lineBtn', 'lineSelect'])){
+
                                 return false;
                             }
                         },
+                        selectLine : function(n){
+                          ths.setLineSelect(n);
+                        },
                         refresh : function () {
+
                             ths.refresh();
                         },
                         toPages : function (val) {
@@ -81,13 +88,42 @@ $.table = function (options) {
             });
             return this;
         },
+        //选中和取消选中 指定行
+        setLineSelect : function(line){
+            var ths = this;
+
+            var tr = ths.el.find('tr[data-key="'+line+'"]');
+
+            if(tr.find('input').checked()){
+                tr.addClass('ks-table-tr-checked');
+            }else{
+                tr.removeClass('ks-table-tr-checked');
+            }
+        },
         //刷新当前列表
         refresh : function () {
+
             this.get(this.page);
         },
         //从API获取数据
         get : function (page, callFun) {
             var ths = this;
+
+            //工具栏按钮状态全部禁用
+            ths.el.find('.ks-table-toolbar ks-btn[data-table-btnindex]').each(function(_, ele){
+                ele = $(ele);
+                var btnIndex = ele.data('table-btnindex');
+                var obj = options;
+                $.loop(btnIndex.split('.'), function(v){
+                    obj = obj[v];
+                });
+                obj.disabled  &&ele.disabled(obj.disabled);
+            });
+            var checkedAllinput = ths.el.find('input[ischeckall]');
+            if(checkedAllinput.length){
+                checkedAllinput[0].checked = true;
+                checkedAllinput.checked(false).trigger('changeALL');
+            }
             ths.page = page || 1;
             var p = $.arrayMerge({}, options.post || {});
 
@@ -96,18 +132,15 @@ $.table = function (options) {
             }
             ths.$data.ksauiLoading = 1;
             $.API($.urlAdd(options.listAPI, {page : ths.page}), p, function (dt) {
-                if (options.lineSelect) {
-                    ths.el.find('tr > td:first-child input[type=checkbox], tr > th:first-child input[type=checkbox]').checked(false);
-                }
                 $.loop(dt, function (val, k) {
-                    $.def.set(ths.$data, k, val);
+                    ths.$data[k] = val;
                 });
                 //将字段预置选项值对应到列表数据中
-                $.loop(dt.List, function (value, key) {
+                $.loop(dt.list, function (value, key) {
                     if ($.isObject(value)) {
                         $.loop(value, function (val, k) {
                             if (options.fieldOption && options.fieldOption[k] && options.fieldOption[k][val]) {
-                                $.def.set(ths.$data.List[key], '_' + k, options.fieldOption[k][val]);
+                                ths.$data.list[key]['_' + k] = options.fieldOption[k][val];
                             }
                         });
                     }
@@ -148,17 +181,29 @@ $.table = function (options) {
 
             return h;
         },
+        //获得已选中数据
+        getSelect : function(){
+            var ths = this;
+            var table = ths.el.find('.'+ths.tableClass).find('.ks-table-tr-checked');
+            var data = [];
+            $.loop(table, function(ele){
+                ele = $(ele);
+                var key = ele.data('key');
+                ths.$data.list && ths.$data.list[key] && data.push(ths.$data.list[key]);
+            });
+            return data;
+        },
         createHtml : function () {
             var ths = this;
             var html = '<div class="' + ths.tableClass + '">';
             //处理工具栏按钮
             if (options.toolBtn) {
-                html += '<div class="ks-table-toolbar ks-clear">';
+                html += '<div class="ks-table-toolbar ks-clear ks-plr">';
                 if ($.isObject(options.toolBtn)) {
                     if (options.toolBtn.left) {
-                        html += '<ks-btn-group class="ks-fl">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', 'this') + '</ks-btn-group>';
+                        html += '<ks-btn-group class="ks-fl">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', '_$tpl_.EL.KS_TABLE.getSelect()') + '</ks-btn-group>';
                     }
-                    html += '<div class="ks-fr"><ks-btn data-key="_refresh" size="small" icon="refresh" @click="refresh">刷新</ks-btn><ks-btn-group class="ks-ml1">' + ths.createBtn(options.toolBtn.right, 'toolBtn.right', 'this') + '</ks-btn-group></div>';
+                    html += '<div class="ks-fr"><ks-btn data-key="_refresh" size="small" icon="refresh" @click="refresh()">刷新</ks-btn><ks-btn-group class="ks-ml1">' + ths.createBtn(options.toolBtn.right, 'toolBtn.right', 'this') + '</ks-btn-group></div>';
                 } else if ($.isString(options.toolBtn)) {
                     html += options.toolBtn;
                 }
@@ -170,7 +215,7 @@ $.table = function (options) {
             html += '<thead><tr>';
             //处理表格头 标题字段栏
             if (options.lineSelect) {
-                html += '<th width="45">{{if $.count(List)}}<input type="ks-checkbox-all" name="__checkall__" selector=".' + ths.tableClass + '" value="" @change="btnEvent(\'lineSelect\', _$tpl_.EL)">{{/if}}</th>';
+                html += '<th width="45"><input type="ks-checkbox-all" name="__checkall__" selector=".' + ths.tableClass + '" value="" @change="btnEvent(\'lineSelect\', _$tpl_.EL);"></th>';
             }
             //表头处理
             $.loop(options.colData, function (value, key) {
@@ -181,17 +226,22 @@ $.table = function (options) {
             }
             html += '</tr></thead>';
             html += '<tbody>';
-            html += '{{if !Counts}}';
+            html += '{{if !count}}';
             html += '<tr><td colspan="999"><ks-empty>暂无数据</ks-empty></td></tr>';
-            html += '{{else}}';
-            html += '{{loop List key value}}';
-            html += '<tr trlist="{{key}}" data-key="{{key}}" ' + (options.lineDblclick ? ' @dblclick="btnEvent(\'lineDblclick\', value)"' : '') + ' ' + (options.lineClick ? ' @click="btnEvent(\'lineClick\', value)"' : '') + '>';
+            html += '  {{else}}  ';
+            html += ' {{loop list key value}} ';
+            html += '<tr trlist="{{key}}" data-key="{{key}}"  ' + (options.lineDblclick ? ' @dblclick="btnEvent(\'lineDblclick\', value)"' : '') + ' ' + (options.lineClick ? ' @click="btnEvent(\'lineClick\', value)"' : '') + '>';
             //全选按钮
             if (options.lineSelect) {
-                html += '<td><input type="ks-checkbox" name="__checkall__" data-ks-line-key="{{key}}" value="{{value.' + options.lineSelect.field + '}}" @change="btnEvent(\'lineSelect\', _$tpl_.EL)"></td>';
+                html += '<td><input type="ks-checkbox" name="__checkall__" data-ks-line-key="{{key}}" value="{{value.' + options.lineSelect.field + '}}" @change="selectLine(key); btnEvent(\'lineSelect\', _$tpl_.EL);"></td>';
             }
             //第二次渲染 合入模板
             $.loop(options.colData, function (value, key) {
+                if(value.type == 'price'){
+                    value.tpl = $.tag('ks-price',  {color:value.color}, (value.unit ? value.unit : '￥')+'{{value.'+key+'}}');
+                }else if(value.type == 'tag'){
+                    value.tpl = $.tag('ks-tag', {color:value.color, icon:value.icon}, '{{value.'+key+'}}');
+                }
                 //展示的列数据合入
                 html += $.tag('td', {style : value.style}, value.tpl ? value.tpl : '{{value.' + key + '}}');
             });

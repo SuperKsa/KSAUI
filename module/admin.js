@@ -86,17 +86,17 @@ function KSAadminIframe(homeUrl){
                 ele.find('[data-url]').click(function(){
                     var t = $(this);
                     //debug(t, t.attr(), t.data());
-                    ths.open(t.text(), t.data('url'), t.attr('icon'), 1);
+                    ths.open(t.data('url'), 1, t.text());
                     ths.taskbarMove();
                 });
             });
             var cache = ths.cache();
             if($.count(cache)){
                 $.loop(cache, function(v){
-                    v && v.url && v.title && ths.open(v.title, v.url, v.icon, v.isOpen);
+                    v && v.url && v.title && ths.open(v.url, v.isOpen, v.title);
                 });
             }else{
-                ths.open('home', ths.homeUrl,'', 1);
+                ths.open(ths.homeUrl, 1, home);
             }
 
             $('.ks-admin-taskbar-next').mousedown(function(){
@@ -193,7 +193,7 @@ function KSAadminIframe(homeUrl){
             return $(li).offset().left - this.taskBarLeft;
         },
         //窗口切换
-        change : function(url){
+        change : function(url, param){
             var ths = this;
             ths.currentUrl = url;
             if(url === ths.homeUrl || url ==='home'){
@@ -206,7 +206,10 @@ function KSAadminIframe(homeUrl){
             //切换iframe为活动状态
             var dt = ths.data[url];
             if(dt){
-                !dt.content && ths.createIframe(url); //切换前可能还没有创建内容框架
+                if(!dt.content){
+                    ths.createIframe(url); //切换前可能还没有创建内容框架
+                }
+
                 $(dt.content).active(true).siblings().active(false);
                 $(dt.taskBar).active(true).siblings().active(false);
                 ths.cache(url, dt.title);
@@ -227,14 +230,14 @@ function KSAadminIframe(homeUrl){
             mu.parent().parents('li').active(true);
             var homeNav = $('<a href="javascript:;">首页</a>');
             homeNav.click(function(){
-                ths.open('home', ths.homeUrl,'', 1);
+                ths.open(ths.homeUrl, 1, 'home');
             });
             ths.navaction.empty().append(homeNav);
             mu.parents('dl').find('[active] > .ks-sidebar_title').push(mu).map(function(e){
                 ths.navaction.append('<span>'+$(e).text()+'</span>');
             });
         },
-        cache : function(url, title, icon){
+        cache : function(url, title){
             //写缓存
             var cache = $.Cache('adminframe') || {};
             if(url) {
@@ -247,7 +250,7 @@ function KSAadminIframe(homeUrl){
                     if (cache[url]) {
                         cache[url].isOpen = 1;
                     }else{
-                        cache[url] = {title: title, url: url, icon:icon, isOpen: 1};
+                        cache[url] = {title: title, url: url, isOpen: 1};
                     }
                 }
                 $.Cache('adminframe', cache);
@@ -264,7 +267,7 @@ function KSAadminIframe(homeUrl){
             this.dom.append(iframe);
             return iframe;
         },
-        createTaskbar : function(title, url, icon){
+        createTaskbar : function(title, url){
             var ths = this;
 
             if(ths.data[url] && ths.data[url].taskBar){
@@ -274,7 +277,7 @@ function KSAadminIframe(homeUrl){
                 ths.data[url].taskBar = ths.home[0];
                 return ths.home;
             }
-            var li = $($.tag('li',{class:'ks-admin-taskbar-li','data-title':title,'data-url':url,'icon':icon},title+'<i icon="close"></i>'));
+            var li = $($.tag('li',{class:'ks-admin-taskbar-li','data-title':title,'data-url':url},title+'<i icon="close"></i>'));
             //切换到当前链接
             li.click(function(){
                 ths.change($(this).data('url'));
@@ -303,20 +306,30 @@ function KSAadminIframe(homeUrl){
 
             return li;
         },
-        //打开一个窗口
-        open : function(title, url, icon, isShow){
+        /**
+         * 打开一个窗口
+         * @param url 需要打开的url (必须是左侧菜单的url)
+         * @param isShow 是否立即显示
+         * @param title 窗口标题 （首次打开必须传入）
+         * @param param url需要附加的参数
+         */
+        open : function(url, isShow, title, param){
+
             var ths = this;
+            if(!title){
+                title = ths.menu.find('[data-url="'+url+'"]').text();
+            }
+
             if(!ths.data[url]) {
                 ths.data[url] = {
                     title: title,
-                    icon: icon,
                     isShow: isShow,
                     taskBar: '',
                     content: '',
                 };
             }
-            ths.createTaskbar(title, url, icon);
-            isShow && ths.change(url);
+            ths.createTaskbar(title, url);
+            isShow && ths.change(url, param);
         },
         //关闭窗口
         close : function(url, isForce){

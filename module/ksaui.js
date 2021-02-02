@@ -592,12 +592,12 @@ $.ksauiRenderTree = {};
                         dom.iframe.attr('parentlayerid', id);
                     };
                 }
-
-                //关闭事件 右上角按钮
-                dom.find('.ks-layer-close').click(function () {
-                    _this.close(true);
-                });
-
+                if (option.closeBtn) {
+                    //关闭事件 右上角按钮
+                    dom.find('.ks-layer-close').click(function () {
+                        _this.close(true);
+                    });
+                }
                 //底部按钮处理
                 if (option.btn) {
                     dom.find('.ks-layer-bottom > ks-btn').click(function () {
@@ -724,7 +724,7 @@ $.ksauiRenderTree = {};
 
 
         return R.init();
-    };;
+    };
 
     /**
      * 对话框操作 (基于layer层)
@@ -736,7 +736,7 @@ $.ksauiRenderTree = {};
      */
     $.Dialog = function (type) {
         var p = arguments;
-        var op = {class : 'ks-Dialog'};
+        var op = {class : 'ks-Dialog ks-Dialog'};
         switch (true) {
             //成功|失败 参数：2=内容 3=关闭回调函数 4=按钮文字
             case $.inArray(type, ['success', 'error']):
@@ -768,6 +768,26 @@ $.ksauiRenderTree = {};
                 };
                 op.class += '_' + type;
                 op.closeBtn = 0;
+                break;
+            //带输入框的确认框 参数 1=prompt 2=标题 3=输入框提示文字 4=输入框内容 5=回调函数
+            case type =='prompt':
+                var callFun = p[4];
+                op.title = p[1];
+                op.content = $.tag('textarea', {type:'ks-textarea', placeholder:p[2], auto:1}, p[3]);
+                op.close = null;
+                op.btn = {'cancel' : '取消', 'confirm' : '确认:primary'};
+                op.outTime = 0;
+                op.cover = 1;
+                op.maxWidth = '80%';
+                op.btnFun = function (a, d) {
+                    if (a == 'confirm' && typeof (callFun) == 'function') {
+                        var val = d.find('textarea').val();
+                        val = val ? val : '';
+                        return callFun.apply(this, [val, d]);
+                    }
+                };
+                op.class += '_' + type;
+                op.closeBtn = 1;
                 break;
             /*表单弹窗 第三个参数：
             [
@@ -851,6 +871,8 @@ $.ksauiRenderTree = {};
         if (tps) {
             msg = '<div icon="' + tps + '">' + msg + '</div>';
         }
+        //移除之前的所有toast
+        $('.ks-layer.ks-Dialog_toast').remove();
         return $.layer({
             content : msg,
             class : 'ks-Dialog_toast',
@@ -858,7 +880,8 @@ $.ksauiRenderTree = {};
             cover : cover,
             close : callFun,
             outTime : outTime,
-            backEvent : false
+            backEvent : false,
+            bodyOver : false
         });
     };
 
@@ -967,15 +990,24 @@ $.ksauiRenderTree = {};
                     }
 
                     if ($.isset(s.msg) && s.msg) {
-                        if (s.success) {
-                            $.toast(s.msg, 'success', function () {
+                        if(s.confirm){
+                            $.Dialog(s.success ? 'success': 'error',  s.msg, function () {
                                 if (s.success && s.locationUrl) {
                                     window.location.href = s.locationUrl;
                                 }
                             });
-                        } else {
-                            $.toast(s.msg, 'error');
+                        }else{
+                            if (s.success) {
+                                $.toast(s.msg, 'success', function () {
+                                    if (s.success && s.locationUrl) {
+                                        window.location.href = s.locationUrl;
+                                    }
+                                });
+                            } else {
+                                $.toast(s.msg, 'error');
+                            }
                         }
+
                     }
 
                 } else {
@@ -1021,39 +1053,53 @@ $.ksauiRenderTree = {};
      * @returns {Boolean}
      */
     $.plugin.formSubmit = function (callFun) {
+        var ths = this, obj = ths.eq(0);
+        if(!obj.length){
+            return false;
+        }
+        var confirmTxt = obj.attr('confirm');
+        if(confirmTxt ===''){
+            confirmTxt = '确认要提交该信息吗？';
+        }
         var loadingLayerID = $.toast('请稍后','','','',0).id;
-        this.map(function (obj) {
-            obj = $(obj);
-            var btn = obj.find('button[type=submit], input[type=submit], ks-btn[submit]');
-            var btnTxt = btn.html();
-            btn.addClass('btn-load').disabled(true).text(btnTxt);
-            var formData = obj.formData(true);
-            if (obj.attr('id')) {
-                formData.append('FORMID', obj.attr('id'));
-            }
-            $.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function (dt) {
-                $.layerHide(loadingLayerID);
-                if (typeof callFun == 'function') {
-                    callFun(dt);
-                }
-                btn.removeClass('btn-load').disabled(false).html(btnTxt);
 
-                //如果当前是一个iframeLayer 则关闭当前layer
-                if($.isObject(dt) && dt.success && $('body').attr('parentlayerid')){
-                    $.layerHideF();
-                    window.parent.$.layerHide(loadingLayerID);
+        var _submit = function(){
+                var btn = obj.find('button[type=submit], input[type=submit], ks-btn[submit]');
+                var btnTxt = btn.html();
+                btn.addClass('btn-load').disabled(true).text(btnTxt);
+                var formData = obj.formData(true);
+                if (obj.attr('id')) {
+                    formData.append('FORMID', obj.attr('id'));
                 }
-            }, function () {
-                $.layerHide(loadingLayerID);
-                btn.removeClass('btn-load').disabled(false).html(btnTxt);
-            }, 'json', 1);
+                $.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function (dt) {
+                    $.layerHide(loadingLayerID);
+                    if (typeof callFun == 'function') {
+                        callFun(dt);
+                    }
+                    btn.removeClass('btn-load').disabled(false).html(btnTxt);
 
-            //30秒后解除提交按钮限制
-            setTimeout(function () {
-                btn.removeClass('btn-load').disabled(false).html(btnTxt);
-                $.layerHide(loadingLayerID);
-            }, 30 * 1000);
-        });
+                    //如果当前是一个iframeLayer 则关闭当前layer
+                    if($.isObject(dt) && dt.success && $('body').attr('parentlayerid')){
+                        $.layerHideF();
+                        window.parent.$.layerHide(loadingLayerID);
+                    }
+                }, function () {
+                    $.layerHide(loadingLayerID);
+                    btn.removeClass('btn-load').disabled(false).html(btnTxt);
+                }, 'json', 1);
+
+                //30秒后解除提交按钮限制
+                setTimeout(function () {
+                    btn.removeClass('btn-load').disabled(false).html(btnTxt);
+                    $.layerHide(loadingLayerID);
+                }, 30 * 1000);
+        }
+        if(confirmTxt){
+            $.Dialog('confirm', '操作提示', confirmTxt, _submit);
+        }else{
+            _submit();
+        }
+
 
         return false;
     };
@@ -1068,7 +1114,6 @@ $.ksauiRenderTree = {};
     $.upload = function (name, files, url, callFun) {
         name = name ? name : 'upload';
         var formData = new FormData();
-        debug(files);
         if(files instanceof Blob) {
             formData.append(name, files);
         }else{
@@ -2180,6 +2225,7 @@ $.ksauiRenderTree = {};
      * @returns {html}
      */
     $.createForm = function (option) {
+        option = $.isArray(option) ? {action:'', field:option} : option;
         var H = $.tag('form', {action:option.action, class:option.class}, '', true);
         H += '<ks-form>';
         $.loop(option.field, function (value, key) {
@@ -2417,8 +2463,9 @@ $.ksauiRenderTree = {};
                         });
                     }
                 }
-                t.change(function () {
-                    $(this).trigger('KSADOMchange', ['attr.checked', this.checked]);
+                //监听选中状态 并触发change事件
+                t.DOMchange('attr.checked',function () {
+                    $(this).trigger('change');
                 });
             },
             'input[type="ks-checkbox-all"]' : function (ele) {
@@ -2442,16 +2489,11 @@ $.ksauiRenderTree = {};
                 //全选事件绑定
                 t.change(function () {
                     //域下相同类型的元素
-                    if (this.checked) {
-                        //数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-                        name && selector.find(inputs).checked(true);
-                    } else {
-                        //数据列表 全选框处理 格式所有全选name必须相同 全选框必须有class <input type="checkbox" name="checkall" class="ks-check-all">
-                        name && selector.find(inputs).checked(false);
-                    }
-                    tParent.removeClass(indeterName);
+                    selector.find(inputs).checked(this.checked);
+                }).DOMchange('attr.checked',function () {
+                    selector.find(inputs).checked(this.checked);
                 });
-                selector.on('change', inputs, function () {
+                t.on('changeALL', function(){
                     var st = false;
                     var selectedNum = selector.find(inputs + ':checked').length;
                     if (selectedNum >= selector.find(inputs).length) {
@@ -2464,8 +2506,14 @@ $.ksauiRenderTree = {};
                         st = false;
                         tParent.removeClass(indeterName);
                     }
-                    t.checked(st);
+                    t[0].checked = st;
+                });
+
+                //域下 所有的input绑定关联事件
+                selector.on('change', inputs, function () {
+                    t.trigger('changeALL');
                 })
+
             },
             'input[type="ks-switch"]' : function (ele) {
                 var t = $(ele), at = t.attr();
@@ -2788,13 +2836,16 @@ $.ksauiRenderTree = {};
                 t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
                 //多图片上传模式 name最后存在[]
                 var isMultiple = /^.+\[\]$/g.test(attrs.name);
+                var multipleMax = isMultiple ? parseInt(attrs.maxlength || 0) : 0;
                 t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
+                var picObj = t.parent().parent();
                 if(attrs.value){
                     try {
                         //多图模式
                         if(isMultiple){
                             //解析value值 必须传入(必须单引号) {'id'123, src:'图片地址'}
                             attrs.value = JSON.parse(attrs.value.replace(/'/g,'"'));
+                            var addI = 0;
                             $.loop(attrs.value, function(val){
                                 if(val.id){
                                     t.parent().parent().before('<ks-pic><ks-pic-thumb>'+
@@ -2802,6 +2853,10 @@ $.ksauiRenderTree = {};
                                              '<span icon="delete-bin-2-fill"></span>'+
                                              '<input type="hidden" name="'+attrs.name+'" value="'+val.id+'">'+
                                              '</ks-pic-thumb></ks-pic>');
+                                    addI ++;
+                                }
+                                if(multipleMax >0 && addI >= multipleMax){
+                                    picObj.hide();
                                 }
                             });
                         //单图模式
@@ -2816,6 +2871,7 @@ $.ksauiRenderTree = {};
                 function _inset(picList){
                     var h = '';
                     if(isMultiple){
+
                         $.loop(picList,function(value){
                             h += '<ks-pic><ks-pic-thumb>'+
                                  '<img src="'+value.src+'">'+
@@ -2823,7 +2879,10 @@ $.ksauiRenderTree = {};
                                  '<span icon="delete-bin-2-fill" delapi="'+attrs.api+'Del?aid='+value.aid+'"></span>'+
                                  '</ks-pic-thumb></ks-pic>';
                         });
-                        t.parent().parent().before(h);
+                        picObj.before(h);
+                        if(multipleMax >0 && picObj.prevAll('ks-pic').length == multipleMax){
+                            picObj.hide();
+                        }
                     }else{
                         $.loop(picList,function(value){
                             h += '<ks-pic-thumb>'+
@@ -2876,9 +2935,11 @@ $.ksauiRenderTree = {};
             $.Dialog('confirm','操作提示','确认要删除该文件吗？',function(){
                 if(delApi){
                     $.API(delApi, '', function(res){
+                        ths.parent().parent().nextAll('ks-pic').show();
                         res.success && ths.parent().parent().remove();
                     });
                 }else{
+                    ths.parent().parent().nextAll('ks-pic').show();
                     ths.parent().parent().remove();
                 }
             })
@@ -2909,6 +2970,7 @@ $.ksauiRenderTree = {};
 
         //table渲染
         $.render('table.ks-table', function (ele) {
+            /*
             ele = $(ele);
             var tr = ele.find('tbody > tr');
 
@@ -2925,7 +2987,8 @@ $.ksauiRenderTree = {};
                     }
                 })
             }
-        });
+            */
+        }, 'html');
 
         //表格固定头部
         $.render('table.ks-table[fixed-height]', function (ele) {

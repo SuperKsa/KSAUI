@@ -1297,6 +1297,7 @@ function debugTime(key) {
      */
     K.show = function () {
         this.map(function (e) {
+            e.style.display = '';
             e.style.display = e.style.display === 'none' ? "block" : '';
             $(e).trigger('KSADOMchange', ['show']);
         });
@@ -1968,6 +1969,7 @@ function debugTime(key) {
                     if(e.isStop){
                         return;
                     }
+
                     //如果存在选择器则遍历所有触发路径
                     if(selector){
                         var els = selectorAll(ele, selector);
@@ -1978,8 +1980,10 @@ function debugTime(key) {
                                 }
                             }
                         });
-                    }else if (callback.apply(ele, args) === false) {
-                        e.stop();
+                    }else{
+                        if (callback.apply(ele, args) === false) {
+                            e.stop();
+                        }
                     }
                 };
 
@@ -2987,6 +2991,7 @@ function debugTime(key) {
         if (!Config.tpl && Config.el) {
             Config.tpl = $(Config.el).html();
         }
+
         //匹配模板变量正则 {xxx}
         var variableReg = /\{\{((?:.|\r?\n)+?)\}\}/g;
         var extractReg = [
@@ -3058,7 +3063,6 @@ function debugTime(key) {
             ECODE : [],
             init : function () {
                 var ths = this;
-
                 ths.markMethods(ths.methods);
                 var codeIsScript = ths.EL && ths.EL.tagName === 'SCRIPT';
                 if (ths.Template) {
@@ -3099,7 +3103,14 @@ function debugTime(key) {
                 var code = this.Template;
                 //规整语法 去掉{{}}里面的空白字符
                 code = code.replace(/\{\{(.*?)\}\}/g, function () {
-                    return '{{' + arguments[1].trim() + '}}';
+                    var str = arguments[1].trim();
+                    str = str.replace('&lt;', '<');
+                    str = str.replace('&gt;', '>');
+                    str = str.replace('&amp;', '&');
+                    str = str.replace('&amp;', '&');
+                    str = str.replace('&quot;', '"');
+                    str = str.replace('&nbsp;', ' ');
+                    return '{{' + str + '}}';
                 });
 
                 var zIndex = 0; //标记累加记号
@@ -3110,18 +3121,18 @@ function debugTime(key) {
                 code = code.replace(/\{\{(((if|loop)(\s+.*?))|(\/(if|loop)))\}\}/g, function () {
                     var arg = arguments;
                     if (arg[1].substr(0, 1) === '/') {
-                        return '<!--' + arg[1] + '-' + indexMap[arg[6]].pop() + '-->';
+                        return '<!--' + arg[1] + '-' + indexMap[arg[6]].pop() + '-->'+"\n";
                     } else {
                         zIndex++;
                         if (!indexMap[arg[3]]) {
                             indexMap[arg[3]] = [];
                         }
                         indexMap[arg[3]].push(zIndex);
-                        return '<!--' + arg[3] + '-' + zIndex + '' + arg[4] + '-->';
+                        return '<!--' + arg[3] + '-' + zIndex + '' + arg[4] + '-->'+"\n";
                     }
                 });
                 code = code.replace(/\{\{(else|elseif\s.*?)\}\}/g, function () {
-                    return '<!--' + arguments[1] + '-->';
+                    return '<!--' + arguments[1] + '-->'+"\n";
                 });
                 code = code.replace(/\{\{eval\s+(.*?)\}\}/g, function () {
                     return '<!--eval ' + arguments[1] + '-->';
@@ -3139,7 +3150,6 @@ function debugTime(key) {
                     var ag = arguments;
                     return '<' + ag[1] + ag[2] + ' _ksahref_="' + ag[3] + '"' + ag[4] + '>';
                 });
-
                 var dom = $.dom(code);
                 if (!$.isArray(dom)) {
                     dom = [dom];
@@ -3389,7 +3399,7 @@ function debugTime(key) {
                             if (!events) {
                                 events = {};
                             }
-                            events.push('"' + (val.name.substr(1)) + '": function(){return ' + val.value + '}');
+                            events.push('"' + (val.name.substr(1)) + '": function($e){return (function(){' + val.value + '}).apply(this,$e);}');
                         }
                     });
                     events = events.length ? '{' + events.join(',') + '}' : '""';
@@ -3523,14 +3533,16 @@ function debugTime(key) {
 
                 if (ths.isMonitor) {
                     //给数据对象加上顶级监听函数 只要被触发 表示将沙箱中的变量更新
-                    Object.defineProperty(ths.data.__proto__, '__ksaUpdate__', {
-                        value : function () {
-                            Es.prototype.KSAglobal();
-                            return this;
-                        },
-                        enumerable : false,
-                        writable : false
-                    });
+                    if(!ths.data.__proto__.__ksaUpdate__) {
+                        Object.defineProperty(ths.data.__proto__, '__ksaUpdate__', {
+                            value : function () {
+                                Es.prototype.KSAglobal();
+                                return this;
+                            },
+                            enumerable : false,
+                            writable : false
+                        });
+                    }
                     //给顶级data增加空白监听 以触发全局
                     $.def.createEvent('set', ths, 'data', function () {
                     })
@@ -4359,7 +4371,19 @@ function debugTime(key) {
     $.strpos = function (str, val, len) {
         str = str.toString();
         str = len > 0 ? str.substr(len) : str;
-        return str.indexOf(val) !== -1;
+
+        if($.isArray(val)){
+            var check = false;
+            $.loop(val, function(v){
+                if(str.indexOf(v) !== -1){
+                    check = true;
+                    return true;
+                }
+            });
+            return check;
+        }else{
+            return str.indexOf(val) !== -1;
+        }
     }
 
     $.strlen = function (value) {

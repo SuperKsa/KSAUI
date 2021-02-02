@@ -229,7 +229,7 @@ ks-header > ks-navaction { margin: 0; padding: 12px 18px; box-shadow: rgba(0,0,0
 .ks-step-li {border-radius: 3px; float: left; width:100%; height: 6px; background: #c6d2e0; position: relative; z-index: 2;}
 .ks-step-li:after { content: ''; width:12px; height:12px; background: #c6d2e0; border-radius: 50%; position: absolute; right:0; bottom: calc(100% - 12px); border:rgba(255,255,255,0.8) 3px solid; z-index: 5}
 .ks-step-li span { position: absolute; top: 20px; display: block; white-space:nowrap; left: 100%; transform:translateX(-50%); margin-left: -9px}
-.ks-step-li.a {color: #298df8;background: #298df8;}
+.ks-step-li.a {color: #298df8;background: #298df8; z-index: 10}
 .ks-step-li.a:after {background: #298df8;}
 
 .ks-step[data-num='3'] .ks-step-li {  width:calc(50% - 0px)}

@@ -12,7 +12,7 @@
 @indigo: #727cf5;// 靛青色 indigo
 @purple: #6b5eae;// 紫色 purple
 @pink: #ff679b;// 粉色 pink
-@red: #ff381e;// 红 red
+@red: #E12318;// 红 red
 @orange: #ff9041;// 橙色 orange
 @yellow: #f9bc0d;// 黄色 yellow
 @green: #5abd48;// 绿色 green
@@ -51,7 +51,6 @@ ks-input-group > *,
 .ks-date,
 ks-area,
 ks-form ks-form-label{ height: 0.8rem; line-height: 0.8rem;}
-
 .ks-select {
     border: none;
     .ks-select-title { padding: 0 0.35rem 0 0.1rem; min-width: auto}
@@ -72,6 +71,7 @@ html ks-pic {
     > label:before { font-size: 0.6rem;}
 }
 
+.ks-Dialog .ks-layer-bottom ks-btn { height: 0.7rem; line-height: 0.7rem; min-width: auto; padding: 0 0.4rem; font-size: 0.28rem}
 
 //按钮
 ks-btn {
@@ -100,16 +100,19 @@ ks-card {
     ks-card-title, ks-card-content { padding:0.3rem 0.3rem;}
 }
 
+/*
 .ks-layer {
     .ks-layer-content {padding: 0.4rem}
     .ks-layer-title { font-size: 0.36rem; text-align: center; border-bottom: 0; padding: 0.4rem 0;}
     .ks-layer-bottom { border-top: 0; text-align: center;}
 }
+*/
 .ks-layer-select { width: 100%;
     .ks-list-select > ks-list-item {
         padding: 0.3rem 0; font-size: 0.28rem; text-align: center;
         &:after, &:before {content: ''; display: none}
     }
+    .ks-layer-title { text-align: center; border-bottom: 0; padding-top: 0.3rem}
     .ks-layer-title ~ .ks-layer-content {padding-top: 0}
 }
 
@@ -211,13 +214,13 @@ ks-card {
 .ks-mt5 { margin-top: 0.4rem;}	.ks-mt5-sub > *:not(:first-child) { margin-top: 0.4rem;}
 
 
-.ks-mr { margin-right: 0.2rem;}	.ks-mr-sub > *:not(:first-child) { margin-right: 0.2rem;}
+.ks-mr { margin-right: 0.2rem;}	.ks-mr-sub > *:not(:last-child) { margin-right: 0.2rem;}
 .ks-mr0 { margin-right:0 !important;}
-.ks-mr1 { margin-right: 0.1rem;}	.ks-mr1-sub > *:not(:first-child) { margin-right: 0.1rem;}
-.ks-mr2 { margin-right: 0.15rem;}	.ks-mr2-sub > *:not(:first-child) { margin-right: 0.15rem;}
-.ks-mr3 { margin-right: 0.2rem;}	.ks-mr3-sub > *:not(:first-child) { margin-right: 0.2rem;}
-.ks-mr4 { margin-right: 0.3rem;}	.ks-mr4-sub > *:not(:first-child) { margin-right: 0.3rem;}
-.ks-mr5 { margin-right: 0.4rem;}	.ks-mr5-sub > *:not(:first-child) { margin-right: 0.4rem;}
+.ks-mr1 { margin-right: 0.1rem;}	.ks-mr1-sub > *:not(:last-child) { margin-right: 0.1rem;}
+.ks-mr2 { margin-right: 0.15rem;}	.ks-mr2-sub > *:not(:last-child) { margin-right: 0.15rem;}
+.ks-mr3 { margin-right: 0.2rem;}	.ks-mr3-sub > *:not(:last-child) { margin-right: 0.2rem;}
+.ks-mr4 { margin-right: 0.3rem;}	.ks-mr4-sub > *:not(:last-child) { margin-right: 0.3rem;}
+.ks-mr5 { margin-right: 0.4rem;}	.ks-mr5-sub > *:not(:last-child) { margin-right: 0.4rem;}
 
 
 .ks-mb { margin-bottom: 0.2rem;}	.ks-mb-sub > *:not(:first-child) { margin-bottom: 0.2rem;}
