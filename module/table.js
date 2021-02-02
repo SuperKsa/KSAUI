@@ -4,12 +4,22 @@ if (typeof KSA == 'undefined') {
 
 $.table = function (options) {
     $._tableID = $._tableID || 0;
-
+    if(!options.data){
+        options.data = {
+            limit : 0,
+            page : 1,
+            list : [],
+            count : 0,
+            maxpage : 1,
+            url : ''
+        };
+    }
     $._tableID++;
     var render = {
         el : $(options.el),
         //内部使用的数据
-        $data : options.data || {},
+        $data : options || {},
+        post : {}, //搜索框的数据
         //传递到外部的数据
         tplObj : {},
         page : 1,
@@ -52,7 +62,7 @@ $.table = function (options) {
                                         }
                                     });
                                 });
-                                hoverEvn.length && ele.showMenu('hover', hoverEvn);
+                                hoverEvn.length && ele.showMenu(obj.menuHover ? 'hover' : 'click', hoverEvn);
                             }
                         });
                     },
@@ -84,7 +94,7 @@ $.table = function (options) {
                     }
                 });
                 ths.bindEvent();
-                options.endFun && options.endFun.call(this, ths.tplObj.el);
+                options.endFun && options.endFun(ths);
             });
             return this;
         },
@@ -125,13 +135,12 @@ $.table = function (options) {
                 checkedAllinput.checked(false).trigger('changeALL');
             }
             ths.page = page || 1;
-            var p = $.arrayMerge({}, options.post || {});
-
+            ths.post = $.arrayMerge({}, options.post || {});
             if (options.search) {
-                p = $.arrayMerge(p, $(options.search).formData());
+                ths.post = $.arrayMerge(ths.post, $(options.search).formData(), {page : ths.page});
             }
             ths.$data.ksauiLoading = 1;
-            $.API($.urlAdd(options.listAPI, {page : ths.page}), p, function (dt) {
+            $.API(options.listAPI, ths.post, function (dt) {
                 $.loop(dt, function (val, k) {
                     ths.$data[k] = val;
                 });
@@ -146,6 +155,7 @@ $.table = function (options) {
                     }
                 });
                 callFun && callFun.call(ths, dt);
+                options.render && options.render(ths);
                 ths.$data.ksauiLoading = 0;
             });
         },
@@ -196,12 +206,13 @@ $.table = function (options) {
         createHtml : function () {
             var ths = this;
             var html = '<div class="' + ths.tableClass + '">';
+
             //处理工具栏按钮
             if (options.toolBtn) {
-                html += '<div class="ks-table-toolbar ks-clear ks-plr">';
+                html += '<div class="ks-table-toolbar ks-clear ks-plr1">';
                 if ($.isObject(options.toolBtn)) {
                     if (options.toolBtn.left) {
-                        html += '<ks-btn-group class="ks-fl">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', '_$tpl_.EL.KS_TABLE.getSelect()') + '</ks-btn-group>';
+                        html += '<div class="ks-fl ks-mr1-sub">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', '_$tpl_.EL.KS_TABLE.getSelect()') + '</div>';
                     }
                     html += '<div class="ks-fr"><ks-btn data-key="_refresh" size="small" icon="refresh" @click="refresh()">刷新</ks-btn><ks-btn-group class="ks-ml1">' + ths.createBtn(options.toolBtn.right, 'toolBtn.right', 'this') + '</ks-btn-group></div>';
                 } else if ($.isString(options.toolBtn)) {

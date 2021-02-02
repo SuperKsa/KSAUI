@@ -1965,11 +1965,10 @@ function debugTime(key) {
                 handler.call = function(e){
                     //注册冒泡事件 e.stop
                     eventAddstopPropagation(e);
-                    var args = arguments;
-                    if(e.isStop){
-                        return;
+                    if(e.isStop || (e.target.nodeName ==='KS-BTN' && $(e.target).disabled())){
+                        return false;
                     }
-
+                    var args = arguments;
                     //如果存在选择器则遍历所有触发路径
                     if(selector){
                         var els = selectorAll(ele, selector);
@@ -3150,6 +3149,7 @@ function debugTime(key) {
                     var ag = arguments;
                     return '<' + ag[1] + ag[2] + ' _ksahref_="' + ag[3] + '"' + ag[4] + '>';
                 });
+
                 var dom = $.dom(code);
                 if (!$.isArray(dom)) {
                     dom = [dom];
