@@ -3399,7 +3399,7 @@ function debugTime(key) {
                             if (!events) {
                                 events = {};
                             }
-                            events.push('"' + (val.name.substr(1)) + '": function($e){return (function(){' + val.value + '}).apply(this,$e);}');
+                            events.push('"' + (val.name.substr(1)) + '": function($e){return (function(){var _$this_return$_ = ' + val.value + '; return _$this_return$_}).apply(this,$e);}');
                         }
                     });
                     events = events.length ? '{' + events.join(',') + '}' : '""';
@@ -3598,6 +3598,7 @@ function debugTime(key) {
                     if ($.isNull(textContent) || textContent === undefined) {
                         textContent = '';
                     }
+
                     if ($.isObject(tag) && tag.nodeType) {
                         tag.textContent = textContent;
                         $(tag.parentElement).trigger('KSADOMchange', ['html', textContent]);

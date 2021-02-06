@@ -411,8 +411,8 @@ ks-collapse {
 
 
 //带右箭头
-ks-list > ks-list-item[icon='arrow_right'], .ks-list-arrow > ks-list-item { padding-right:2em;}
-ks-list > ks-list-item[icon='arrow_right']:before,
+ks-list > ks-list-item[icon*='arrow_right'], .ks-list-arrow > ks-list-item { padding-right:2em;}
+ks-list > ks-list-item[icon*='arrow_right']:before,
 .ks-list-arrow > ks-list-item:before {color:#777; top: 50%; font-size: 1em; width: 1.2em; height: 1.2em; line-height: 1.2em; transform: translateY(-50%); text-align: center; font-family: @iconfont; position: absolute; right: 0;}
 .ks-list-arrow > ks-list-item:before { content: '\ea6e'; }
 
@@ -501,9 +501,9 @@ ks-avatar {
 //============== 轮播 ==============
 .ks-slide {
 	width: 100%; position: relative; height:auto; overflow: hidden;
-	.ks-slide-c { width: 100%; transition:all 0.6s ease-in-out; height: auto; overflow: hidden; transition-duration:0ms}
-	.ks-slide-item { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 1; transition: all .6s ease-in-out;}
-	.ks-slide-item:not(:first-child) {transform: translateX(200%) scale(1);}
+	.ks-slide-c { width: 100%; transition:all 0.6s ease-in-out; height: auto; overflow: hidden;}
+	.ks-slide-c._a { transition: none}
+	.ks-slide-item {width: auto; height: 100%; z-index: 1; transition: all .6s ease-in-out; float: left;}
 	
 	//左右控制器
 	.ks-slide-control-prev, .ks-slide-control-next { position: absolute; top: 50%; z-index: 99; cursor: pointer; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 100%; margin-top: -18px; background: #000; transition: all .3s ease-in-out; opacity: 0; display: inline-block; color: #fff;}
@@ -620,9 +620,10 @@ ks-empty:before { content: '\ecec'; font-size:3em; font-family: @iconfont; displ
 
 //============== 表格框(table.js必须) ==============
 .ks-table {
-	width: 100%; background: #fff; display: table; empty-cells: show; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 1.5715; position: relative; z-index: 1; text-align: left;
-	th { font-weight: bold; color: rgba(0,0,0,.75); text-align: left;}
+	width: 100%; background: #fff; display: table; empty-cells: show; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 1.5715; position: relative; z-index: 1;
+	th { font-weight: bold; color: rgba(0,0,0,.75);}
 	th, td { padding: 14px; min-width: 51px; overflow-wrap:break-word; border-bottom: #f0f0f0 1px solid}
+	
 	//模式 左标题右内容
 	tr > th:only-of-type { width: 100px;}
 	tr > th:only-of-type ~ td:only-of-type { width:auto;}
@@ -639,7 +640,8 @@ ks-empty:before { content: '\ecec'; font-size:3em; font-family: @iconfont; displ
 	&[striped] tbody > tr:nth-of-type(even) { background: #fcfcfc}
 	//line线条属性
 	&[border] td, &[border] th {border: #f0f0f0 1px solid}
-	
+	//最后一行去掉底部边框
+	&:not([border]) > *:last-child tr:last-child th, &:not([border]) > *:last-child tr:last-child td { border-bottom: 0}
 	//行被选中
 	tbody tr.ks-table-tr-checked { background: #e6f7ff !important;}
 	tbody tr.ks-table-tr-checked td , tbody tr.ks-table-tr-checked {border-color: #d8e9f1}

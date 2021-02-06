@@ -511,9 +511,8 @@ $.ksauiRenderTree = {};
                 }
                 this.layer.css(style);
             },
-            close : function(isCancel){
+            close : function(){
                 this.autoCloseObj && clearTimeout(this.autoCloseObj);
-                option.cancel = !!isCancel;
                 $.layerHide(this.ID);
             },
             //创建DOM
@@ -595,7 +594,7 @@ $.ksauiRenderTree = {};
                 if (option.closeBtn) {
                     //关闭事件 右上角按钮
                     dom.find('.ks-layer-close').click(function () {
-                        _this.close(true);
+                        _this.close();
                     });
                 }
                 //底部按钮处理
@@ -603,7 +602,8 @@ $.ksauiRenderTree = {};
                     dom.find('.ks-layer-bottom > ks-btn').click(function () {
                         var t = $(this);
                         if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), dom) !== false))) {
-                            _this.close(t.data('btn-index') ==='cancel');
+                            option.cancel = t.data('btn-index') ==='cancel';
+                            _this.close();
                         }
                     }).filter('ks-btn:last-child:not([color])').attr('color', 'primary');
                 }
@@ -622,7 +622,7 @@ $.ksauiRenderTree = {};
                         var coverEvent = ($.isMobile ? 'touchend' : option.cover == 3 ? 'dblclick' : option.cover == 2 ? 'click' : '');
                         //触发事件
                         coverEvent && cover.on(coverEvent, function () {
-                                _this.close(true);
+                                _this.close();
                         });
                     }
                     _this.layer.after(cover);
@@ -691,7 +691,7 @@ $.ksauiRenderTree = {};
                     //N秒自动关闭
                     if (option.outTime > 0) {
                         _this.autoCloseObj = setTimeout(function () {
-                            _this.close(true);
+                            _this.close();
                         }, option.outTime * 1000 + 50);
                     }
                     _this.pos();
@@ -769,11 +769,36 @@ $.ksauiRenderTree = {};
                 op.class += '_' + type;
                 op.closeBtn = 0;
                 break;
-            //带输入框的确认框 参数 1=prompt 2=标题 3=输入框提示文字 4=输入框内容 5=回调函数
+            /**
+             * 带输入框的确认框 参数
+             * 1=prompt
+             * 2=标题
+             * 3=输入框提示文字
+             * 4=输入框内容
+             * 5=回调函数
+             * 6=附加类型（0=默认text 1=textarea 2=textarea自动增高 3=两次确认密码框）
+             *
+             */
             case type =='prompt':
                 var callFun = p[4];
                 op.title = p[1];
-                op.content = $.tag('textarea', {type:'ks-textarea', placeholder:p[2], auto:1}, p[3]);
+                var tpes = ['text','textarea','textarea','password'];
+                var p6 = p[5] || 0;
+                var ty = tpes[p6];
+                var isArea = $.inArray(p6, [1,2]);
+                if(isArea){
+                    op.content = $.tag(ty, {type:'ks-'+ty, placeholder:p[2], auto: p6 == 2 }, p[3]);
+                }else{
+                    op.content = $.tag('input', {type:'ks-'+ty, placeholder:p[2], value:p[3]}, '', true);
+                    if(p6 == 3){
+                        op.content += $.tag('input', {type:'ks-'+ty, placeholder:'请再次输入...', class:'ks-mt3'}, '', true);
+                    }
+                }
+
+
+
+
+
                 op.close = null;
                 op.btn = {'cancel' : '取消', 'confirm' : '确认:primary'};
                 op.outTime = 0;
@@ -781,8 +806,16 @@ $.ksauiRenderTree = {};
                 op.maxWidth = '80%';
                 op.btnFun = function (a, d) {
                     if (a == 'confirm' && typeof (callFun) == 'function') {
-                        var val = d.find('textarea').val();
+                        var inpt = d.find(isArea ? 'textarea' : 'input');
+                        var val = inpt.eq(0).val();
                         val = val ? val : '';
+                        if(p6 == 3){
+                            var in2val = inpt.eq(1).val();
+                            if(!val || !in2val || val !== in2val){
+                                $.toast('请输入密码，且两次须相同');
+                                return false;
+                            }
+                        }
                         return callFun.apply(this, [val, d]);
                     }
                 };
@@ -822,9 +855,9 @@ $.ksauiRenderTree = {};
                     layer.find('form').submit(function (e) {
                         e.stop();
                         var ts = this;
-                        $(ts).formSubmit(function (d) {
-                            callFun && callFun.call(ts, d);
-                            if (d.success) {
+                        $(ts).formSubmit(function (d, sdt) {
+                            callFun && callFun.apply(ts, arguments);
+                            if (sdt.success) {
                                 $.layerHide(layer.layerID);
                             }
                         });
@@ -881,7 +914,8 @@ $.ksauiRenderTree = {};
             close : callFun,
             outTime : outTime,
             backEvent : false,
-            bodyOver : false
+            bodyOver : false,
+            cancel : false
         });
     };
 
@@ -971,6 +1005,8 @@ $.ksauiRenderTree = {};
     $.API = function (url, postdata, fun, errfun, datatype, isBflow) {
         datatype = datatype ? datatype : 'json';
         url = $.urlAdd(url, {ajax:1});
+        fun = fun ? fun : new Function();
+        errfun = errfun ? errfun : new Function();
         var option = {
             type : postdata ? 'POST' : 'GET',
             url : url,
@@ -983,32 +1019,36 @@ $.ksauiRenderTree = {};
                         if (s.result.KSAUI) {
                             $[s.result.KSAUI.type].apply('', s.result.KSAUI.param)
                         }
-                        typeof (fun) == 'function' && fun(s.result, s);
-                    } else {
-                        console.log('%cKSAUI-AJAX-ERROR API异常返回！URL：' + url + "\n", 'background:#f00; color:#fff', s);//debug
-                        typeof (errfun) === 'function' && errfun(s);
-                    }
-
-                    if ($.isset(s.msg) && s.msg) {
-                        if(s.confirm){
-                            $.Dialog(s.success ? 'success': 'error',  s.msg, function () {
-                                if (s.success && s.locationUrl) {
-                                    window.location.href = s.locationUrl;
-                                }
-                            });
-                        }else{
-                            if (s.success) {
-                                $.toast(s.msg, 'success', function () {
+                        if ($.isset(s.msg) && s.msg) {
+                            if(s.confirm){
+                                $.Dialog('confirm',  '提示信息', s.msg, function () {
+                                    fun(s.result, s);
                                     if (s.success && s.locationUrl) {
                                         window.location.href = s.locationUrl;
                                     }
-                                });
-                            } else {
-                                $.toast(s.msg, 'error');
+                                }, '确认');
+                            }else{
+                                if (s.success) {
+                                    $.toast(s.msg, 'success', function () {
+                                        if (s.success && s.locationUrl) {
+                                            window.location.href = s.locationUrl;
+                                        }
+                                    });
+                                } else {
+                                    $.toast(s.msg, 'error');
+                                }
+                                fun(s.result, s);
                             }
+                        }else{
+                            fun(s.result, s);
                         }
 
+                    } else {
+                        console.log('%cKSAUI-AJAX-ERROR API异常返回！URL：' + url + "\n", 'background:#f00; color:#fff', s);//debug
+                        errfun(s);
                     }
+
+
 
                 } else {
                     $.toast('error', 'ajax远端系统错误');
@@ -1071,15 +1111,15 @@ $.ksauiRenderTree = {};
                 if (obj.attr('id')) {
                     formData.append('FORMID', obj.attr('id'));
                 }
-                $.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function (dt) {
+                $.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function (dt, sdt) {
                     $.layerHide(loadingLayerID);
-                    if (typeof callFun == 'function') {
-                        callFun(dt);
-                    }
                     btn.removeClass('btn-load').disabled(false).html(btnTxt);
-
+                    //如果回调函数返回false则直接跳出
+                    if (callFun && callFun.apply(obj[0], arguments) === false) {
+                        return false;
+                    }
                     //如果当前是一个iframeLayer 则关闭当前layer
-                    if($.isObject(dt) && dt.success && $('body').attr('parentlayerid')){
+                    if($.isObject(dt) && sdt.success && $('body').attr('parentlayerid')){
                         $.layerHideF();
                         window.parent.$.layerHide(loadingLayerID);
                     }
@@ -2025,22 +2065,32 @@ $.ksauiRenderTree = {};
                 width : ele.width(true),
                 height : ele.height(true),
                 item : ele.find('.ks-slide-item'),
+                itemC : '',
                 itemWidth : 0,
                 widthScale : 1,
+                MX : 0,
                 num : 0,
                 playIndex : 0, //当前播放索引值
                 init : function () {
                     var ths = this;
 
                     ths.num = this.item.length - 1;
-                    ths.itemWidth = ths.item.eq(0).width(true);
+                    ths.itemWidth = ths.item.eq(0).width(true,true);
                     ths.widthScale = ths.itemWidth / ths.width;
+                    var widthC = 0;
+                    ths.item.each(function(_, e){
+                        e = $(e);
+                        var mw = e.width(true, true);
+                        var w = e.width(true);
+                        e.data('width', w).width(w);
+                        widthC += mw;
+                    });
 
 
-                    var newDom = $('<div class="ks-slide-c"></div>');
+                    var newDom = $('<div class="ks-slide-c" style="width:'+(widthC + 10)+'px; height:100%"></div>');
                     newDom.html(this.item);
                     ele.html(newDom);
-
+                    ths.itemC = newDom;
                     //组件
                     var h = '';
                     //左右切换按钮 带属性：data-slide-btn
@@ -2077,13 +2127,7 @@ $.ksauiRenderTree = {};
                                 return;
                             }
                             var tp = 'next';
-                            //第一切换最后
-                            if (v === ths.num && ths.playIndex === 0) {
-                                tp = 'prev';
-                                //最后切换第一
-                            } else if (v === 0 && ths.playIndex === ths.num) {
-                                tp = 'next';
-                            } else if (v < ths.playIndex) {
+                           if (v < ths.playIndex) {
                                 tp = 'prev';
                             }
                             ths.play(tp, v);
@@ -2096,46 +2140,37 @@ $.ksauiRenderTree = {};
                     ths.play('next', 0);
 
                     //触摸事件
-                    var moveXs = {};
-                    var slideC = ele.children('.ks-slide-c');
+                    var slideC = ths.itemC;
                     ele.touch(function () {
-
+                        slideC.addClass('_a');
                     }, function (evn, touch) {
                         if (touch.action === 'left' || touch.action === 'right') {
-                            slideC.children('._up').each(function (i, e) {
-                                e = $(e);
-                                var mx = parseInt(e.attr('css-mx')) + touch.moveX;
 
-                                e.css({
-                                    transform : 'translateX(' + mx + 'px) scale(' + e.attr('css-scale') + ')',
-                                    transition : 'none'
-                                })
+                            slideC.css({
+                                transform : 'translateX(' + (touch.moveX + ths.MX) + 'px) scale(1)',
                             });
                         }
                     }, function (evn, touch) {
+                        slideC.removeClass('_a');
+                        if( (touch.action ==='right' && ths.playIndex <=0) || (touch.action ==='left' && ths.playIndex >= ths.num) ){
+                            ths.move(ths.playIndex);
+                            return;
+                        }
                         //横向移动距离超过10%才触发
                         if (touch.action == 'left') {
                             E.play('next');
                         } else if (touch.action == 'right') {
+
                             E.play('prev');
-                        } else {
-                            slideC.children('._up').each(function (i, e) {
-                                e = $(e);
-                                e.css({
-                                    transform : 'translateX(' + e.attr('css-mx') + 'px) scale(' + e.attr('css-scale') + ')',
-                                    transition : ''
-                                })
-                            });
                         }
                     });
                 },
-                move : function (i, n) {
-                    var mX = (this.itemWidth * n);
-                    var scale = 1;
-                    this.item.eq(i).css('transition', '').css('transform', 'translateX(' + mX + 'px) scale(' + scale + ')').attr({
-                        'css-mx' : mX,
-                        'css-scale' : scale
-                    });
+                move : function (i) {
+                    var mX = 0-(this.item.eq(i).data('width') * i);
+                    this.itemC.css({
+                        transform : 'translateX('+mX+'px) scale(1)',
+                    }).attr('index' , i);
+                    this.MX = mX;
                 },
                 play : function (tp, index) {
                     var ths = this;
@@ -2150,37 +2185,9 @@ $.ksauiRenderTree = {};
                         }
                     }
 
-                    index = index < 0 ? ths.num : (index > ths.num ? 0 : index);
+                    index = index < 0 ? 0 : (index > ths.num ? ths.num : index);
                     ele.attr({'playerindex' : index, 'playeraction' : tp});
-                    var indexL = index - 1, indexR = index + 1;
-                    indexL = indexL < 0 ? ths.num : (indexL > ths.num ? 0 : indexL);
-                    indexR = indexR < 0 ? ths.num : (indexR > ths.num ? 0 : indexR);
-
-                    //当前动作组
-                    var acgroup = [index, tp == 'next' ? indexL : indexR];
-                    ths.item.removeClass('a _hide _on _up');
-
-                    ths.item.eq(acgroup).removeClass('_hide')
-                        .addClass('_moveon').removeClass('_moveon', 600)
-                        .each(function (_, e) {
-                            var i = $(e).index();
-                            var mvn = i == index ? 0 : (i == indexL ? -1 : (i == indexR ? 1 : i));
-                            ths.move(i, mvn);
-                        });
-
-                    ths.item.eq([indexL, index, indexR]).addClass('_up');
-                    ths.item.eq(index).addClass('_on');
-
-                    //隐藏的动作组
-                    ths.item.each(function (i, e) {
-                        if ($.inArray(i, acgroup)) {
-                            return;
-                        }
-                        $(e).addClass('_hide').removeClass('_hide', 200);
-                        var mvn = tp == 'next' ? 1 : -1;
-                        ths.move(i, mvn);
-                    });
-
+                    ths.move(index);
                     ths.playIndex = index;
                     if (options.auto) {
                         $.setTimeout('ksauiSlide' + ths.id, function () {
@@ -3015,7 +3022,7 @@ $.ksauiRenderTree = {};
             });
             colgroup += '</colgroup>';
             ele.after(dom);
-            dom.find('.ks-table-header').html('<table class="ks-table">' + colgroup + '</table>').find('table').append(thead);
+            dom.find('.ks-table-header').html('<table class="'+ele.attr('class')+'">' + colgroup + '</table>').find('table').append(thead);
             dom.find('.ks-table-body').append(ele[0]).find('table').prepend(colgroup);
 
             var scrollWidth = dom.find('.ks-table-body').width(true) - dom.find('.ks-table-body > table').width(true); //滚动条宽度

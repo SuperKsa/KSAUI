@@ -230,6 +230,10 @@ $.table = function (options) {
             }
             //表头处理
             $.loop(options.colData, function (value, key) {
+                if($.isset(value.show) && !value.show){
+                    value.style = value.style ? value.style : '';
+                    value.style += 'display:none;';
+                }
                 html += $.tag('th', {'data-field' : key, style : value.style, width : value.width}, value.name);
             });
             if (options.lineBtn) {
@@ -248,10 +252,14 @@ $.table = function (options) {
             }
             //第二次渲染 合入模板
             $.loop(options.colData, function (value, key) {
+                if($.isset(value.show) && !value.show){
+                    value.style = value.style ? value.style : '';
+                    value.style += 'display:none;';
+                }
                 if(value.type == 'price'){
-                    value.tpl = $.tag('ks-price',  {color:value.color}, (value.unit ? value.unit : '￥')+'{{value.'+key+'}}');
+                    value.tpl = $.tag('ks-price',  {color:value.color, style : value.style}, (value.unit ? value.unit : '￥')+'{{value.'+key+'}}');
                 }else if(value.type == 'tag'){
-                    value.tpl = $.tag('ks-tag', {color:value.color, icon:value.icon}, '{{value.'+key+'}}');
+                    value.tpl = $.tag('ks-tag', {color:value.color, icon:value.icon, style : value.style}, '{{value.'+key+'}}');
                 }
                 //展示的列数据合入
                 html += $.tag('td', {style : value.style}, value.tpl ? value.tpl : '{{value.' + key + '}}');
