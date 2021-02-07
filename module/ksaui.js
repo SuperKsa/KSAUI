@@ -839,11 +839,22 @@ $.ksauiRenderTree = {};
                 op.outTime = 0;
                 op.cover = 1;
                 op.btnFun = function (a, layer) {
+                    var args = arguments;
                     if (a == 'confirm') {
                         if(p[2].action){
-                            layer.find('form').submit();
+                            layer.find('form').formSubmit(function(){
+                                var callR;
+                                if(callFun) {
+                                    callR = callFun.apply(layer, arguments);
+                                }
+                                if(callR !== false){
+                                    $.layerHide(layer.layerID);
+                                }
+                            });
                         }else{
-                            callFun && callFun.apply(this, arguments);
+                            if(callFun){
+                                return callFun.apply(layer, [layer.find('form').formData(), layer]);
+                            }
                         }
                         return false;
                     }
@@ -1358,6 +1369,7 @@ $.ksauiRenderTree = {};
 
         defValue = Nums === 0 ? select.val() : defValue;
         var json = select.attr() || {};
+        json.option = [];
         select.children().map(function (el) {
             var v;
             if (el.tagName == 'OPTGROUP') {
@@ -1372,6 +1384,7 @@ $.ksauiRenderTree = {};
             json.option = json.option || [];
             json.option.push(v);
         });
+
         return json;
     };
 
@@ -2651,7 +2664,7 @@ $.ksauiRenderTree = {};
 
 
                     t.attr('type value', '');
-                    t.wrap($.tag('div',{class:'ks-select'}));
+                    t.wrap($.tag('div',{class:'ks-select', style : at.style}));
                     t.after('<span class="ks-select-title">' + _selectText() + '</span>');
                     t.next().click(function () {
                         if (t.disabled()) {

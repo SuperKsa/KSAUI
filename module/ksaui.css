@@ -348,7 +348,7 @@ ks-navaction > :not(ks-btn):last-child:after {
   margin-right: 0;
 }
 .ks-Dialog_form .ks-layer-content {
-  min-width: 450px;
+  min-width: 400px;
   padding: 24px 40px;
 }
 .ks-Dialog_toast.ks-layer {

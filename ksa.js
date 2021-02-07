@@ -3718,6 +3718,7 @@ function debugTime(key) {
                     }
 
                     $.def.createEvent('set', obj, objKey, function () {
+
                         var arg = [ele];
                         $.loop(arguments, function (v) {
                             arg.push(v);
