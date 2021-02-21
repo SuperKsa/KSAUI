@@ -410,7 +410,7 @@ $.ksauiRenderTree = {};
                 }
                 //如果layer是一个远程url 则提示稍后
                 if(option.ajaxUrl){
-                    option.content = '请稍后';
+                    option.content = '<div class="ks-loading"></div>';
                 }
                 option = $.arrayMerge({
                     el : $.layerEL || 'body', //弹窗位置被限制在哪个元素中
@@ -445,7 +445,7 @@ $.ksauiRenderTree = {};
                 option.cache = option.cache ? option.cache : null;
                 if (option.iframe) {
                     option.class += ' ks-layer-iframe';
-                    option.content = '<iframe src="' + option.iframe + '" width="100%" height="100%"></iframe>';
+                    option.content = '<div class="ks-loading"></div><iframe src="' + option.iframe + '" width="100%" height="100%"></iframe>';
                 }
             },
             //layer 尺寸、位置处理
@@ -589,6 +589,7 @@ $.ksauiRenderTree = {};
                     dom.find('iframe')[0].onload = function () {
                         dom.iframe = $(this.contentWindow.document.body);
                         dom.iframe.attr('parentlayerid', id);
+                        dom.find('.ks-loading').remove();
                     };
                 }
                 if (option.closeBtn) {
@@ -627,7 +628,8 @@ $.ksauiRenderTree = {};
                     }
                     _this.layer.after(cover);
                 }
-
+                //重新计算尺寸
+                dom.layer = _this;
                 //初始化回调
                 $.isFunction(option.init) && option.init(dom, id);
             },
@@ -795,10 +797,6 @@ $.ksauiRenderTree = {};
                     }
                 }
 
-
-
-
-
                 op.close = null;
                 op.btn = {'cancel' : '取消', 'confirm' : '确认:primary'};
                 op.outTime = 0;
@@ -821,6 +819,7 @@ $.ksauiRenderTree = {};
                 };
                 op.class += '_' + type;
                 op.closeBtn = 1;
+                op.pos = '8';
                 break;
             /*表单弹窗 第三个参数：
             [
@@ -893,6 +892,66 @@ $.ksauiRenderTree = {};
                     op.pos = 8;
                     op.width = '100%';
                 }
+                break;
+            case type == 'smscode' :
+                var param = p[2];
+                op.title = '请输入短信验证码';
+                op.content = '';
+                if(p[1]){
+                    op.content += '<div class="ks-mb">'+p[1]+'</div>';
+                }
+                op.content += '<div><ks-input-group><input type="ks-text" name="code" value="" placeholder="请输入"><ks-btn>重新发送</ks-btn></ks-input-group></div>';
+                var callData = {};
+                op.init = function(ly){
+                    var btn = ly.find('.ks-layer-content ks-btn');
+                    var input = ly.find('input[name=code]');
+                    var _send = function(){
+                        if(btn.disabled()){
+                            return;
+                        }
+
+                        btn.disabled(true).text('发送中');
+                        $.API(param.api, param.post, function(res){
+                            if(res.success){
+                                input.val('');
+                                callData = res;
+                                var sendTime = res.sendTime;
+                                sendTime --;
+                                btn.disabled(true).text('重新发送('+sendTime+'秒)');
+                                ly.layer.pos();
+                                var s =window.setInterval(function(){
+                                    if(sendTime === 0 ){
+                                        window.clearInterval(s);
+                                        btn.disabled(false).text('重新发送');
+                                        ly.layer.pos();
+                                    }else{
+                                        sendTime --;
+                                        btn.disabled(true).text('重新发送('+sendTime+'秒)');
+                                    }
+                                }, 1000);
+                            }else{
+                                btn.disabled(false).text('重新发送');
+                            }
+                        }, function(){
+                            btn.disabled(false).text('重新发送');
+                        });
+                    }
+                    btn.click(_send);
+                    _send();
+                }
+                var callFun = p[3];
+                op.btn = {cancel:'取消', confirm:'确认'};
+                op.btnFun = function(a, ly){
+                    if (a == 'confirm' && typeof (callFun) == 'function') {
+                        callData.code = input.val() || '';
+                        if(!callData.code){
+                            $.toast('请输入短信验证码');
+                            return false;
+                        }
+                        return callFun.call(this, callData);
+                    }
+                };
+                op.cover = 1;
                 break;
             //默认 参数： 1=标题 2=内容 3=自动关闭时间 4=按钮文字 5=按钮回调函数 6=关闭回调函数
             default:
@@ -2101,8 +2160,6 @@ $.ksauiRenderTree = {};
                 height : ele.height(true),
                 item : ele.find('.ks-slide-item'),
                 itemC : '',
-                itemWidth : 0,
-                widthScale : 1,
                 MX : 0,
                 num : 0,
                 playIndex : 0, //当前播放索引值
@@ -2110,9 +2167,8 @@ $.ksauiRenderTree = {};
                     var ths = this;
 
                     ths.num = this.item.length - 1;
-                    ths.itemWidth = ths.item.eq(0).width(true,true);
-                    ths.widthScale = ths.itemWidth / ths.width;
                     var widthC = 0;
+
                     ths.item.each(function(_, e){
                         e = $(e);
                         var mw = e.width(true, true);
@@ -2120,12 +2176,11 @@ $.ksauiRenderTree = {};
                         e.data('width', w).width(w);
                         widthC += mw;
                     });
-
-
                     var newDom = $('<div class="ks-slide-c" style="width:'+(widthC + 10)+'px; height:100%"></div>');
                     newDom.html(this.item);
                     ele.html(newDom);
                     ths.itemC = newDom;
+
                     //组件
                     var h = '';
                     //左右切换按钮 带属性：data-slide-btn
@@ -2199,6 +2254,7 @@ $.ksauiRenderTree = {};
                             E.play('prev');
                         }
                     }, 'X');
+
                 },
                 move : function (i) {
                     var mX = 0-(this.item.eq(i).data('width') * i);
@@ -2230,6 +2286,7 @@ $.ksauiRenderTree = {};
                         }, options.auto);
                     }
                     options.status && ele.find('.ks-slide-status span').removeClass('a').eq(index).addClass('a');
+
                 }
             };
 

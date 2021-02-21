@@ -220,6 +220,9 @@ function debugTime(key) {
 
     function selectorAll(dom, selector) {
         selector = selectorStr(selector);
+        if(selector.substr(0,1) =='>'){
+            selector = ':scope '+selector;
+        }
         var ele = dom.querySelectorAll(selector);
         //如果选择器没有找到 尝试查找ks-selector属性
         if (!ele.length && selector.indexOf('[') === -1) {
@@ -1093,6 +1096,8 @@ function debugTime(key) {
             if (ele.parentNode) {
                 ele.parentNode.removeChild(ele);
                 $(ele).trigger('KSADOMchange', ['remove']);
+                //通知父级HTML变更
+                $(ele.parentNode).trigger('KSADOMchange', ['html']);
             }
         });
         return this;
@@ -1109,6 +1114,8 @@ function debugTime(key) {
             if (ele.parentNode) {
                 ele.parentNode.insertBefore(node, ele.nextSibling);
                 $(ele).trigger('KSADOMchange', ['after', html]);
+                //通知父级HTML变更
+                $(ele.parentNode).trigger('KSADOMchange', ['html']);
             }
         }, true);
     }
@@ -1429,6 +1436,37 @@ function debugTime(key) {
             });
             return this;
         }
+    }
+
+    /**
+     * 滚动到底部触发回调
+     * @param callFun 回调函数
+     * @param Nus 触底多少距离触发 px 默认50
+     */
+    K.reachBottom = function(callFun, Nus){
+        Nus = Nus ? Nus : 50; //触底距离多少开始回调
+        this.map(function(ele){
+            var isDom = ele === document;
+            var isCall;
+            var S;
+            $(ele).scroll(function(){
+                var ths =$(this);
+                var scrollTop =ths.scrollTop();//滚动高度
+                var viewH = ths.height(true); //可见高度
+                var contentH = isDom ? $('html')[0].scrollHeight : this.scrollHeight;//内容高度
+                var scY = Math.abs(scrollTop - (contentH - viewH));
+
+                if(!isCall && scY < Nus){ //到达底部100px时,加载新内容
+                    callFun.call(ele, ele);
+                    isCall = true;
+                }else if(scY > Nus){
+                    S && window.clearTimeout(S);
+                    S = window.setTimeout(function(){
+                        isCall = false;
+                    }, 300); //延迟解锁 消除抖动
+                }
+            });
+        });
     }
 
     /**
@@ -2540,6 +2578,18 @@ function debugTime(key) {
     }
 // ====================== 元素监听 ====================== //
 
+    //重写Array.push 用以监听数组变更
+    Array.prototype.push = function() {
+        for( let i = 0 ; i < arguments.length ; i++){
+            if(this._KSAmonitor_ === true){
+                $.def.set(this, this.length, arguments[i]);
+            }else{
+                this[this.length] = arguments[i] ;
+            }
+        }
+        return this.length;
+    };
+
     /**
      * 变量监听函数
      * 所有监听回调必须在新值改变以前
@@ -2688,6 +2738,7 @@ function debugTime(key) {
             }
             map.run('set', obj, keyName, value, oldValue);
             var ths = this;
+
             if ($.isObject(value) && $.isObject(oldValue)) {
                 var newMap = ths.objMap(value);
                 var isObjSet = 0;
@@ -2698,9 +2749,11 @@ function debugTime(key) {
                         isObjSet = 1;
                     }
                 });
+
                 $.loop(value, function (v, k) {
                     //旧值不存在 触发新增回调
                     if (!$.isset(oldValue[k])) {
+
                         newMap.run('add', value, k, v);
                         isObjSet = 1;
                     }
@@ -2709,6 +2762,8 @@ function debugTime(key) {
                 if (isObjSet) {
                     var objMap = ths.objMap(obj);
                     objMap && objMap.run('set', obj, keyName, value);
+
+                    //obj[keyName] = value;
                 }
             }
 
@@ -2758,6 +2813,17 @@ function debugTime(key) {
             try {
                 var setter = property && property.set;
                 var getter = property && property.get;
+                //打上监听标记
+
+                if(!obj._KSAmonitor_){
+                    Object.defineProperty(obj.__proto__, '_KSAmonitor_', {
+                        value : function () {
+                            return true;
+                        },
+                        enumerable : false,
+                        writable : false
+                    });
+                }
                 Object.defineProperty(obj, keyName, {
                     enumerable : true,
                     configurable : true,
@@ -2773,6 +2839,8 @@ function debugTime(key) {
                         if (oldValue === newV) {//值相同时不回调函数
                             return;
                         }
+
+
 
                         if (!$.isset(newV)) {
                             newV = '';
@@ -2809,15 +2877,17 @@ function debugTime(key) {
 
             }
         },
+
         set : function (obj, keyName, dt) {
             //新旧值完全相同则不做任何处理
-            if (!obj || obj[keyName] === dt) {
+            if (!obj) {
                 return;
             }
             var ths = this,
                 events = ths.objMap(obj); //当前对象监听事件
             //触发对象add事件 父级关联的
             events && events.run('add', obj, keyName, dt);
+
             //给对象赋值
             if ($.isObject(dt)) {
                 if (!$.isset(obj[keyName])) {
@@ -2826,9 +2896,9 @@ function debugTime(key) {
                 $.loop(dt, function (v, k) {
                     ths.set(obj[keyName], k, v);
                 });
-            } else {
-                obj[keyName] = dt;
+                //ths.monitor(obj, keyName, dt);
             }
+            obj[keyName] = dt;
         },
 
         //已删除对象ID列表 被删除的对象ID会保存在这里
@@ -3149,7 +3219,6 @@ function debugTime(key) {
                     var ag = arguments;
                     return '<' + ag[1] + ag[2] + ' _ksahref_="' + ag[3] + '"' + ag[4] + '>';
                 });
-
                 var dom = $.dom(code);
                 if (!$.isArray(dom)) {
                     dom = [dom];
@@ -3653,10 +3722,13 @@ function debugTime(key) {
                                         $.def.createEvent('set', v[1], v[2], function () {
                                             var e = $(ele);
 
-                                            $.loop(attrs[0](), function (attrV, attrK) {
-                                                attrV = attrV === '' ? attrK : attrV;
+                                            $.loop(attrs[0](), function (attrVal, attrK) {
+                                                var attrV = attrVal === '' ? attrK : attrVal;
                                                 if (attrK === v[0]) {
-
+                                                    if(attrK == 'v-html'){
+                                                        e.html(attrVal.toString());
+                                                        return;
+                                                    }
                                                     //动态绑定attr 单独处理 attrv肯定是一个function
                                                     if (attrK.substr(0, 1) === ':') {
                                                         var sAv = attrV();
@@ -3680,6 +3752,8 @@ function debugTime(key) {
                                     if (k === 'v-model') {
                                         ths.vUpdateModel(ele, v);
                                         //动态属性处理
+                                    } else if (k === 'v-html') {
+                                        el.html(v.toString());
                                     } else if (k.substr(0, 1) === ':') {
                                         var sval = v();
                                         el.attr(k.substr(1), sval ? sval : '');
@@ -3718,7 +3792,6 @@ function debugTime(key) {
                     }
 
                     $.def.createEvent('set', obj, objKey, function () {
-
                         var arg = [ele];
                         $.loop(arguments, function (v) {
                             arg.push(v);
@@ -3758,44 +3831,50 @@ function debugTime(key) {
                         return;
                     }
                     var _ts = this;
+                    /*
                     var loopKey = $.autoID('ktpl-parseLoop');
                     if (!ths.cache.loopscope) {
                         ths.cache.loopscope = {};
                     }
                     var cache = ths.cache.loopscope[loopKey] = {};
-
+*/
+                    var loopCache = {};
                     var newEle = document.createDocumentFragment();
                     var valueOld = {};
 
                     //用数据解析一个循环
                     function pushNode(value, key) {
+                        dt[key] = value;
                         var node = func.call('', key, value);
                         if ($.isArray(node)) {
                             node = _ts.C(node);
                         }
+
                         //loop删除数据监听
                         $.def.createEvent('delete', dt, key, function () {
 
                             //如果缓存中只有一个循环时 先创建占位节点
                             var lastDom;
-                            if ($.count(cache) === 1) {
-                                var objkeys = Object.keys(cache);
-                                lastDom = cache[objkeys[objkeys.length - 1]][0];
+                            if ($.count(loopCache) === 1) {
+                                var objkeys = Object.keys(loopCache);
+                                lastDom = loopCache[objkeys[objkeys.length - 1]][0];
+
                                 if (lastDom) {
                                     _loopcreateCom();
-                                    $(lastDom).before(cache.Placeholder);
+                                    $(lastDom).before(loopCache.Placeholder);
                                 }
                             }
 
                             //删除当前循环中的元素
-                            $.loop(cache[key], function (e) {
+                            $.loop(loopCache[key], function (e) {
                                 $(e).remove();
                             });
                             //从缓存中删除当前元素信息
-                            delete cache[key];
+                            delete loopCache[key];
                         });
 
                         valueOld[key] = value;
+
                         return node;
                     }
 
@@ -3803,13 +3882,13 @@ function debugTime(key) {
                     function _loopcreateCom() {
                         var node = document.createComment('KSA-Placeholder:loop');
                         node._KSA_Placeholder = 1;
-                        cache.Placeholder = node;
+                        loopCache.Placeholder = node;
                         return node;
                     }
 
 
                     $.loop(dt, function (value, key) {
-                        cache[key] = cache[key] || [];
+                        loopCache[key] = loopCache[key] || [];
                         var node = pushNode(value, key);
                         var nodes;
                         if (node.nodeType === 11) {
@@ -3820,74 +3899,77 @@ function debugTime(key) {
                         newEle.appendChild(node);
 
                         $.loop(nodes, function (v) {
-                            cache[key].push(v);
+                            loopCache[key].push(v);
                         });
                     });
 
 
                     function _addFun(value, key) {
-                        var lastDom = cache.Placeholder;
+                        var lastDom = loopCache.Placeholder;
                         //跳过无变化的数据
-                        if (value === dt[key] && cache[key]) {
+                        if (value === dt[key] && loopCache[key]) {
                             return;
                         }
-                        cache[key] = [];
+
+
+                        loopCache[key] = [];
                         //根据数据创建节点
                         var node = pushNode(value, key);
 
                         //节点信息push到缓存
                         if (node.nodeType === 11) {
                             $.loop(node.childNodes, function (v) {
-                                cache[key].push(v);
+                                loopCache[key].push(v);
                             });
                         } else {
-                            cache[key].push(node);
+                            loopCache[key].push(node);
                         }
 
                         if (!lastDom) {
-                            //重新遍历cache在对应位置节点上添加 目的是保持顺序
-                            var objKeys = Object.keys(cache);
+                            //重新遍历loopCache在对应位置节点上添加 目的是保持顺序
+                            var objKeys = Object.keys(loopCache);
                             var prevV;
                             $.loop(objKeys, function (sv, sk) {
                                 if (sv == key) {//找到当前顺序
                                     if (sk === 0) {
-                                        var currCache = cache[objKeys[sk + 1]];
+                                        var currCache = loopCache[objKeys[sk + 1]];
                                         if (currCache) {
                                             lastDom = currCache[0]; //添加位置 取 下一个列表第一个
-                                            $(lastDom).before(cache[key]);
+                                            $(lastDom).before(loopCache[key]);
                                         }
 
                                     } else {
                                         var currCache = prevV[prevV.length - 1];
                                         if (currCache) {
                                             lastDom = currCache; //添加位置 取 上一个列表最后一个
-                                            $(lastDom).after(cache[key]);
+                                            $(lastDom).after(loopCache[key]);
                                         }
                                     }
                                     return true; //跳出循环
                                 }
-                                prevV = cache[sv];//记录上一次的元素列表
+                                prevV = loopCache[sv];//记录上一次的元素列表
                             });
                             prevV = null;
                         } else {
-                            $(lastDom).after(cache[key]);
+                            $(lastDom).after(loopCache[key]);
                         }
 
                         //如果存在占位节点则删除
-                        if (cache.Placeholder) {
+                        if (loopCache.Placeholder) {
                             $(lastDom).remove();
-                            delete cache.Placeholder;
+                            delete loopCache.Placeholder;
                         }
+
                     }
 
                     //监听 loop添加数据动作
                     $.def.createEvent('add', dt, _addFun);
 
                     //如果loop没有数据 则创建一个占位符
-                    if (!$.count(cache)) {
+                    if (!$.count(loopCache)) {
                         newEle.appendChild(_loopcreateCom());
                     }
-                    ths.cache.loopscope[loopKey] = cache;
+                    //ths.cache.loopscope[loopKey] = cache;
                     //添加数据后增加更新事件
                     return newEle;
                 }
@@ -4243,12 +4325,12 @@ function debugTime(key) {
         if ($.isArray(dt)) {
             return dt.length;
         } else if ($.isObject(dt)) {
-            var S = 0, k;
-            for (k in dt) {
+            var S = 0;
+            $.loop(dt, function(){
                 S++;
-            }
+            });
             return S;
-        }
+        };
     }
 
     $.arrayMerge = function () {
