@@ -246,34 +246,21 @@ ks-navaction > :not(ks-btn):last-child:after {
   border-radius: 3px;
   top: 50%;
   left: 50%;
-  min-width: 360px;
-}
-.ks-layer[pos="0"] {
-  border-radius: 3px;
-  border: #e4eaf2 1px solid;
-  box-shadow: 0 5px 5px 0 rgba(154, 161, 171, 0.17);
-  position: absolute;
-  min-width: 120px;
-}
-.ks-layer[pos="0"] > .ks-layer-content {
-  padding: 0;
-}
-.ks-layer[pos="0"] > .ks-layer-title {
-  background: #f2f2f2;
-}
-.ks-layer[pos="00"] {
-  left: 100%;
-  top: 0;
-  width: 100%;
-  min-width: 100%;
-  height: 100%;
-  border-radius: 0;
+  overflow: hidden;
 }
 .ks-layer[active] {
   opacity: 1;
 }
 .ks-layer[active] + .ks-layer-cover {
   opacity: 1;
+}
+.ks-layer-title {
+  padding: 10px 24px;
+  color: rgba(0, 0, 0, 0.8);
+  font-weight: bold;
+  font-size: 16px;
+  border-bottom: #e4e8ec 1px solid;
+  background: #fff;
 }
 .ks-layer-close {
   height: 40px;
@@ -292,17 +279,20 @@ ks-navaction > :not(ks-btn):last-child:after {
 .ks-layer-close:hover {
   color: #4792fb;
 }
-.ks-layer-title {
-  padding: 10px 24px;
-  color: rgba(0, 0, 0, 0.8);
-  font-weight: bold;
-  font-size: 16px;
-  border-bottom: #e4e8ec 1px solid;
-  background: #fff;
-}
 .ks-layer-content {
   padding: 24px;
   overflow-y: auto;
+}
+.ks-layer-bottom {
+  padding: 15px;
+  text-align: right;
+  border-top: #e4e8ec 1px solid;
+}
+.ks-layer-bottom ks-btn {
+  margin-right: 10px;
+}
+.ks-layer-bottom ks-btn:last-child {
+  margin-right: 0;
 }
 .ks-layer-cover {
   background: rgba(0, 0, 0, 0.5);
@@ -314,13 +304,6 @@ ks-navaction > :not(ks-btn):last-child:after {
   bottom: 0;
   z-index: 1;
   user-select: none;
-}
-.ks-layer-select {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-}
-.ks-layer-select .ks-layer-content {
-  max-height: 18em;
 }
 .ks-layer-iframe {
   overflow: hidden;
@@ -336,47 +319,54 @@ ks-navaction > :not(ks-btn):last-child:after {
   padding: 0;
   overflow: hidden;
 }
-.ks-layer-bottom {
-  padding: 15px;
-  text-align: right;
-  border-top: #e4e8ec 1px solid;
+.ks-layer[pos="00"] {
+  left: 100%;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
 }
-.ks-layer-bottom ks-btn {
-  margin-right: 10px;
+.ks-layer[pos="0"] {
+  border: #e4eaf2 1px solid;
+  box-shadow: 0 5px 5px 0 rgba(154, 161, 171, 0.17);
+  position: absolute;
+  min-width: 120px;
 }
-.ks-layer-bottom ks-btn:last-child {
-  margin-right: 0;
+.ks-layer[pos="0"] .ks-layer-content {
+  padding: 0;
+}
+.ks-layer[pos="0"] .ks-layer-title {
+  background: #f2f2f2;
 }
 .ks-Dialog_form .ks-layer-content {
   min-width: 400px;
   padding: 24px 40px;
 }
-.ks-Dialog_toast.ks-layer {
+.ks-Dialog_toast {
   background: rgba(0, 0, 0, 0.8);
   color: #eee;
   padding: 15px 25px;
   text-align: center;
   box-shadow: none;
-  min-width: 120px;
 }
-.ks-Dialog_toast.ks-layer .ks-layer-close {
+.ks-Dialog_toast .ks-layer-close {
   display: none;
 }
-.ks-Dialog_toast.ks-layer .ks-layer-cover {
+.ks-Dialog_toast .ks-layer-cover {
   opacity: 0.3;
   background: #fff;
 }
-.ks-Dialog_toast.ks-layer .ks-layer-content {
+.ks-Dialog_toast .ks-layer-content {
   padding: 0;
   overflow: hidden;
 }
-.ks-Dialog_toast.ks-layer .ks-layer-content [icon]:before {
+.ks-Dialog_toast .ks-layer-content [icon]:before {
   font-size: 26px;
   margin-right: 10px;
   vertical-align: middle;
 }
 .ks-Dialog_confirm .ks-layer-title {
-  padding: 20px 0 0 40px;
+  padding: 0.2rem 0 0 0.4rem;
   font-size: 16px;
   border: 0;
 }
@@ -384,18 +374,17 @@ ks-navaction > :not(ks-btn):last-child:after {
   font-family: remixicon;
   content: '\ee59';
   color: #4792fb;
-  margin-right: 5px;
-  font-size: 24px;
+  font-size: 0.24rem;
   vertical-align: middle;
 }
 .ks-Dialog_confirm .ks-layer-content {
   font-size: 16px;
-  width: 360px;
-  padding: 10px 30px 30px 70px;
+  padding: 0.1rem 0.4rem 0.4rem 0.7rem;
+  min-width: 3.4rem;
 }
 .ks-Dialog_confirm .ks-layer-bottom {
   border-top: 0;
-  padding: 0 30px 30px;
+  padding: 0 0.4rem 0.2rem;
 }
 .ks-Dialog_success .ks-layer-content,
 .ks-Dialog_error .ks-layer-content {
@@ -472,6 +461,13 @@ ks-navaction > :not(ks-btn):last-child:after {
 }
 .ks-layer-showmenu[pos='0'] > .ks-layer-content > *:before {
   margin-right: 5px;
+}
+.ks-layer-select {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+.ks-layer-select .ks-layer-content {
+  max-height: 18em;
 }
 .layer-loading {
   text-align: center;
@@ -1086,13 +1082,11 @@ ks-avatar[square] {
   width: 100%;
   position: relative;
   height: auto;
-  overflow: hidden;
 }
 .ks-slide .ks-slide-c {
   width: 100%;
   transition: all 0.6s ease-in-out;
   height: auto;
-  overflow: hidden;
 }
 .ks-slide .ks-slide-c._a {
   transition: none;
@@ -1236,7 +1230,7 @@ ks-navbar > ks-navbar-item {
   flex: 1;
   position: relative;
   cursor: pointer;
-  font-size: 0.2rem;
+  font-size: 0.24rem;
 }
 ks-navbar > ks-navbar-item[active] {
   color: #4792fb;
@@ -2829,6 +2823,23 @@ textarea.ks-input {
   z-index: 11;
   color: rgba(0, 0, 0, 0.35);
 }
+.ks-input-smart p {
+  padding: 0 5px;
+  font-size: 13px;
+  height: 36px;
+  line-height: 36px;
+  overflow: hidden;
+  max-width: 380px;
+  border-bottom: #dedede 1px solid;
+  cursor: pointer;
+}
+.ks-input-smart p:hover {
+  color: #4792fb;
+  background: #f2f2f2;
+}
+.ks-input-smart p:last-child {
+  border-bottom: 0;
+}
 .ks-checkbox,
 .ks-radio,
 .ks-switch {
@@ -3254,7 +3265,8 @@ ks-pic:hover ks-pic-thumb ~ label {
 }
 .ks-clear:after,
 .ks-fl-sub::after,
-.ks-fr-sub::after {
+.ks-fr-sub::after,
+.ks-slide-c::after {
   content: '';
   width: 100%;
   clear: both;
@@ -4443,6 +4455,27 @@ ks-line[label]:after {
 }
 .ks-anim-hide.ks-anim-scale {
   animation-name: ks-anim-scale-out;
+}
+.ks-loading {
+  text-align: center;
+  display: block;
+  padding: 0.4rem 0;
+  color: #9a9a9a;
+}
+.ks-loading::before {
+  content: '\eec4';
+  font-family: remixicon;
+  font-size: 2em;
+  width: 1.6em;
+  height: 1.6em;
+  text-align: center;
+  line-height: 1.6em;
+  vertical-align: middle;
+  display: inline-block;
+  animation: spin 1s  linear infinite;
+}
+.ks-loading::after {
+  content: 'Loading...';
 }
 ks-input-group {
   display: inline-table;

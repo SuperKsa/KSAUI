@@ -42,7 +42,7 @@ $.ksauiRenderTree = {};
 
     var agent = navigator.userAgent.toLowerCase();
     //判断是否移动端
-    if (/android|ipad|iphone|applewebkit|windows phone|windows ce|windows mobile/.test(agent) && ('ontouchstart' in document.documentElement)) {
+    if (/android|ipad|iphone/.test(agent)) {
         $.device = 'MOBILE';
         $.isMobile = true;
         $('html').attr('mobile', 'true');
@@ -830,6 +830,7 @@ $.ksauiRenderTree = {};
         */
             case type == 'form':
                 var H = $.createForm(p[2]);
+                var submitConfirm = p[2].confirm;
 
                 var callFun = p[3];
                 op.title = p[1];
@@ -839,24 +840,34 @@ $.ksauiRenderTree = {};
                 op.outTime = 0;
                 op.cover = 1;
                 op.btnFun = function (a, layer) {
-                    var args = arguments;
-                    if (a == 'confirm') {
+                    function callf(){
                         if(p[2].action){
-                            layer.find('form').formSubmit(function(){
+                            layer.find('form').formSubmit(function(res, sdt){
                                 var callR;
                                 if(callFun) {
                                     callR = callFun.apply(layer, arguments);
                                 }
-                                if(callR !== false){
+
+                                if(callR !== false && sdt.success){
                                     $.layerHide(layer.layerID);
                                 }
                             });
+                            return false;
                         }else{
                             if(callFun){
                                 return callFun.apply(layer, [layer.find('form').formData(), layer]);
                             }
                         }
-                        return false;
+                    }
+
+                    if (a == 'confirm') {
+                        if(submitConfirm){
+                            submitConfirm = submitConfirm === true ? '确认要进行该操作吗？' : submitConfirm;
+                            $.Dialog('confirm', submitConfirm,  '', callf);
+                            return false;
+                        }else{
+                            return callf();
+                        }
                     }
                 };
                 op.class += '_' + type;
@@ -865,6 +876,7 @@ $.ksauiRenderTree = {};
                 op.show = function (layer) {
                     layer.find('form').submit(function (e) {
                         e.stop();
+                        /*
                         var ts = this;
                         $(ts).formSubmit(function (d, sdt) {
                             callFun && callFun.apply(ts, arguments);
@@ -872,6 +884,8 @@ $.ksauiRenderTree = {};
                                 $.layerHide(layer.layerID);
                             }
                         });
+
+                         */
                     });
                 };
                 op.pos = 5;
@@ -904,19 +918,20 @@ $.ksauiRenderTree = {};
      * @returns {k.fn.init}
      */
     $.toast = function (msg, tps, callFun, outTime) {
+        $.toastHide();
         var cover = 0;
         outTime = typeof (outTime) == 'undefined' ? 2 : outTime;
         if (msg == 'loading') {
             msg = '数据加载中';
             callFun = tps;
             tps = 'loading';
-            cover = 3;
+            outTime = 0;
+            cover = 1;
         }
         if (tps) {
             msg = '<div icon="' + tps + '">' + msg + '</div>';
         }
-        //移除之前的所有toast
-        $('.ks-layer.ks-Dialog_toast').remove();
+
         return $.layer({
             content : msg,
             class : 'ks-Dialog_toast',
@@ -929,6 +944,11 @@ $.ksauiRenderTree = {};
             cancel : false
         });
     };
+    $.toastHide = function(){
+        //移除所有toast
+        $('.ks-layer.ks-Dialog_toast + .ks-layer-cover').remove();
+        $('.ks-layer.ks-Dialog_toast').remove();
+    }
 
     /**
      * 创建一个新的全屏页面
@@ -1041,6 +1061,7 @@ $.ksauiRenderTree = {};
                             }else{
                                 if (s.success) {
                                     $.toast(s.msg, 'success', function () {
+
                                         if (s.success && s.locationUrl) {
                                             window.location.href = s.locationUrl;
                                         }
@@ -1656,6 +1677,7 @@ $.ksauiRenderTree = {};
                     var h = $this.times(v);
                     v = format.replace('Y', h.Y).replace('m', h.m).replace('d', h.d).replace('H', h.H).replace('i', h.i).replace('s', h.s);
                     input.val(v);
+                    input.trigger('input').trigger('change');
                     return v;
                 }
 
@@ -2176,7 +2198,7 @@ $.ksauiRenderTree = {};
 
                             E.play('prev');
                         }
-                    });
+                    }, 'X');
                 },
                 move : function (i) {
                     var mX = 0-(this.item.eq(i).data('width') * i);
@@ -2681,6 +2703,8 @@ $.ksauiRenderTree = {};
                     //绑定一个内部事件 让select表单值改变后通知父级
                     t.DOMchange('val', function () {
                         t.parent().children('.ks-select-title').html(_selectText());
+                    }).DOMchange('html', function(){
+                        t.parent().children('.ks-select-title').html(_selectText());
                     });
                 }
                 //如果在标签属性data-value给定选中值 则处理到内部
@@ -2733,6 +2757,46 @@ $.ksauiRenderTree = {};
                         window.setTimeout(function () {
                             clearbtn.active(false);
                         }, 10)
+                    });
+                }
+                //下拉联想输入框
+                if(at.api){
+                    var intxtS;
+                    var intxtLayerID;
+                    t.blur(function(){
+                        intxtLayerID && $.layerHide(intxtLayerID);
+                        intxtS && window.clearTimeout(intxtS);
+                    }).on('input focus', function () {
+                        var inputVal = $(this).val();
+                        intxtLayerID && $.layerHide(intxtLayerID);
+                        intxtS && window.clearTimeout(intxtS);
+                        if(inputVal.length >0){
+                            intxtS = window.setTimeout(function(){
+                                $.layer({
+                                    pos : t,
+                                    cover : 0,
+                                    content : '请稍后...',
+                                    closeBtn : 0,
+                                    bodyOver : false, //body不需要裁切
+                                    init : function (layer) {
+                                        intxtLayerID = layer.layerID;
+                                        $.API(at.api, {keyword:inputVal}, function(res){
+                                            var h = '<div class="ks-input-smart">';
+                                            $.loop(res.list, function(val){
+                                                h += '<p value="'+val.value+'">'+val.title+'</p>';
+                                            });
+                                            h += '</div>';
+                                            h = $(h);
+                                            h.find('p').click(function(){
+                                                t.val($(this).text());
+                                                $.layerHide(intxtLayerID);
+                                            });
+                                            layer.find('.ks-layer-content').html(h);
+                                        });
+                                    }
+                                });
+                            },300);
+                        }
                     });
                 }
             },
@@ -3148,7 +3212,7 @@ $.ksauiRenderTree = {};
                 if ($.isset(ele.attr('split'))) {
                     txt = txt.replace(/([0-9]+)\.?/, function (v) {
                         v = v.replace(/([0-9])([0-9]{3})$/g, '$1,$2');
-                        return '<strong>' + v + '</strong>';
+                        return '' + v + '';
                     });
                 }
                 ele.append(txt);
@@ -3182,7 +3246,7 @@ $.ksauiRenderTree = {};
                     }
                 }
             } else if (attrs.label) {
-                ele.prepend($.tag('ks-card-title', {icon : attrs.icon}, attrs.label));
+                ele.prepend($.tag('ks-card-title', {icon : attrs.icon}, $.tag('div', {class:'ks-fl'}, attrs.label)));
             }
             ele[0].removeAttribute('icon');
             ele[0].removeAttribute('label');

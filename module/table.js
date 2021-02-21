@@ -18,7 +18,7 @@ $.table = function (options) {
     var render = {
         el : $(options.el),
         //内部使用的数据
-        $data : options || {},
+        $data : options.data || {ksauiLoading : 0},
         post : {}, //搜索框的数据
         //传递到外部的数据
         tplObj : {},
@@ -31,6 +31,7 @@ $.table = function (options) {
             });
             ths.dom = ths.createHtml();
             ths.el.html('<div class="ks-tc ks-p5 ks-text-gray">数据加载中！请稍后...</div>');
+
             this.get(1, function (dt) {
                 ths.$data.list = dt.list ? dt.list : {};
                 if ($.isset(dt.count)) {
@@ -42,29 +43,7 @@ $.table = function (options) {
                     tpl : ths.dom,
                     data : ths.$data,
                     init : function(e){
-                        $(e.EL).find('[data-table-btnindex]').each(function(_, ele){
-                            ele = $(ele);
-                            var btnIndex = ele.attr('data-table-btnindex');
-                            var obj = options;
-                            $.loop(btnIndex.split('.'), function(v){
-                                    obj = obj[v];
-                            });
-                            //hover菜单处理
-                            if(obj.menu){
-                                var hoverEvn = [];
-                                $.loop(obj.menu, function(val){
-                                    hoverEvn.push({
-                                        label : val.text,
-                                        icon : val.icon,
-                                        style : val.style,
-                                        event : function(){
-                                            val.event.call(ele[0], ele.data('table-line-data'));
-                                        }
-                                    });
-                                });
-                                hoverEvn.length && ele.showMenu(obj.menuHover ? 'hover' : 'click', hoverEvn);
-                            }
-                        });
+
                     },
                     methods : {
                         btnEvent : function (key) {
@@ -135,28 +114,49 @@ $.table = function (options) {
                 checkedAllinput.checked(false).trigger('changeALL');
             }
             ths.page = page || 1;
+
             ths.post = $.arrayMerge({}, options.post || {});
             if (options.search) {
-                ths.post = $.arrayMerge(ths.post, $(options.search).formData(), {page : ths.page});
+                ths.post = $.arrayMerge(ths.post, $(options.search).formData());
             }
+            ths.post = $.arrayMerge(ths.post, {page : ths.page});
             ths.$data.ksauiLoading = 1;
             $.API(options.listAPI, ths.post, function (dt) {
                 $.loop(dt, function (val, k) {
                     ths.$data[k] = val;
                 });
-                //将字段预置选项值对应到列表数据中
-                $.loop(dt.list, function (value, key) {
-                    if ($.isObject(value)) {
-                        $.loop(value, function (val, k) {
-                            if (options.fieldOption && options.fieldOption[k] && options.fieldOption[k][val]) {
-                                ths.$data.list[key]['_' + k] = options.fieldOption[k][val];
-                            }
-                        });
-                    }
-                });
+                if(dt.page){
+                    ths.page = dt.page;
+                }
+                ths.$data.ksauiLoading = 0;
                 callFun && callFun.call(ths, dt);
                 options.render && options.render(ths);
-                ths.$data.ksauiLoading = 0;
+                //行右侧按钮 menu菜单绑定
+                ths.el.find('td[data-linebtn-key] *[data-table-btnindex]').each(function(_, ele){
+                    ele = $(ele);
+                    var btnIndex = ele.attr('data-table-btnindex');
+                    var obj = options;
+                    $.loop(btnIndex.split('.'), function(v){
+                        obj = obj[v];
+                    });
+                    //hover菜单处理
+                    if(obj.menu){
+                        var hoverEvn = [];
+                        $.loop(obj.menu, function(val){
+                            hoverEvn.push({
+                                label : val.text,
+                                icon : val.icon,
+                                style : val.style,
+                                event : function(){
+                                    val.event.call(ele[0], ele.data('table-line-data'), ths);
+                                }
+                            });
+                        });
+                        hoverEvn.length && ele.showMenu(obj.menuHover ? 'hover' : 'click', hoverEvn);
+                    }
+                });
+
+
             });
         },
         createBtn : function (dt, objIndex, eventParm) {
@@ -182,7 +182,7 @@ $.table = function (options) {
                             '@click' : click,
                             cap : value.cap,
                             line : value.line
-                        }, value.text);
+                        }, value.text)+ ' ';
                     });
                 } else {
                     h += dt;

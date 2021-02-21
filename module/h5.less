@@ -1,46 +1,8 @@
-@ColorList : primary, success, warning, danger, blue , indigo , purple , pink , red , orange , yellow , green , teal , cyan , white , gray , light , black;
-@ColorListValue : #4792fb, #5ab32d, #ea981d, #ff6a5b, #4792fb, #727cf5, #6b5eae, #ff679b, #ff381e, #ff9041, #f9bc0d, #5abd48, #14d0ef, #00d4c0, #fff, #9e9e9e, #bec3ca, #474d56;
-@ColorListLength : length(@ColorList);
-
-
-
-@defColor: #4a4a4a; //通用主色
-@textColor: #9e9e9e; //浅色文字
-@highColor: #4792fb; //高亮主色 突出
-
-@blue: #4792fb;// 蓝色 blue
-@indigo: #727cf5;// 靛青色 indigo
-@purple: #6b5eae;// 紫色 purple
-@pink: #ff679b;// 粉色 pink
-@red: #E12318;// 红 red
-@orange: #ff9041;// 橙色 orange
-@yellow: #f9bc0d;// 黄色 yellow
-@green: #5abd48;// 绿色 green
-@teal: #14d0ef;// 天空蓝 teal
-@cyan: #00d4c0;// 青色 cyan
-@white: #fff;// 白色 white
-@gray: #9e9e9e;// 灰色 gray
-@light: #bec3ca;// 浅白 light
-@black: #474d56;// 暗色 black
-
-//== 定义边框色 ==
-@borderColor: #e4e8ec;
-
-//表单高度
-@inputHeight : 36px;
-
-//色调支持
-@primary : #4792fb; //主色
-@success : #5ab32d; //成功
-@warning : #ea981d; //警告
-@danger : #ff6a5b; //错误/危险
 
 html {font-size: 13.33333vw;}
-body {font-size: .24rem; color: #3a3a3a}
+body {font-size: .25rem; color: #3a3a3a}
 
 ks-hr {width: 200%; transform: scale(0.5) translateX(-50%)}
-
-.ks-textarea > textarea { height: 0.8rem;}
 
 //输入框
 ks-btn,
@@ -50,7 +12,8 @@ ks-input-group > *,
 .ks-select,
 .ks-date,
 ks-area,
-ks-form ks-form-label{ height: 0.8rem; line-height: 0.8rem;}
+ks-form ks-form-label { height: 0.7rem; line-height: 0.7rem;}
+.ks-textarea > textarea { height: 0.7rem;}
 .ks-select {
     border: none;
     .ks-select-title { padding: 0 0.35rem 0 0; min-width: auto}
@@ -66,20 +29,37 @@ ks-form {
     }
 }
 
-html ks-pic {
+ks-pic {
     width: 1.6rem; height: 1.6rem;
     > label:before { font-size: 0.6rem;}
 }
 
-.ks-Dialog .ks-layer-bottom ks-btn { height: 0.7rem; line-height: 0.7rem; min-width: auto; padding: 0 0.4rem; font-size: 0.28rem}
 
 //按钮
 ks-btn {
-    min-width: 2.2rem; font-size: 0.3rem; padding: 0 0.47rem;
-    &[size=small] {height: 0.54rem; line-height: 0.56rem; min-width: 1.1rem; font-size: 0.25rem; padding: 0 0.2rem;}
-    &[size=mini] {height: 0.44rem; line-height: 0.44rem; min-width: 1rem; font-size: 0.22rem; padding: 0 0.2rem;}
+    min-width: auto; font-size: 0.28rem; padding: 0 0.47rem; height: 2.4em; line-height: 2.4em;
+    &[size=small] {font-size: 0.24rem; padding: 0 0.26rem; height: 2.2em; line-height: 2.2em;}
+    &[size=mini] {font-size: 0.2rem; padding: 0 0.2rem; height: 2.2em; line-height: 2.2em;}
 }
 
+.ks-layer-title { font-size: 0.28rem}
+.ks-layer-bottom ks-btn { min-width: auto; padding: 0 0.3rem;}
+.ks-Dialog_confirm {
+    .ks-layer-title {padding:0.3rem 0.4rem 0 0.15rem; font-size: 0.32rem;}
+    .ks-layer-title:before { display: inline-block; width: 0.6rem; height: 0.6rem; line-height: 0.6rem; text-align: center; font-size: 0.4rem}
+    .ks-layer-content { font-size: 0.32rem; min-width: 5rem; padding: 0.3rem 0.4rem 0.6rem 0.75rem;}
+    .ks-layer-bottom { padding-bottom: 0.4rem;}
+}
+.ks-Dialog_error ,
+.ks-Dialog_success {
+    .ks-layer-content {
+        min-width: 5rem; padding: 0.5rem 0.4rem 0.6rem 1.2rem; font-size: 0.32rem;
+        &::before { left: 0.4rem; top: 0.4rem}
+    }
+}
+.ks-Dialog_toast {padding: 0.15rem 0.4rem; font-size: 0.26rem; border-radius: 0.1rem;}
+
+.ks-Dialog_form .ks-layer-content { min-width: 3rem}
 
 //tab选项卡
 ks-tab {
@@ -98,15 +78,10 @@ ks-tab {
 ks-card {
     border-radius: 0.05rem; box-shadow:  0 0 0.05rem #e8e8e8;
     ks-card-title, ks-card-content { padding:0.3rem 0.3rem;}
+    ks-card-title { font-size: 0.3rem; font-weight: 700; border: 0}
+    ks-card-title > .ks-fr { font-size: 0.25rem; font-weight: normal}
 }
 
-/*
-.ks-layer {
-    .ks-layer-content {padding: 0.4rem}
-    .ks-layer-title { font-size: 0.36rem; text-align: center; border-bottom: 0; padding: 0.4rem 0;}
-    .ks-layer-bottom { border-top: 0; text-align: center;}
-}
-*/
 .ks-layer-select { width: 100%;
     .ks-list-select > ks-list-item {
         padding: 0.3rem 0; font-size: 0.28rem; text-align: center;
@@ -254,5 +229,3 @@ ks-card {
 .ks-mlr3 { margin-left: 0.2rem; margin-right: 0.2rem;}	.ks-mlr3-sub > * { margin-left: 0.2rem; margin-right: 0.2rem;}
 .ks-mlr4 { margin-left: 0.3rem; margin-right: 0.3rem;}	.ks-mlr4-sub > * { margin-left: 0.3rem; margin-right: 0.3rem;}
 .ks-mlr5 { margin-left: 0.4rem; margin-right: 0.4rem;}	.ks-mlr5-sub > * { margin-left: 0.4rem; margin-right: 0.4rem;}
-
-
