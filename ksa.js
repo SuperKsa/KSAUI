@@ -2580,7 +2580,7 @@ function debugTime(key) {
 
     //重写Array.push 用以监听数组变更
     Array.prototype.push = function() {
-        for( let i = 0 ; i < arguments.length ; i++){
+        for( var i = 0 ; i < arguments.length ; i++){
             if(this._KSAmonitor_ === true){
                 $.def.set(this, this.length, arguments[i]);
             }else{

@@ -96,7 +96,7 @@ function KSAadminIframe(homeUrl){
                     v && v.url && v.title && ths.open(v.url, v.isOpen, v.title);
                 });
             }else{
-                ths.open(ths.homeUrl, 1, home);
+                ths.open(ths.homeUrl, 1, 'home');
             }
 
             $('.ks-admin-taskbar-next').mousedown(function(){
@@ -335,6 +335,9 @@ function KSAadminIframe(homeUrl){
         close : function(url, isForce){
             var ths = this;
             var dt = ths.data[url];
+            if(!dt){
+                return;
+            }
             var t = $(dt.taskBar);
             var content = $(dt.content);
 

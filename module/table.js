@@ -121,6 +121,7 @@ $.table = function (options) {
             }
             ths.post = $.arrayMerge(ths.post, {page : ths.page});
             ths.$data.ksauiLoading = 1;
+            //请求API数据
             $.API(options.listAPI, ths.post, function (dt) {
                 $.loop(dt, function (val, k) {
                     ths.$data[k] = val;

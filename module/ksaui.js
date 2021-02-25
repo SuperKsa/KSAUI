@@ -778,7 +778,7 @@ $.ksauiRenderTree = {};
              * 3=输入框提示文字
              * 4=输入框内容
              * 5=回调函数
-             * 6=附加类型（0=默认text 1=textarea 2=textarea自动增高 3=两次确认密码框）
+             * 6=附加类型（0=默认text 1=textarea 2=textarea自动增高 3=两次确认密码框 4=带旧密码的两次确认输入框）
              *
              */
             case type =='prompt':
@@ -791,10 +791,14 @@ $.ksauiRenderTree = {};
                 if(isArea){
                     op.content = $.tag(ty, {type:'ks-'+ty, placeholder:p[2], auto: p6 == 2 }, p[3]);
                 }else{
-                    op.content = $.tag('input', {type:'ks-'+ty, placeholder:p[2], value:p[3]}, '', true);
+                    op.content = '';
+
+                    op.content += $.tag('input', {type:'ks-'+ty, placeholder:p[2], value:p[3]}, '', true);
                     if(p6 == 3){
-                        op.content += $.tag('input', {type:'ks-'+ty, placeholder:'请再次输入...', class:'ks-mt3'}, '', true);
+                        op.content += $.tag('input', {type:'ks-'+ty, placeholder:'再次输入新密码', class:'ks-mt3'}, '', true);
+                        op.content += $.tag('input', {type:'ks-'+ty, placeholder:'请输入旧密码', name:'old', value:'', class:'ks-mt3'}, '', true);
                     }
+
                 }
 
                 op.close = null;
@@ -813,13 +817,21 @@ $.ksauiRenderTree = {};
                                 $.toast('请输入密码，且两次须相同');
                                 return false;
                             }
+                            var oldval = inpt.eq(2).val();
+                            if(!oldval){
+                                $.toast('请输入旧密码');
+                                return false;
+                            }
+                            return callFun.apply(this, [val, oldval, d]);
                         }
                         return callFun.apply(this, [val, d]);
                     }
                 };
                 op.class += '_' + type;
                 op.closeBtn = 1;
-                op.pos = '8';
+                if($.isMobile){
+                    op.pos = '8';
+                }
                 break;
             /*表单弹窗 第三个参数：
             [
@@ -942,6 +954,7 @@ $.ksauiRenderTree = {};
                 var callFun = p[3];
                 op.btn = {cancel:'取消', confirm:'确认'};
                 op.btnFun = function(a, ly){
+                    var input = ly.find('input[name=code]');
                     if (a == 'confirm' && typeof (callFun) == 'function') {
                         callData.code = input.val() || '';
                         if(!callData.code){
@@ -2640,7 +2653,7 @@ $.ksauiRenderTree = {};
                 ele = $(ele);
                 var at = ele.attr();
                 ele.attr('type', 'number').addClass('ks-input');
-                ele.wrap($.tag('label',{type : 'number', class : 'ks-input ks-input-arrow', 'icon': at.icon, 'style':at.style}));
+                ele.wrap($.tag('span',{type : 'number', class : 'ks-input ks-input-arrow', 'icon': at.icon, 'style':at.style}));
 
                 ele.after('<span data-digit="down" icon="subtract"></span><span data-digit="up" icon="add"></span>');
 
@@ -3259,11 +3272,12 @@ $.ksauiRenderTree = {};
 
                 var txtele = ele.contents();
                 var txt = v ? v : txtele.eq(0).text().trim();
+                txt = txt.toString();
                 txtele.map(function(){
                     this.textContent = '';
                 });
                 txtele.nextAll('', 1).remove();
-                txt = txt.replace(/([^0-9]+)/gi, '<unit>$1</unit>');
+                txt = txt.replace(/([^\s0-9]+)/gi, '<unit>$1</unit>');
                 txt = txt.replace(/(\.[0-9]+)/g, '<small>$1</small>');
 
                 if ($.isset(ele.attr('split'))) {
