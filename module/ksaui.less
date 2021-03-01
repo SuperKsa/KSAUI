@@ -187,7 +187,7 @@ ks-navaction {display: block; margin-bottom: 15px;
 	overflow: hidden; background: #fff;
 	.ks-layer-content iframe { border: none; width: 100%; height: 100%; overflow: hidden}
 	.ks-layer-content { padding:0; overflow: hidden; position: relative}
-	.ks-layer-content .ks-loading { width: 1.3rem; height: 0.7rem; line-height: 0.7rem; text-align: center; padding: 0; color: #fff; border-radius: 0.1rem; background: rgba(0,0,0, 0.8); position: absolute; left: 50%; top: 50%; margin: -0.2rem  0 0 -0.65rem;}
+	.ks-layer-content .ks-loading {color: #fff; border-radius: 0.4em; background: rgba(0,0,0, 0.7); position: absolute; left: 50%; top: 50%; margin: -0.2rem  0 0 -0.65rem;}
 }
 
 //从右到左滑出一个全屏（移动端适用）
@@ -506,9 +506,9 @@ ks-avatar {
 //============== 轮播 ==============
 .ks-slide {
 	width: 100%; position: relative; height:auto;
-	.ks-slide-c { width: 100%; transition:all 0.6s ease-in-out; height: auto; }
+	.ks-slide-c { width: 100%; transition:all 0.6s ease-in-out; height: auto; display: flex; flex-flow: row;}
 	.ks-slide-c._a { transition: none}
-	.ks-slide-item {width: auto; height: 100%; z-index: 1; transition: all .6s ease-in-out; float: left;}
+	.ks-slide-item {width: auto; height: 100%; z-index: 1; transition: all .6s ease-in-out; flex-shrink:0}
 	
 	//左右控制器
 	.ks-slide-control-prev, .ks-slide-control-next { position: absolute; top: 50%; z-index: 99; cursor: pointer; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 100%; margin-top: -18px; background: #000; transition: all .3s ease-in-out; opacity: 0; display: inline-block; color: #fff;}
@@ -700,7 +700,7 @@ ks-form {
 	}
 }
 
-html:not([mobile]) {
+html[device=pc] {
 	ks-form {
 		ks-form-label {
 			text-align: right; padding-right: 12px;
@@ -840,28 +840,20 @@ th.ks-label { width: 100px; padding: 10px;}
 
 //============== 表单 按钮 ==============
 ks-btn {
-	transition:all 0.1s ease-in-out; cursor:pointer; display:inline-block;  text-align:center; vertical-align:middle; white-space:nowrap; margin:0; user-select: none; font-style: normal; height: @inputHeight; line-height:(@inputHeight - 2); font-size:14px; background:#fff; color: #63666b; padding:0 15px; border-radius:3px; opacity: .95; border: @borderColor 1px solid; overflow: hidden; position: relative;
+	transition:all 0.1s ease-in-out; cursor:pointer; display:inline-block;  text-align:center; vertical-align:middle; white-space:nowrap; margin:0; user-select: none; font-style: normal; height: @inputHeight; line-height:(@inputHeight - 2); font-size:14px; background:#fff; color: #63666b; padding:0 15px; border-radius:4px; opacity: .95; border: @borderColor 1px solid; overflow: hidden; position: relative;
 	
-	//获得焦点
-	&:hover:not([disabled]) { border-color: @primary; color:@primary; z-index: 10;}
+	
 	&:active { opacity: 1;}
-	
+	//获得焦点
+	&:hover { border-color: @primary; color:@primary; z-index: 10;}
 	//被禁用
-	&[disabled] { cursor: not-allowed; opacity: 0.5}
+	&[disabled] { cursor: not-allowed; opacity: 0.5; pointer-events: none;}
 	
 	//整行
 	&[block] { width: 100%;}
 	
-	//加载中
-	&[icon='loading']::before { content: ''; margin: 0 5px 0 0; width:10px; height:10px; border-radius: 100%; border: rgba(255,255,255,0.8) 2px solid; border-top-color: transparent; opacity: .8; vertical-align: middle}
-	&[icon='loading']:not([color])::before { border-color: rgba(0, 0, 0, 0.3); border-top-color: transparent;}
-	&[line][icon='loading']::before,
-	&[color*='white'][icon='loading']::before{ border-color: rgba(0,0,0,.2); border-top-color: transparent;}
-	
 	//按钮图标统一增加右边距
-	&[icon]:before:not(:only-child) { margin-right: 3px;}
-	
-	
+	&[icon]:before:not(:only-child) { margin-right: 2px;}
 	
 	//按钮存在上传表单的处理 icon=upload
 	&[icon='upload'] {
@@ -892,6 +884,8 @@ ks-btn {
 	}
 	
 }
+
+
 
 
 //按钮尺寸
@@ -1053,7 +1047,7 @@ select:disabled ~ .ks-list-select { cursor: not-allowed; opacity: .7}
 //普通输入框
 .ks-input {
 	vertical-align:middle; white-space: nowrap;
-	input {height: inherit; background: #fff; padding: 0 10px; float: left; width: 100%}
+	input {height: inherit; padding: 0 10px; float: left; width: 100%; box-shadow: none; outline: none;-webkit-appearance: none;}
 	//清除text文本输入框的清除图标
 	> input::-ms-clear{display: none;}
 	//清除password密码输入框的明文图标
@@ -1165,7 +1159,7 @@ input.ks-input, textarea.ks-input { padding: 0 10px;}
 
 
 //============== 表单焦点状态 ==============
-html:not([mobile]) {
+html[device=pc] {
 	//hover 经过
 	.ks-input input:not(:disabled):hover,
 	.ks-input textarea:not(:disabled):hover,
@@ -1566,8 +1560,8 @@ ks-line[label]:after { content: attr(label); padding: 0 0.7em; background: #fff;
 .ks-anim-hide.ks-anim-scale {animation-name:ks-anim-scale-out;}
 
 //============== 输入框组 ==============
-.ks-loading { text-align: center; display: block; padding: 0.4rem 0; color: #9a9a9a; }
-.ks-loading::before { content: '\eec4'; font-family: @iconfont; font-size: 2em; width: 1.6em; height: 1.6em; text-align: center; line-height: 1.6em;  vertical-align: middle; display: inline-block;  animation: spin 1s  linear infinite;}
+.ks-loading { text-align: center; display: block; padding: 0.6em 1em; color: #9a9a9a; }
+.ks-loading::before { content: '\eec4'; font-family: @iconfont; font-size: 2em; text-align: center;  vertical-align: middle; display: inline-block;  animation: spin 1s  linear infinite;}
 .ks-loading::after {content: 'Loading...'}
 //============== 输入框组 ==============
 ks-input-group {
@@ -1584,7 +1578,7 @@ ks-input-group {
 	.ks-select { min-width: 100px;}
 }
 //PC专用样式
-html:not([mobile]) {
+html[device=pc]{
 	ks-input-group {
 		background: #f2f2f2;
 		//默认所有去圆角
@@ -1631,8 +1625,8 @@ ks-area[size=mini] {height: (@inputHeight - 12); line-height: (@inputHeight - 14
 
 
 //手机浏览器中日期组件禁止输入(禁止手机弹出输入法)
-html[mobile] .ks-input[type='date'] { position: relative;}
-html[mobile] .ks-input[type='date'] > i.ks-input-cover { position: absolute; left: 0; top: 0; bottom: 0; right: 0; background: #fff; opacity: 0;  z-index: 10;}
+html[device=mobile] .ks-input[type='date'] { position: relative;}
+html[device=mobile] .ks-input[type='date'] > i.ks-input-cover { position: absolute; left: 0; top: 0; bottom: 0; right: 0; background: #fff; opacity: 0;  z-index: 10;}
 
 
 

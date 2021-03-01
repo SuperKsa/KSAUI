@@ -42,10 +42,10 @@ $.ksauiRenderTree = {};
 
     var agent = navigator.userAgent.toLowerCase();
     //判断是否移动端
-    if (/android|ipad|iphone/.test(agent)) {
+    if (/android|ipad|iphone/.test(agent) || (/mac os/.test(agent) && $.W < $.H)) {
         $.device = 'MOBILE';
         $.isMobile = true;
-        $('html').attr('mobile', 'true');
+        $('html').attr('mobile', 'true').attr('device', 'mobile');
         $.isWechat = agent.match(/MicroMessenger/i) === 'micromessenger';
     }
     if ($.device == 'PC') {
@@ -54,6 +54,7 @@ $.ksauiRenderTree = {};
             $.mouseX = e.x || e.layerX || 0;
             $.mouseY = e.y || e.layerY || 0;
         });
+        $('html').attr('device', 'pc');
     }
     $(window).resize(function () {
         $.W = window.innerWidth;
@@ -1205,7 +1206,7 @@ $.ksauiRenderTree = {};
         if(confirmTxt ===''){
             confirmTxt = '确认要提交该信息吗？';
         }
-        var loadingLayerID = $.toast('请稍后','','','',0).id;
+        var loadingLayerID;
 
         var _submit = function(){
                 var btn = obj.find('button[type=submit], input[type=submit], ks-btn[submit]');
@@ -1215,6 +1216,7 @@ $.ksauiRenderTree = {};
                 if (obj.attr('id')) {
                     formData.append('FORMID', obj.attr('id'));
                 }
+                loadingLayerID = $.toast('请稍后','','','',0).id;
                 $.API($.urlAdd(obj.attr('action'), 'formsubmit=true'), formData, function (dt, sdt) {
                     $.layerHide(loadingLayerID);
                     btn.removeClass('btn-load').disabled(false).html(btnTxt);
@@ -3458,13 +3460,16 @@ $.ksauiRenderTree = {};
                 ele.css('flex-direction', 'row');
             }
 
-            var navbar = ele.children('ks-navbar');
 
-            if (navbar.length) {
-                ele.attr('navbar', true);
+        });
 
-                var navbarItem = navbar.children('ks-navbar-item');
-                var contents = ele.children('ks-content').children('ks-navbar-content');
+        $.render('ks-navbar', function (ele) {
+            ele = $(ele);
+            var ks = ele.parent('ks');
+            ks.attr('navbar', true);
+
+                var navbarItem = ele.children('ks-navbar-item');
+                var contents = ks.children('ks-content').children('ks-navbar-content');
 
                 //显示底部导航对应的内容区
                 function _navbarContentShow(el, key) {
@@ -3473,6 +3478,13 @@ $.ksauiRenderTree = {};
 
                 navbarItem.each(function (i, el) {
                     el = $(el);
+                    var href = el.attr('href');
+
+                    if(href){
+                        el.click(function(){
+                            window.location.href = href;
+                        });
+                    }
                     var skey = el.attr('key');
                     if (el.active()) {
                         _navbarContentShow(el, skey);
@@ -3489,15 +3501,8 @@ $.ksauiRenderTree = {};
                         }
                     });
                 });
-            }
         });
 
-        $(document).on('click', 'ks-navbar-item[href]', function(){
-            var href = $(this).attr('href');
-            if(href){
-                window.location.href = href;
-            }
-        });
 
         //自定义组件 栅格
         $.render('ks-row', function (ele) {

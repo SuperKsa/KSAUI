@@ -1028,10 +1028,17 @@ function debugTime(key) {
         } else {
             var t = [];
             this.map(function (ele) {
-                ele.innerHTML && t.push(ele.innerHTML || '');
+                t.push(ele.innerHTML || ele.textContent);
             });
-            return t.join("\n");
+            return t.join("");
         }
+    };
+    K.outerHtml = function () {
+        var t = [];
+        this.map(function (ele) {
+            t.push(ele.outerHTML || ele.textContent);
+        });
+        return t.join("");
     };
 
     /**

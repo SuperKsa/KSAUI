@@ -318,14 +318,9 @@ ks-navaction > :not(ks-btn):last-child:after {
   position: relative;
 }
 .ks-layer-iframe .ks-layer-content .ks-loading {
-  width: 1.3rem;
-  height: 0.7rem;
-  line-height: 0.7rem;
-  text-align: center;
-  padding: 0;
   color: #fff;
-  border-radius: 0.1rem;
-  background: rgba(0, 0, 0, 0.8);
+  border-radius: 0.4em;
+  background: rgba(0, 0, 0, 0.7);
   position: absolute;
   left: 50%;
   top: 50%;
@@ -1099,6 +1094,8 @@ ks-avatar[square] {
   width: 100%;
   transition: all 0.6s ease-in-out;
   height: auto;
+  display: flex;
+  flex-flow: row;
 }
 .ks-slide .ks-slide-c._a {
   transition: none;
@@ -1108,7 +1105,7 @@ ks-avatar[square] {
   height: 100%;
   z-index: 1;
   transition: all 0.6s ease-in-out;
-  float: left;
+  flex-shrink: 0;
 }
 .ks-slide .ks-slide-control-prev,
 .ks-slide .ks-slide-control-next {
@@ -1601,7 +1598,7 @@ ks-form[search] ks-form-btn {
 ks-form[search] ks-form-content > .ks-select {
   width: 100%;
 }
-html:not([mobile]) ks-form ks-form-label {
+html[device=pc] ks-form ks-form-label {
   text-align: right;
   padding-right: 12px;
 }
@@ -1912,49 +1909,30 @@ ks-btn {
   background: #fff;
   color: #63666b;
   padding: 0 15px;
-  border-radius: 3px;
+  border-radius: 4px;
   opacity: 0.95;
   border: #e4e8ec 1px solid;
   overflow: hidden;
   position: relative;
 }
-ks-btn:hover:not([disabled]) {
+ks-btn:active {
+  opacity: 1;
+}
+ks-btn:hover {
   border-color: #4792fb;
   color: #4792fb;
   z-index: 10;
 }
-ks-btn:active {
-  opacity: 1;
-}
 ks-btn[disabled] {
   cursor: not-allowed;
   opacity: 0.5;
+  pointer-events: none;
 }
 ks-btn[block] {
   width: 100%;
 }
-ks-btn[icon='loading']::before {
-  content: '';
-  margin: 0 5px 0 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 100%;
-  border: rgba(255, 255, 255, 0.8) 2px solid;
-  border-top-color: transparent;
-  opacity: 0.8;
-  vertical-align: middle;
-}
-ks-btn[icon='loading']:not([color])::before {
-  border-color: rgba(0, 0, 0, 0.3);
-  border-top-color: transparent;
-}
-ks-btn[line][icon='loading']::before,
-ks-btn[color*='white'][icon='loading']::before {
-  border-color: rgba(0, 0, 0, 0.2);
-  border-top-color: transparent;
-}
 ks-btn[icon]:before:not(:only-child) {
-  margin-right: 3px;
+  margin-right: 2px;
 }
 ks-btn[icon='upload'] {
   position: relative;
@@ -2709,10 +2687,12 @@ select:disabled ~ .ks-list-select {
 }
 .ks-input input {
   height: inherit;
-  background: #fff;
   padding: 0 10px;
   float: left;
   width: 100%;
+  box-shadow: none;
+  outline: none;
+  -webkit-appearance: none;
 }
 .ks-input > input::-ms-clear {
   display: none;
@@ -3058,25 +3038,25 @@ textarea.ks-input {
 .ks-switch[color='black'] > input[type=checkbox]:checked ~ i {
   background: #474d56;
 }
-html:not([mobile]) .ks-input input:not(:disabled):hover,
-html:not([mobile]) .ks-input textarea:not(:disabled):hover,
-html:not([mobile]) input.ks-input:not(:disabled):hover,
-html:not([mobile]) .ks-textarea textarea:not(:disabled):hover,
-html:not([mobile]) ks-input-group > input:not(:disabled):hover,
-html:not([mobile]) ks-input-group > textarea:not(:disabled):hover,
-html:not([mobile]) .ks-select:hover,
-html:not([mobile]) ks-area:not([disabled]):hover {
+html[device=pc] .ks-input input:not(:disabled):hover,
+html[device=pc] .ks-input textarea:not(:disabled):hover,
+html[device=pc] input.ks-input:not(:disabled):hover,
+html[device=pc] .ks-textarea textarea:not(:disabled):hover,
+html[device=pc] ks-input-group > input:not(:disabled):hover,
+html[device=pc] ks-input-group > textarea:not(:disabled):hover,
+html[device=pc] .ks-select:hover,
+html[device=pc] ks-area:not([disabled]):hover {
   border-color: #a2cfff;
   border-width: 1px !important;
 }
-html:not([mobile]) .ks-input input:not(:disabled):focus,
-html:not([mobile]) .ks-input textarea:not(:disabled):focus,
-html:not([mobile]) input.ks-input:not(:disabled):focus,
-html:not([mobile]) .ks-textarea textarea:not(:disabled):focus,
-html:not([mobile]) ks-input-group > input:focus,
-html:not([mobile]) ks-input-group > textarea:focus,
-html:not([mobile]) .ks-select[active],
-html:not([mobile]) ks-area:not([disabled])[active] {
+html[device=pc] .ks-input input:not(:disabled):focus,
+html[device=pc] .ks-input textarea:not(:disabled):focus,
+html[device=pc] input.ks-input:not(:disabled):focus,
+html[device=pc] .ks-textarea textarea:not(:disabled):focus,
+html[device=pc] ks-input-group > input:focus,
+html[device=pc] ks-input-group > textarea:focus,
+html[device=pc] .ks-select[active],
+html[device=pc] ks-area:not([disabled])[active] {
   border-color: #4792fb;
   color: #495057 !important;
   box-shadow: 0 0 0 2px rgba(45, 140, 240, 0.2);
@@ -4471,17 +4451,14 @@ ks-line[label]:after {
 .ks-loading {
   text-align: center;
   display: block;
-  padding: 0.4rem 0;
+  padding: 0.6em 1em;
   color: #9a9a9a;
 }
 .ks-loading::before {
   content: '\eec4';
   font-family: remixicon;
   font-size: 2em;
-  width: 1.6em;
-  height: 1.6em;
   text-align: center;
-  line-height: 1.6em;
   vertical-align: middle;
   display: inline-block;
   animation: spin 1s  linear infinite;
@@ -4518,38 +4495,38 @@ ks-input-group > ks-btn {
 ks-input-group .ks-select {
   min-width: 100px;
 }
-html:not([mobile]) ks-input-group {
+html[device=pc] ks-input-group {
   background: #f2f2f2;
 }
-html:not([mobile]) ks-input-group > *,
-html:not([mobile]) ks-input-group > ks-btn,
-html:not([mobile]) ks-input-group input,
-html:not([mobile]) ks-input-group > .ks-input,
-html:not([mobile]) ks-input-group > .ks-input input {
+html[device=pc] ks-input-group > *,
+html[device=pc] ks-input-group > ks-btn,
+html[device=pc] ks-input-group input,
+html[device=pc] ks-input-group > .ks-input,
+html[device=pc] ks-input-group > .ks-input input {
   border-radius: 0;
 }
-html:not([mobile]) ks-input-group > .ks-input:not(input):not(ks-btn) {
+html[device=pc] ks-input-group > .ks-input:not(input):not(ks-btn) {
   border: 0;
 }
-html:not([mobile]) ks-input-group > *:not(input):not(ks-btn) {
+html[device=pc] ks-input-group > *:not(input):not(ks-btn) {
   border: #e4e8ec 1px solid;
   border-left-width: 0;
   border-right-width: 0;
 }
-html:not([mobile]) ks-input-group > *:first-child,
-html:not([mobile]) ks-input-group > *:first-child > input {
+html[device=pc] ks-input-group > *:first-child,
+html[device=pc] ks-input-group > *:first-child > input {
   border-left-width: 1px;
   border-radius: 3px 0 0 3px;
 }
-html:not([mobile]) ks-input-group > *:last-child,
-html:not([mobile]) ks-input-group > *:last-child > input {
+html[device=pc] ks-input-group > *:last-child,
+html[device=pc] ks-input-group > *:last-child > input {
   border-right-width: 1px;
   border-radius: 0 3px 3px 0;
 }
-html:not([mobile]) ks-input-group > *:first-child:not(:hover):not(:focus):not(.a):not([active]):not(input) {
+html[device=pc] ks-input-group > *:first-child:not(:hover):not(:focus):not(.a):not([active]):not(input) {
   border-right-color: transparent;
 }
-html:not([mobile]) ks-input-group > *:last-child:not(:hover):not(:focus):not(.a):not([active]):not(input) {
+html[device=pc] ks-input-group > *:last-child:not(:hover):not(:focus):not(.a):not([active]):not(input) {
   border-left-color: transparent;
 }
 ks-input-group[size=small],
@@ -4589,10 +4566,10 @@ ks-area[size=mini] {
   width: 16px;
   line-height: 1;
 }
-html[mobile] .ks-input[type='date'] {
+html[device=mobile] .ks-input[type='date'] {
   position: relative;
 }
-html[mobile] .ks-input[type='date'] > i.ks-input-cover {
+html[device=mobile] .ks-input[type='date'] > i.ks-input-cover {
   position: absolute;
   left: 0;
   top: 0;
