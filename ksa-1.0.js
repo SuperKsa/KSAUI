@@ -57,8 +57,7 @@ function debugTime(key) {
     };
     wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
     wrapMap.th = wrapMap.td;
-    var rtagName = (/<([a-z][^\/\0>\x20\t\r\n\f]*)/i);
-
+    var rtagName = (/<([a-z][^\/>\x20\t\r\n\f]*)/i);
 
     /**
      * 字符串转虚拟dom
@@ -2569,7 +2568,7 @@ function debugTime(key) {
             $.loop(headers, function (val, k) {
                 A.setRequestHeader(k, val);
             });
-
+            
             A.send(option.data);
 
             A.onreadystatechange = function () {
