@@ -2323,6 +2323,43 @@ $.ksauiRenderTree = {};
         return this;
     };
 
+    /**
+     * 上下滚动公告效果
+     * 被触发效果的元素必须有高度与 overflow: hidden
+     * @param Timer 滚动切换时间
+     * @param subTag 子级标签选择器
+     * @param granTag 孙级标签选择器
+     * @returns {*}
+     */
+    $.plugin.announcement = function(Timer, subTag, granTag){
+        Timer = Timer > 0 ? Timer : 10;
+        subTag = subTag ? subTag : 'ul';
+        granTag = granTag ? granTag : 'li';
+        this.each(function(){
+            var ann = $(this);
+            ann.addClass('ks-transition'); //加动画效果
+            var h = ann.height(true);
+            var len = ann.find(granTag).length;
+            var start = 0;
+            var S;
+            function _run(){
+                S = window.setInterval(function(){
+                    start ++;
+                    if(start == len){
+                        start = 0;
+                    }
+                    ann.find(subTag).css('margin-top', 0 - start*h);
+                }, Timer*1000);
+            }
+            _run();
+            ann.hover(function(){
+                window.clearInterval(S);
+            }, function(){
+                _run();
+            });
+        });
+        return this;
+    };
 
     /**
      * 创建内置组件 - form表单
@@ -3528,9 +3565,6 @@ $.ksauiRenderTree = {};
 
             function _titleStatus(N) {
                 N = N >= 0 ? N : 0;
-                var el = title_item.eq(N);
-                var left = (el[0].offsetLeft + el.width(true) / 2);
-                titleStatus.css('left', left < 30 ? 30 : left);
                 title_item.eq(N).active(true).siblings().active(false);
             }
 
@@ -3541,7 +3575,6 @@ $.ksauiRenderTree = {};
             var content_item = ele.find('ks-tab-item');
             var itemLength = content_item.length;
 
-            var code_title_status = '<ks-tab-title-status></ks-tab-title-status>';
             //如果标题栏不存在 则新建
             if(!title.length){
                 title = $('<ks-tab-title></ks-tab-title>');
@@ -3552,8 +3585,7 @@ $.ksauiRenderTree = {};
                 ele.prepend(title);
                 title_item = title.children('ks-tab-title-item');
             }
-            title.append(code_title_status);
-            var titleStatus = title.children('ks-tab-title-status');
+
             //如果主内容框不存在 则创建
             if(!contentBox.length){
                 content_item.wrapAll('<ks-tab-content></ks-tab-content>');
@@ -3621,7 +3653,7 @@ $.ksauiRenderTree = {};
             }
             _play(currIndex);
             _titleStatus(currIndex);
-        });
+        }, 'html');
 
         //自定义组件 tag标签关闭
         $.render('ks-tag[close], ks-tag[edit]', function (ele) {

@@ -2770,9 +2770,11 @@ function debugTime(key) {
                 var isObjSet = 0;
                 //删除旧数据中的项目
                 $.loop(oldValue, function (v, k) {
-                    if (!$.isset(value[k]) || value[k] !== v) {
+                    if (!$.isset(value[k])) {
                         ths.delete(oldValue, k);
                         isObjSet = 1;
+                    }else if(value[k] !== v){
+                        ths.diff(oldValue, k, v, value[k]);
                     }
                 });
 
@@ -2788,11 +2790,9 @@ function debugTime(key) {
                 if (isObjSet) {
                     var objMap = ths.objMap(obj);
                     objMap && objMap.run('set', obj, keyName, value);
-
-                    //obj[keyName] = value;
+                    //obj[keyName] = oldValue;
                 }
             }
-
         },
         /**
          * 刷新或创建监听队列
@@ -2916,6 +2916,7 @@ function debugTime(key) {
 
             //给对象赋值
             if ($.isObject(dt)) {
+
                 if (!$.isset(obj[keyName])) {
                     obj[keyName] = $.isArray(dt) ? [] : {};
                 }
@@ -3020,15 +3021,15 @@ function debugTime(key) {
      * @param obj
      * @returns {number}
      */
-    $.objectID = function (obj, newValue) {
+    $.objectID = function (obj, newID) {
         var keyName = '_uniqueID_';
-        var isValue = $.isset(newValue);
-        var isdel = newValue === '';
+        var isValue = $.isset(newID);
+        var isdel = newID === '';
         if (obj instanceof HTMLElement) {
             if (isdel) {
                 $.isset(obj[keyName]) && delete obj[keyName];
             } else if (isValue) {
-                obj[keyName] = newValue;
+                obj[keyName] = newID;
             } else {
                 if (!obj[keyName]) {
                     obj[keyName] = _KSAobjectIDIndex++;
@@ -3041,12 +3042,13 @@ function debugTime(key) {
             if (isdel) {
                 $.isset(obj[keyName]) && delete obj[keyName];
             } else if (isValue) {
+                $.objectID(obj);
                 Object.defineProperty(obj, keyName, {
-                    value : newValue,
+                    value : newID,
                     enumerable : false,
                     writable : true
                 });
-                return newValue;
+                return newID;
             } else {
                 if (!$.isset(obj[keyName])) {
                     Object.defineProperty(obj, '_uniqueIDFunc_', {
@@ -3071,7 +3073,7 @@ function debugTime(key) {
             if (isdel) {
                 $.isset(obj.prototype[keyName]) && delete obj.prototype[keyName];
             } else if (isValue) {
-                obj.prototype[keyName] = newValue;
+                obj.prototype[keyName] = newID;
             } else {
                 if (!obj.prototype[keyName]) {
                     obj.prototype[keyName] = _KSAobjectIDIndex++;
@@ -3933,11 +3935,9 @@ function debugTime(key) {
                     function _addFun(value, key) {
                         var lastDom = loopCache.Placeholder;
                         //跳过无变化的数据
-                        if (value === dt[key] && loopCache[key]) {
+                        if (value === dt[key] || loopCache[key]) {
                             return;
                         }
-
-
                         loopCache[key] = [];
                         //根据数据创建节点
                         var node = pushNode(value, key);
