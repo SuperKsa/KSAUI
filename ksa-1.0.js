@@ -2781,7 +2781,6 @@ function debugTime(key) {
                 $.loop(value, function (v, k) {
                     //旧值不存在 触发新增回调
                     if (!$.isset(oldValue[k])) {
-
                         newMap.run('add', value, k, v);
                         isObjSet = 1;
                     }
@@ -4498,6 +4497,16 @@ function debugTime(key) {
 
     $.strlen = function (value) {
         return value.toString().length;
+    }
+
+    $.copy = function(text){
+        var textarea = $(document.createElement('textarea'));
+        $('body').append(textarea);
+        textarea.val(text);
+        textarea[0].select();
+        textarea.css({position: 'absolute'});
+        document.execCommand("Copy");
+        textarea.remove();
     }
 
     K.focus = function (fun) {

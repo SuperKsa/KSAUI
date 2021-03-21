@@ -1,7 +1,7 @@
 if(typeof KSA =='undefined'){
     throw new Error("KSA组件缺失 admin.js");
 }
-
+$.layerHideBackEvent = false;
 $.AddTags = ['ks-date','ks-datetime','ks-button','ks-menu','ks-window','ks-input'];
 
 /**

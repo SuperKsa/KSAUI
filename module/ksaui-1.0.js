@@ -46,7 +46,7 @@ $.ksauiRenderTree = {};
         $.device = 'MOBILE';
         $.isMobile = true;
         $('html').attr('mobile', 'true').attr('device', 'mobile');
-        $.isWechat = agent.match(/MicroMessenger/i) === 'micromessenger';
+        $.isWechat = /microMessenger/i.test(agent);
     }
     if ($.device == 'PC') {
         //监听鼠标坐标
@@ -321,7 +321,9 @@ $.ksauiRenderTree = {};
             var coverEle = o.next('[data-layer-key="' + Id + '"]');
             o.addClass('ks-anim-hide');
             coverEle.addClass('ks-anim-fadeout');
-            option.backEvent && $.BackEvent('KsaLayer' + Id);
+            if($.layerHideBackEvent === undefined || $.layerHideBackEvent) {
+                option.backEvent && $.BackEvent('KsaLayer' + Id);
+            }
             setTimeout(function () {
                 o.active(false);
                 Fun && Fun(Id);

@@ -46,8 +46,9 @@ $.ksauiRenderTree = {};
         $.device = 'MOBILE';
         $.isMobile = true;
         $('html').attr('mobile', 'true').attr('device', 'mobile');
-        $.isWechat = agent.match(/MicroMessenger/i) === 'micromessenger';
+        $.isWechat = /microMessenger/i.test(agent);
     }
+
     if ($.device == 'PC') {
         //监听鼠标坐标
         $(document).on('mousemove', function (e) {

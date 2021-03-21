@@ -123,6 +123,7 @@ $.table = function (options) {
             ths.$data.ksauiLoading = 1;
             //请求API数据
             $.API(options.listAPI, ths.post, function (dt) {
+                ths.$data.list = $.isArray(ths.$data.list) ? [] : {};
                 $.loop(dt, function (val, k) {
                     ths.$data[k] = val;
                 });
