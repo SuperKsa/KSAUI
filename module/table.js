@@ -26,9 +26,6 @@ $.table = function (options) {
         tableClass : 'ks-table-list-' + $._tableID,
         init : function () {
             var ths = this;
-            ths.el.map(function (ele) {
-                ele.KS_TABLE = ths;
-            });
             ths.dom = ths.createHtml();
             ths.el.html('<div class="ks-tc ks-p5 ks-text-gray">数据加载中！请稍后...</div>');
 
@@ -42,11 +39,11 @@ $.table = function (options) {
                     el : options.el,
                     tpl : ths.dom,
                     data : ths.$data,
-                    init : function(e){
-
+                    init : function(ele){
+                        ths.el = $(ele).filter('.'+ths.tableClass);
                     },
                     methods : {
-                        btnEvent : function (key) {
+                        btnEvent : function (key, value) {
                             var arg = [].slice.call(arguments);
                             var fun = options;
                             $.loop($.explode('.', key), function (val) {
@@ -54,19 +51,32 @@ $.table = function (options) {
                             });
                             fun = $.isObject(fun) && fun.event ? fun.event : fun;
 
-                            $.isFunction(fun) && fun.apply(ths, arg.slice(1));
+                            $.isFunction(fun) && fun.apply(ths, [value, ths.el, ths]);
                             if($.strpos(key, ['lineBtn', 'lineSelect'])){
 
                                 return false;
                             }
                         },
-                        selectLine : function(n){
-                          ths.setLineSelect(n);
+                        //选中和取消选中 指定行
+                        selectLine : function(line, value){
+                            var tr = ths.el.find('tr[data-key="'+line+'"]');
+                            if(tr.find('input').checked()){
+                                tr.addClass('ks-table-tr-checked');
+                            }else{
+                                tr.removeClass('ks-table-tr-checked');
+                            }
+                            options.lineSelect && options.lineSelect.event && options.lineSelect.event.apply(ths, [value, ths.el, ths]);
                         },
+                        //获得已选中数据
+                        getSelect : function(){
+                            return ths.getSelect();
+                        },
+                        //刷新
                         refresh : function () {
 
                             ths.refresh();
                         },
+                        //转分页
                         toPages : function (val) {
                             ths.get(val);
                         }
@@ -77,18 +87,7 @@ $.table = function (options) {
             });
             return this;
         },
-        //选中和取消选中 指定行
-        setLineSelect : function(line){
-            var ths = this;
 
-            var tr = ths.el.find('tr[data-key="'+line+'"]');
-
-            if(tr.find('input').checked()){
-                tr.addClass('ks-table-tr-checked');
-            }else{
-                tr.removeClass('ks-table-tr-checked');
-            }
-        },
         //刷新当前列表
         refresh : function () {
 
@@ -150,7 +149,7 @@ $.table = function (options) {
                                 icon : val.icon,
                                 style : val.style,
                                 event : function(){
-                                    val.event.call(ele[0], ele.data('table-line-data'), ths);
+                                    val.event.apply(ths, [ths.$data.list[ele.data('key')], ths.el, ths]);
                                 }
                             });
                         });
@@ -162,7 +161,7 @@ $.table = function (options) {
             });
         },
         createBtn : function (dt, objIndex, eventParm) {
-            var bindLineDataName = objIndex =='lineBtn' ? '{{value}}' : '';
+            var bindLineDataName = objIndex =='lineBtn' ? 'value' : '';
             var h = '';
             if (dt) {
                 if ($.isObject(dt)) {
@@ -171,10 +170,10 @@ $.table = function (options) {
                         if ($.isString(value)) {
                             value = {text : value};
                         }
-                        var click = btnIndex ? ('btnEvent(\'' + btnIndex + '\', ' + (eventParm || "''") + ', _$tpl_.EL, _$tpl_.EL.KS_TABLE)') : '';
+                        var click = btnIndex ? ('btnEvent(\'' + btnIndex + '\', ' + (eventParm || "''") + ', this)') : '';
                         h += $.tag('ks-btn', {
                             'data-table-btnIndex' : btnIndex,
-                            'data-table-line-data' : bindLineDataName,
+                            ':data-table-line-data' : bindLineDataName,
                             'data-key' : key,
                             size : 'small',
                             icon : value.icon,
@@ -196,12 +195,14 @@ $.table = function (options) {
         //获得已选中数据
         getSelect : function(){
             var ths = this;
-            var table = ths.el.find('.'+ths.tableClass).find('.ks-table-tr-checked');
-            var data = [];
-            $.loop(table, function(ele){
+            var tr = ths.el.find('tr.ks-table-tr-checked');
+            var data = {};
+            $.loop(tr, function(ele){
                 ele = $(ele);
                 var key = ele.data('key');
-                ths.$data.list && ths.$data.list[key] && data.push(ths.$data.list[key]);
+                if(ths.$data.list && $.isset(ths.$data.list[key])){
+                    data[key] = ths.$data.list[key];
+                }
             });
             return data;
         },
@@ -214,7 +215,7 @@ $.table = function (options) {
                 html += '<div class="ks-table-toolbar ks-clear ks-plr1">';
                 if ($.isObject(options.toolBtn)) {
                     if (options.toolBtn.left) {
-                        html += '<div class="ks-fl ks-mr1-sub">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', '_$tpl_.EL.KS_TABLE.getSelect()') + '</div>';
+                        html += '<div class="ks-fl ks-mr1-sub">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', 'getSelect()') + '</div>';
                     }
                     html += '<div class="ks-fr"><ks-btn data-key="_refresh" size="small" icon="refresh" @click="refresh()">刷新</ks-btn><ks-btn-group class="ks-ml1">' + ths.createBtn(options.toolBtn.right, 'toolBtn.right', 'this') + '</ks-btn-group></div>';
                 } else if ($.isString(options.toolBtn)) {
@@ -228,7 +229,7 @@ $.table = function (options) {
             html += '<thead><tr>';
             //处理表格头 标题字段栏
             if (options.lineSelect) {
-                html += '<th width="45"><input type="ks-checkbox-all" name="__checkall__" selector=".' + ths.tableClass + '" value="" @change="btnEvent(\'lineSelect\', _$tpl_.EL);"></th>';
+                html += '<th width="45"><input type="ks-checkbox-all" name="__checkall__" selector=".' + ths.tableClass + '" value="" @change="btnEvent(\'lineSelect\');"></th>';
             }
             //表头处理
             $.loop(options.colData, function (value, key) {
@@ -247,10 +248,10 @@ $.table = function (options) {
             html += '<tr><td colspan="999"><ks-empty>暂无数据</ks-empty></td></tr>';
             html += '  {{else}}  ';
             html += ' {{loop list key value}} ';
-            html += '<tr trlist="{{key}}" data-key="{{key}}"  ' + (options.lineDblclick ? ' @dblclick="btnEvent(\'lineDblclick\', value)"' : '') + ' ' + (options.lineClick ? ' @click="btnEvent(\'lineClick\', value)"' : '') + '>';
+            html += '<tr :trlist="key" :data-key="key"  ' + (options.lineDblclick ? ' @dblclick="btnEvent(\'lineDblclick\', value)"' : '') + ' ' + (options.lineClick ? ' @click="btnEvent(\'lineClick\', value)"' : '') + '>';
             //全选按钮
             if (options.lineSelect) {
-                html += '<td><input type="ks-checkbox" name="__checkall__" data-ks-line-key="{{key}}" value="{{value.' + options.lineSelect.field + '}}" @change="selectLine(key); btnEvent(\'lineSelect\', _$tpl_.EL);"></td>';
+                html += '<td><input type="ks-checkbox" name="__checkall__" :data-ks-line-key="key" :value="value.' + options.lineSelect.field + '" @change="selectLine(key, value);"></td>';
             }
             //第二次渲染 合入模板
             $.loop(options.colData, function (value, key) {
@@ -268,7 +269,7 @@ $.table = function (options) {
             });
             //行操作按钮
             if (options.lineBtn) {
-                html += '<td data-linebtn-key="{{key}}">' + ths.createBtn(options.lineBtn, 'lineBtn', 'value') + '</td>';
+                html += '<td :data-linebtn-key="key">' + ths.createBtn(options.lineBtn, 'lineBtn', 'value') + '</td>';
             }
             html += '</tr>';
             html += '{{/loop}}';

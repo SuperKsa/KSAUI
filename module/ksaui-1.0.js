@@ -106,7 +106,7 @@ $.ksauiRenderTree = {};
 
                 $.loop(Mut, function (val) {
                     //if(val.target.tagName ==='KS'){
-                        //debug(val, val.target, val.target.clientWidth);
+                        //Dialogval, val.target, val.target.clientWidth);
                     //}
                     if ((val.type === 'childList' || val.type ==='attributes') && val.addedNodes.length) {
                         $.loop(val.addedNodes, function (ele) {
@@ -974,7 +974,7 @@ $.ksauiRenderTree = {};
                             $.toast('请输入短信验证码');
                             return false;
                         }
-                        return callFun.call(this, callData);
+                        return callFun.call(ly, callData);
                     }
                 };
                 op.cover = 1;
