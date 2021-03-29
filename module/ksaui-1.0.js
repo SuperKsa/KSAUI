@@ -2406,7 +2406,7 @@ $.ksauiRenderTree = {};
                         H += value.before ? value.before : '';
                     }
                     //数字 普通输入框 密码框
-                    if ($.inArray(value.type, ['number', 'text', 'password', 'tel'])) {
+                    if ($.inArray(value.type, ['number', 'text', 'password', 'tel', 'color'])) {
                         value.type = !value.unit ? 'ks-'+value.type : value.type;
                         delete value.label;
                         if(value.unit){
@@ -2845,6 +2845,15 @@ $.ksauiRenderTree = {};
                 t.parent().click(function () {
                     $.showDate(t);
                 });
+            },
+            'input[type="ks-color"]' : function (ele) {
+                var t = $(ele), at = t.attr();
+                t.attr('type', at.type.substr(3));
+                if(at.label){
+                    ks_input_group(t);
+                }else{
+                    t.wrap($.tag('label',{type : 'color', class : 'ks-input-color', 'icon': at.icon, 'style':at.style}));
+                }
             },
             'input[type="ks-text"], input[type="ks-tel"]' : function (ele) {
                 var t = $(ele), at = t.attr();

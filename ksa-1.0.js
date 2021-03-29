@@ -1330,8 +1330,9 @@ function debugTime(key) {
      */
     K.show = function () {
         this.map(function (e) {
+            var isnone = document.defaultView.getComputedStyle(e, null).display === 'none';
             e.style.display = '';
-            e.style.display = e.style.display === 'none' ? "block" : '';
+            e.style.display = isnone ? "block" : '';
             $(e).trigger('KSADOMchange', ['show']);
         });
         return this;

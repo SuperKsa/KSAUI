@@ -681,7 +681,8 @@ ks-form {
 	> :last-child { margin-bottom: 0}
 	ks-form-label { float: left; width: 125px; height: @inputHeight; line-height: @inputHeight;}
 	
-	ks-form-content {min-height: @inputHeight; width: 100%; display: block}
+	ks-form-content {min-height: @inputHeight; width: 100%; display: block; line-height: @inputHeight;}
+	ks-form-content:before {}
 	ks-form-extra { min-height: 24px; line-height: 24px; font-size: 14px; color: rgba(0,0,0,.4)}
 	
 	ks-form-label + ks-form-content,
@@ -728,6 +729,7 @@ ks-form[size='small']{
 	ks-form-item {margin-bottom: 10px;}
 	ks-input-group > *:not([class*='ks-']) { padding: 0 5px;}
 	ks-form-label { height: 28px; line-height: 28px;}
+	ks-form-content { line-height: 28px;}
 }
 
 //普通行
@@ -1011,7 +1013,8 @@ ks-input-group > *,
 .ks-input-arrow input,
 .ks-select,
 .ks-date,
-ks-area {height: @inputHeight; line-height: (@inputHeight - 2);}
+ks-area,
+.ks-input-color {height: @inputHeight; line-height: (@inputHeight - 2);}
 
 ks-form[size='small'] {
 	ks-input-group > *,
@@ -1021,7 +1024,8 @@ ks-form[size='small'] {
 	.ks-select,
 	.ks-date,
 	ks-area,
-	ks-btn { height: 28px; line-height: 26px;}
+	ks-btn,
+	.ks-input-color { height: 28px; line-height: 26px;}
 }
 
 //日期输入框 单行内 输入框 底色 宽度 边框 圆角 内边距
@@ -1073,6 +1077,11 @@ select:disabled ~ .ks-list-select { cursor: not-allowed; opacity: .7}
 input.ks-input, textarea.ks-input { padding: 0 10px;}
 .ks-input:not(input):not(textarea) { padding: 0; position: relative; display: inline-block}
 
+//颜色选择表单
+.ks-input-color {
+	width: 70px; display: inline-block;
+	> input { width: 100%; height: 100%; border: none; padding: 0}
+}
 
 //递增输入框
 .ks-input-arrow {

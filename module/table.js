@@ -149,7 +149,7 @@ $.table = function (options) {
                                 icon : val.icon,
                                 style : val.style,
                                 event : function(){
-                                    val.event.apply(ths, [ths.$data.list[ele.data('key')], ths.el, ths]);
+                                    val.event.apply(ths, [ths.$data.list[ele.data('line-key')], ths.el, ths]);
                                 }
                             });
                         });
@@ -160,7 +160,8 @@ $.table = function (options) {
 
             });
         },
-        createBtn : function (dt, objIndex, eventParm) {
+        createBtn : function (dt, objIndex, eventParm, attrs) {
+            attrs = attrs ? attrs : {};
             var bindLineDataName = objIndex =='lineBtn' ? 'value' : '';
             var h = '';
             if (dt) {
@@ -171,9 +172,8 @@ $.table = function (options) {
                             value = {text : value};
                         }
                         var click = btnIndex ? ('btnEvent(\'' + btnIndex + '\', ' + (eventParm || "''") + ', this)') : '';
-                        h += $.tag('ks-btn', {
+                        h += $.tag('ks-btn', $.arrayMerge({
                             'data-table-btnIndex' : btnIndex,
-                            ':data-table-line-data' : bindLineDataName,
                             'data-key' : key,
                             size : 'small',
                             icon : value.icon,
@@ -183,7 +183,7 @@ $.table = function (options) {
                             '@click' : click,
                             cap : value.cap,
                             line : value.line
-                        }, value.text)+ ' ';
+                        }, attrs), value.text)+ ' ';
                     });
                 } else {
                     h += dt;
@@ -269,7 +269,7 @@ $.table = function (options) {
             });
             //行操作按钮
             if (options.lineBtn) {
-                html += '<td :data-linebtn-key="key">' + ths.createBtn(options.lineBtn, 'lineBtn', 'value') + '</td>';
+                html += '<td :data-linebtn-key="key">' + ths.createBtn(options.lineBtn, 'lineBtn', 'value', {':data-line-key' :'key'}) + '</td>';
             }
             html += '</tr>';
             html += '{{/loop}}';
