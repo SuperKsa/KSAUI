@@ -212,6 +212,7 @@ function KSAadminIframe(homeUrl){
 
                 $(dt.content).active(true).siblings().active(false);
                 $(dt.taskBar).active(true).siblings().active(false);
+                this.currentIframe =  $(dt.content).find('iframe');
                 ths.cache(url, dt.title);
                 $.loop(ths.data,function(v, k){
                     ths.data[k].isShow = false;
@@ -265,6 +266,7 @@ function KSAadminIframe(homeUrl){
             var iframe = $('<div class="ks-admin-iframe" data-url="'+url+'"><iframe src="'+$.adminUrl(url)+'" width="100%" height="100%"></iframe></div>');
             ths.data[url].content =  iframe[0];
             this.dom.append(iframe);
+            this.currentIframe = iframe.find('iframe');
             return iframe;
         },
         createTaskbar : function(title, url){
@@ -289,9 +291,9 @@ function KSAadminIframe(homeUrl){
                 ths.close($(this).parent().data('url'));
                 return false;
             });
-            //状态栏双击关闭
+            //状态栏双击刷新
             li.dblclick(function(){
-                ths.close(url);
+                ths.currentIframe[0].contentWindow.location.reload(true);
             });
             ths.bar.children('ul').append(li);
 

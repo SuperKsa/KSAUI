@@ -33,7 +33,7 @@ $.table = function (options) {
             this.get(1, function (dt) {
                 ths.$data.list = dt.list ? dt.list : {};
                 if ($.isset(dt.count)) {
-                    ths.dom += '{{if count && Math.ceil(count / limit) >1}}<div class="ks-tc ks-mt"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.count / dt.limit) + '" @change="toPages()"></ks-page></div>{{/if}}';
+                    ths.dom += '{{if count && Math.ceil(count / limit) >1}}<div class="ks-tc ks-mt ks-mb5"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.count / dt.limit) + '" @change="toPages()"></ks-page></div>{{/if}}';
                 }
                 ths.tplObj = $.tpl({
                     debug : options.debug,

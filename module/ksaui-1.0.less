@@ -697,7 +697,7 @@ ks-form {
 	}
 	//搜索框模式
 	&[search] {
-		position: relative; padding-bottom: 36px; height: auto; overflow: hidden; display: block;
+		position: relative; padding-bottom: @inputHeight; height: auto; overflow: hidden; display: block;
 		ks-form-label {min-width: 100px; text-align: right}
 		> * { float: left; width: 33.333333%; margin:0 0 10px 0; }
 		ks-form-btn { position: absolute; right: 0; bottom: 0; width: auto; margin: 0}
@@ -729,7 +729,8 @@ ks-form[size='small']{
 	ks-form-item {margin-bottom: 10px;}
 	ks-input-group > *:not([class*='ks-']) { padding: 0 5px;}
 	ks-form-label { height: 28px; line-height: 28px;}
-	ks-form-content { line-height: 28px;}
+	ks-form-content { line-height: 25px; min-height: auto}
+	&[search] { padding-bottom: 28px;}
 }
 
 //普通行
