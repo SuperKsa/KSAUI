@@ -1621,20 +1621,22 @@ $.ksauiRenderTree = {};
 
     /**
      * 弹出一个日期输入框
-     * @param {type} input 触发表单
-     * @param {type} format 日期格式 必须为：YmdHis 区分大小写随意组合顺序
+     * @param target 触发表单
+     * @param format 日期格式 必须为：YmdHis 区分大小写随意组合顺序
+     * @param callFun 回调函数
      */
-    $.showDate = function (input, format) {
+    $.showDate = function (target, format, callFun) {
         var $this = this;
-        var defYmd = '2020-01-01';
-        input = $(input);
+        target = $(target);
+        var input = target[0] && target[0].tagName == 'INPUT' ? target : null;
 
 
-        if (input.data('layer-id')) {
-            $.layerHide(input.data('layer-id'));
+        if (target.data('layer-id')) {
+            $.layerHide(target.data('layer-id'));
             return;
         }
-        format = format ? format : (input.attr('format') || 'Y-m-d H:i');
+        format = format ? format : (target.attr('format') || 'Y-m-d H:i');
+        var defYmd = input ? input.val() : target.attr('value');
         //class名称
         var cl = {
             a : 'ks-calendar',
@@ -1699,8 +1701,8 @@ $.ksauiRenderTree = {};
 
         }
 
-        var str = input.val();
-        var dt = monthHtml(str);
+
+        var dt = monthHtml(defYmd);
         var TimeHtml = '';
         if (isHi) {
             TimeHtml = '<div class="' + cl.d + ' ks-clear">';
@@ -1727,12 +1729,13 @@ $.ksauiRenderTree = {};
 
         $.layer({
             cover : !!$.isMobile,
-            pos : $.isMobile ? 8 : input,
+            pos : $.isMobile ? 8 : target,
             width : $.isMobile ? '100%' : null,
             content : H,
             closeBtn : 0,
             bodyOver : false,
             show : function (layer) {
+                target.data('layer-id', layer.layerID);
                 //将dom pop对象转为子级日历
                 var dom = layer.find('.' + cl.a);
                 //阻止冒泡
@@ -1762,8 +1765,12 @@ $.ksauiRenderTree = {};
                     }
                     var h = $this.times(v);
                     v = format.replace('Y', h.Y).replace('m', h.m).replace('d', h.d).replace('H', h.H).replace('i', h.i).replace('s', h.s);
-                    input.val(v);
-                    input.trigger('input').trigger('change');
+                    if(input) {
+                        input.val(v);
+                        input.trigger('input').trigger('change');
+                    }
+                    target.attr('value', v);
+                    callFun && callFun(v);
                     return v;
                 }
 
@@ -1821,17 +1828,17 @@ $.ksauiRenderTree = {};
                 });
 
                 layer.hover(function () {
-                    input.attr('ks-date-show', 1);
+                    target.attr('ks-date-show', 1);
                 }, function () {
-                    input.removeAttr('ks-date-show');
+                    target.removeAttr('ks-date-show');
                 });
-                input.blur(function () {
+                input && input.blur(function () {
                     !$(this).attr('ks-date-show') && $.layerHide(layer.layerID);
                 });
 
                 //监听点击事件 自动关闭
                 $(document).on('click.KSAUI-showdate', function (e) {
-                    if (!$.inArray(e.target, [input[0], layer[0]])) {
+                    if (!$.inArray(e.target, [target[0], layer[0]])) {
                         $(document).off('click.KSAUI-showdate');
                         $.layerHide(layer.layerID);
 
@@ -1839,7 +1846,7 @@ $.ksauiRenderTree = {};
                 });
             },
             close : function () {
-                input.removeData('layer-id');
+                target.removeData('layer-id');
 
             }
         });
@@ -3348,11 +3355,16 @@ $.ksauiRenderTree = {};
                 }
                 ele.append(txt);
             }
-            _inup();
-            ele.DOMchange('html', function(str){
+            var val = ele.attr('value');
+            var unit = ele.attr('unit');
+            if(unit){
+                val = unit+val;
+            }
+            _inup(val);
+            ele.DOMchange('attr.value', function(str){
                 _inup(str);
             });
-        }, 'html');
+        }, 'attr.value');
 
         //自定义组件 卡片盒子
         $.render('ks-card', function (ele, isMonitor) {

@@ -16,6 +16,7 @@ $.table = function (options) {
     }
     $._tableID++;
     var render = {
+        options : options,
         el : $(options.el),
         //内部使用的数据
         $data : options.data || {ksauiLoading : 0},
@@ -32,7 +33,7 @@ $.table = function (options) {
             this.get(1, function (dt) {
                 ths.$data.list = dt.list ? dt.list : {};
                 if ($.isset(dt.count)) {
-                    ths.dom += '{{if count && Math.ceil(count / limit) >1}}<div class="ks-tc ks-mt"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.count / dt.limit) + '" @change="toPages(this.value)"></ks-page></div>{{/if}}';
+                    ths.dom += '{{if count && Math.ceil(count / limit) >1}}<div class="ks-tc ks-mt"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.count / dt.limit) + '" @change="toPages()"></ks-page></div>{{/if}}';
                 }
                 ths.tplObj = $.tpl({
                     debug : options.debug,
@@ -50,7 +51,6 @@ $.table = function (options) {
                                 fun = fun[val];
                             });
                             fun = $.isObject(fun) && fun.event ? fun.event : fun;
-
                             $.isFunction(fun) && fun.apply(ths, [value, ths.el, ths]);
                             if($.strpos(key, ['lineBtn', 'lineSelect'])){
 
@@ -78,7 +78,7 @@ $.table = function (options) {
                         },
                         //转分页
                         toPages : function (val) {
-                            ths.get(val);
+                            ths.get(window.event.target.value);
                         }
                     }
                 });
@@ -260,7 +260,7 @@ $.table = function (options) {
                     value.style += 'display:none;';
                 }
                 if(value.type == 'price'){
-                    value.tpl = $.tag('ks-price',  {color:value.color, style : value.style}, (value.unit ? value.unit : '￥')+'{{value.'+key+'}}');
+                    value.tpl = $.tag('ks-price',  {color:value.color, style : value.style, unit:value.unit, ':value': 'value.'+key+''}, '');
                 }else if(value.type == 'tag'){
                     value.tpl = $.tag('ks-tag', {color:value.color, icon:value.icon, style : value.style}, '{{value.'+key+'}}');
                 }
