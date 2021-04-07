@@ -181,9 +181,10 @@ function KSAadminIframe(homeUrl){
                 }
 
                 if (!$.isNull(moveX)) {
-                    moveX = moveX > 0 ? 0 : moveX;
+
                     var moveXmax = -(ths.taskBarContentWidth - ths.taskBarWidth);
                     moveX = moveX <0 && moveX < moveXmax ? moveXmax : moveX;
+                    moveX = moveX > 0 ? 0 : moveX;
                     ths.bar.children('ul').css('left', moveX + 'px');
                 }
             }
