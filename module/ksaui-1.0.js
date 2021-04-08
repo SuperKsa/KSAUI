@@ -1629,8 +1629,6 @@ $.ksauiRenderTree = {};
         var $this = this;
         target = $(target);
         var input = target[0] && target[0].tagName == 'INPUT' ? target : null;
-
-
         if (target.data('layer-id')) {
             $.layerHide(target.data('layer-id'));
             return;
@@ -2505,7 +2503,7 @@ $.ksauiRenderTree = {};
                             title : value.title,
                             placeholder : value.placeholder,
                             style : value.style,
-                            'ks-render' : ''
+                            format : value.format
                         }, '', 1);
                         //地区选择
                     } else if (value.type == 'area') {

@@ -1352,7 +1352,6 @@ function debugTime(key) {
         return this;
     }
 
-
     /**
      * 执行一个动画
      * @param {int/arrat} numbers 需要动画的数值 数字 或 数字数组

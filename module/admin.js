@@ -41,8 +41,6 @@ $.adminAjaxSubmit = function(obj){
     });
 };
 
-
-
 /**
  * 后台主框架逻辑
  */
