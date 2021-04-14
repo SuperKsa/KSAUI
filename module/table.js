@@ -6,20 +6,54 @@ $.table = function (options) {
     $._tableID = $._tableID || 0;
     if(!options.data){
         options.data = {
+            ksauiLoading : 1,
             limit : 0,
             page : 1,
             list : [],
             count : 0,
-            maxpage : 1,
+            maxpage : 0,
             url : ''
         };
     }
+
+    var endFunCall = function(){
+        var ths = this;
+        //行右侧按钮 menu菜单绑定
+        ths.el.find('td[data-linebtn-key] *[data-table-btnindex]').each(function(_, ele){
+            ele = $(ele);
+            var btnIndex = ele.attr('data-table-btnindex');
+            var obj = options;
+            $.loop(btnIndex.split('.'), function(v){
+                obj = obj[v];
+            });
+            //hover菜单处理
+            if(obj.menu){
+                var hoverEvn = [];
+                var lineValue = ths.$data.list[ele.data('line-key')];
+                $.loop(obj.menu, function(val){
+                    if(!val.if || ($.isFunction(val.if) && val.if(lineValue))) {
+                        hoverEvn.push({
+                            label : val.text,
+                            icon : val.icon,
+                            style : val.style,
+                            event : function () {
+                                val.event.apply(ths, [lineValue, ths.el, ths]);
+                            }
+                        });
+                    }
+                });
+                hoverEvn.length && ele.showMenu(obj.menuHover ? 'hover' : 'click', hoverEvn);
+            }
+        });
+        options.endFun && options.endFun.call(options, options.el);
+    }
+
     $._tableID++;
     var render = {
         options : options,
         el : $(options.el),
         //内部使用的数据
-        $data : options.data || {ksauiLoading : 0},
+        $data : options.data,
         post : {}, //搜索框的数据
         //传递到外部的数据
         tplObj : {},
@@ -27,63 +61,71 @@ $.table = function (options) {
         tableClass : 'ks-table-list-' + $._tableID,
         init : function () {
             var ths = this;
+
             ths.dom = ths.createHtml();
-            ths.el.html('<div class="ks-tc ks-p5 ks-text-gray">数据加载中！请稍后...</div>');
 
-            this.get(1, function (dt) {
-                ths.$data.list = dt.list ? dt.list : {};
-                if ($.isset(dt.count)) {
-                    ths.dom += '{{if count && Math.ceil(count / limit) >1}}<div class="ks-tc ks-mt ks-mb5"><ks-page current="' + dt.page + '" total="' + Math.ceil(dt.count / dt.limit) + '" @change="toPages()"></ks-page></div>{{/if}}';
-                }
-                ths.tplObj = $.tpl({
-                    debug : options.debug,
-                    el : options.el,
-                    tpl : ths.dom,
-                    data : ths.$data,
-                    init : function(ele){
-                        ths.el = $(ele).filter('.'+ths.tableClass);
+            ths.tplObj = $.tpl({
+                debug : options.debug,
+                el : ths.el,
+                tpl : ths.dom,
+                data : ths.$data,
+                init : function(){
+                    ths.el = $(this.el);
+                },
+                render : function(){
+                    ths.el = $(this.el);
+                },
+                methods : {
+                    btnEvent : function (key, value) {
+                        var arg = [].slice.call(arguments);
+                        var fun = options;
+                        $.loop($.explode('.', key), function (val) {
+                            fun = fun[val];
+                        });
+                        fun = $.isObject(fun) && fun.event ? fun.event : fun;
+                        $.isFunction(fun) && fun.apply(ths, [value, ths.el, ths]);
+                        if($.strpos(key, ['lineBtn', 'lineSelect'])){
+                            return false;
+                        }
                     },
-                    methods : {
-                        btnEvent : function (key, value) {
-                            var arg = [].slice.call(arguments);
-                            var fun = options;
-                            $.loop($.explode('.', key), function (val) {
-                                fun = fun[val];
-                            });
-                            fun = $.isObject(fun) && fun.event ? fun.event : fun;
-                            $.isFunction(fun) && fun.apply(ths, [value, ths.el, ths]);
-                            if($.strpos(key, ['lineBtn', 'lineSelect'])){
+                    //选中和取消选中 指定行
+                    selectLine : function(line, value){
+                        var tr = ths.el.find('tr[data-key="'+line+'"]');
+                        if(tr.find('input').checked()){
+                            tr.addClass('ks-table-tr-checked');
+                        }else{
+                            tr.removeClass('ks-table-tr-checked');
+                        }
+                        options.lineSelect && options.lineSelect.event && options.lineSelect.event.apply(ths, [value, ths.el, ths]);
+                    },
+                    //获得已选中数据
+                    getSelect : function(){
+                        return ths.getSelect();
+                    },
+                    //刷新
+                    refresh : function () {
 
-                                return false;
-                            }
-                        },
-                        //选中和取消选中 指定行
-                        selectLine : function(line, value){
-                            var tr = ths.el.find('tr[data-key="'+line+'"]');
-                            if(tr.find('input').checked()){
-                                tr.addClass('ks-table-tr-checked');
-                            }else{
-                                tr.removeClass('ks-table-tr-checked');
-                            }
-                            options.lineSelect && options.lineSelect.event && options.lineSelect.event.apply(ths, [value, ths.el, ths]);
-                        },
-                        //获得已选中数据
-                        getSelect : function(){
-                            return ths.getSelect();
-                        },
-                        //刷新
-                        refresh : function () {
-
-                            ths.refresh();
-                        },
-                        //转分页
-                        toPages : function (val) {
-                            ths.get(window.event.target.value);
+                        ths.refresh();
+                    },
+                    //转分页
+                    toPages : function (val) {
+                        ths.get(window.event.target.value);
+                    },
+                    _KSA_TABLE_END_ : function(){
+                        if(!this.$data.ksauiLoading){
+                            window.setTimeout(function(){
+                                endFunCall.call(ths);
+                            })
                         }
                     }
-                });
+                }
+            });
+
+            this.get(1, function (dt) {
+
+
                 ths.bindEvent();
-                options.endFun && options.endFun(ths);
+
             });
             return this;
         },
@@ -96,7 +138,6 @@ $.table = function (options) {
         //从API获取数据
         get : function (page, callFun) {
             var ths = this;
-
             //工具栏按钮状态全部禁用
             ths.el.find('.ks-table-toolbar ks-btn[data-table-btnindex]').each(function(_, ele){
                 ele = $(ele);
@@ -122,9 +163,8 @@ $.table = function (options) {
             ths.$data.ksauiLoading = 1;
             //请求API数据
             $.API(options.listAPI, ths.post, function (dt) {
-                ths.$data.list = $.isArray(ths.$data.list) ? [] : {};
                 $.loop(dt, function (val, k) {
-                    ths.$data[k] = val;
+                    $.tplSet(ths.$data, k, val);
                 });
                 if(dt.page){
                     ths.page = dt.page;
@@ -132,30 +172,7 @@ $.table = function (options) {
                 ths.$data.ksauiLoading = 0;
                 callFun && callFun.call(ths, dt);
                 options.render && options.render(ths);
-                //行右侧按钮 menu菜单绑定
-                ths.el.find('td[data-linebtn-key] *[data-table-btnindex]').each(function(_, ele){
-                    ele = $(ele);
-                    var btnIndex = ele.attr('data-table-btnindex');
-                    var obj = options;
-                    $.loop(btnIndex.split('.'), function(v){
-                        obj = obj[v];
-                    });
-                    //hover菜单处理
-                    if(obj.menu){
-                        var hoverEvn = [];
-                        $.loop(obj.menu, function(val){
-                            hoverEvn.push({
-                                label : val.text,
-                                icon : val.icon,
-                                style : val.style,
-                                event : function(){
-                                    val.event.apply(ths, [ths.$data.list[ele.data('line-key')], ths.el, ths]);
-                                }
-                            });
-                        });
-                        hoverEvn.length && ele.showMenu(obj.menuHover ? 'hover' : 'click', hoverEvn);
-                    }
-                });
+
 
 
             });
@@ -242,6 +259,7 @@ $.table = function (options) {
             if (options.lineBtn) {
                 html += '<th width="160">操作</th>';
             }
+
             html += '</tr></thead>';
             html += '<tbody>';
             html += '{{if !count}}';
@@ -275,7 +293,9 @@ $.table = function (options) {
             html += '{{/loop}}';
             html += '{{/if}}';
             html += '</tbody>';
-            html += '</table></div></div>';
+            html += '</table></div>';
+            html += '{{if maxpage > 1}}<div class="ks-tc ks-mt ks-mb5"><ks-page :current="page" :total="maxpage" @change="toPages()"></ks-page></div>{{/if}}</div>';
+            html += '{{_KSA_TABLE_END_()}}';
             return html;
         },
         bindEvent : function () {

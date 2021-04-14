@@ -68,34 +68,44 @@ $.ksauiRenderTree = {};
      */
     function _KSArenderStart() {
         //回调渲染函数
-        function _documentRenderFun(option, ele, selector) {
+        function _documentRenderFun(option, ele, selector, update) {
             if (!ele._KSAUIRENDER_) {
                 ele._KSAUIRENDER_ = {};
             }
-            if (ele._KSAUIRENDER_[selector]) {
-                return;
+
+            //监听属性变化
+            if(option.monitor.length) {
+                $.loop(option.monitor, function (val) {
+                    var isCall = 0;
+                    if (update.type === 'attributes') {
+                        isCall = val == 'attr.' + update.attributeName;
+                    }else if(val == 'html' && update.type === 'childList'){
+                        isCall = 1;
+                    }
+                    if (isCall) {
+                        option.callback && option.callback.call(ele, ele, true);
+                    }
+                });
             }
-            ele._KSAUIRENDER_[selector] = true;
-            //渲染回调
-            option.callback && option.callback.call(ele, ele);
-            //检查是否有DOMchange监听事件
-            option.monitor && $(ele).DOMchange(option.monitor, function () {
-                option.callback && option.callback.call(ele, ele, true);
-            });
+            if (!ele._KSAUIRENDER_[selector]) {
+                ele._KSAUIRENDER_[selector] = true;
+                //渲染回调
+                option.callback && option.callback.call(ele, ele);
+            }
         }
 
         //创建回调渲染
-        function _documentRender(ele) {
+        function _documentRender(ele, update) {
             if (ele.nodeType !== 1) {
                 return;
             }
             ele = $(ele);
             $.loop($.ksauiRenderTree, function (option, selector) {
                 ele.find(selector).map(function (ele) {
-                    _documentRenderFun(option, ele, selector);
+                    _documentRenderFun(option, ele, selector, update);
                 });
                 var thisEl = ele.filter(selector);
-                thisEl.length && _documentRenderFun(option, thisEl[0], selector);
+                thisEl.length && _documentRenderFun(option, thisEl[0], selector, update);
             });
         }
 
@@ -103,26 +113,26 @@ $.ksauiRenderTree = {};
         //监听节点变动 HTML5
         if (MutationObserver) {
             var observer = new MutationObserver(function (Mut) {
-
                 $.loop(Mut, function (val) {
-                    //if(val.target.tagName ==='KS'){
-                        //Dialogval, val.target, val.target.clientWidth);
-                    //}
-                    if ((val.type === 'childList' || val.type ==='attributes') && val.addedNodes.length) {
+                    if (val.type === 'childList' && val.addedNodes.length) {
                         $.loop(val.addedNodes, function (ele) {
                             if (ele.nodeType === 1 && $.isIndom(ele)) {
                                 //debug(ele, ele.clientWidth);
-                                _documentRender(ele);
+                                _documentRender(ele, val);
                             }
                         });
+                    }else if(val.type ==='attributes'){
+                        _documentRender(val.target, val);
                     }
                 });
             });
             observer.observe(document, {
+                characterDataOldValue : true, //在文本在受监视节点上发生更改时记录节点文本的先前值
+                attributeOldValue : true, //记录属性旧值
                 attributes : true , //检测属性变动
                 childList : true , //检测子节点变动
                 subtree : true , //整个子孙节点变动
-                attributeFilter : ['style', 'clientWidth', 'clientHeight', 'offsetWidth', 'offsetHeight']
+                //attributeFilter : ['style', 'clientWidth', 'clientHeight', 'offsetWidth', 'offsetHeight']
             });
             //监听节点变动 低版本浏览器
         } else {
@@ -140,12 +150,19 @@ $.ksauiRenderTree = {};
     };
 
     $.render = function (selector, func, monitor) {
+        var newMonitor = [];
+        $.loop($.explode(' ', monitor), function(val){
+            val = $.trim(val);
+            if(val){
+                newMonitor.push(val);
+            }
+        });
         if ($.isObject(selector) && !func) {
             $.loop(selector, function (val, key) {
-                $.ksauiRenderTree[key] = {callback : val, monitor : monitor};
+                $.ksauiRenderTree[key] = {callback : val, monitor : newMonitor};
             });
         } else {
-            $.ksauiRenderTree[selector] = {callback : func, monitor : monitor};
+            $.ksauiRenderTree[selector] = {callback : func, monitor : newMonitor};
         }
     };
 
@@ -2811,7 +2828,7 @@ $.ksauiRenderTree = {};
                     }
 
 
-                    t.attr('type value', '');
+                    t.attr('type', '');
                     t.wrap($.tag('div',{class:'ks-select', style : at.style}));
                     t.after('<span class="ks-select-title">' + _selectText() + '</span>');
                     t.next().click(function () {
@@ -3329,10 +3346,9 @@ $.ksauiRenderTree = {};
                 });
             });
         });
-
         //自定义组件 价格标签
         $.render('ks-price', function (ele) {
-            var ele = $(ele);
+            ele = $(ele);
             function _inup(v){
 
                 var txtele = ele.contents();
@@ -3362,7 +3378,7 @@ $.ksauiRenderTree = {};
             ele.DOMchange('attr.value', function(str){
                 _inup(str);
             });
-        }, 'attr.value');
+        }, 'attr.value attr.unit');
 
         //自定义组件 卡片盒子
         $.render('ks-card', function (ele, isMonitor) {
@@ -3375,7 +3391,6 @@ $.ksauiRenderTree = {};
                 ele.wrapInner('<ks-card-content></ks-card-content>');
                 title.length && ele.prepend(title);
             }
-
             //title存在 则附加title
             if (title.length) {
                 //二次监听渲染时处理
@@ -3389,9 +3404,7 @@ $.ksauiRenderTree = {};
             } else if (attrs.label) {
                 ele.prepend($.tag('ks-card-title', {icon : attrs.icon}, $.tag('div', {class:'ks-fl'}, attrs.label)));
             }
-            ele[0].removeAttribute('icon');
-            ele[0].removeAttribute('label');
-        }, 'attr.label attr.icon');
+        }, 'attr.label');
 
         //自定义组件 警示框渲染
         $.render('ks-alert', function (ele) {
@@ -3519,7 +3532,7 @@ $.ksauiRenderTree = {};
             }).focus(function () {
                 $(this).select();
             });
-        }, 'attr.total attr.quick attr.numbers');
+        }, 'attr.total attr.current');
 
         //自定义组件 H5主框架
         $.render('ks', function (ele) {

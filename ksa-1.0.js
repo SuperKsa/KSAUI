@@ -2735,6 +2735,9 @@ function debugTime(key) {
     $.tplSet = function(){
         Vue.set.apply(Vue, arguments);
     }
+    $.tplDelete = function(){
+        Vue.delete.apply(Vue, arguments);
+    }
     $.tpl = function(Config){
         var originalEL; //原始节点
         var eleIsSript;
@@ -2746,6 +2749,8 @@ function debugTime(key) {
             }
         }
         Config.methods = Config.methods ? Config.methods : {};
+        var renderFunc = Config.render;
+        delete Config.render;
         var _Rn = {
             Template : Config.tpl.trim(),
             el : '',
@@ -2753,12 +2758,20 @@ function debugTime(key) {
                 var ts = this;
                 ts.formatHTML();
                 Config.mounted = function(){
-                    var eles = [].slice.call(this.$el.childNodes);
 
-                    $(this.$el).after(eles).remove(); //渲染完成
                     Config.methods.$data = Config.data;
+
                     this.methods = Config.methods;
-                    Config.init && Config.init(eles);
+
+                    Config.init && Config.init.call(Config, originalEL);
+
+                    Config.el = originalEL;
+
+                    this.$nextTick(function () {
+                        var eles = [].slice.call(this.$el.childNodes);
+                        $(this.$el).after(eles).remove(); //渲染完成
+                        renderFunc && renderFunc.call(Config, originalEL);
+                    });
                 }
                 Config.el = this.el;
                 return new Vue(Config);
@@ -2807,6 +2820,7 @@ function debugTime(key) {
                 this.el.style.display = 'none';
                 if(eleIsSript){
                     originalEL.after(this.el).remove();
+                    originalEL = this.el;
                 }else{
                     originalEL.html(this.el);
                 }
