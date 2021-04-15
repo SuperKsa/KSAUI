@@ -1321,7 +1321,7 @@ $.ksauiRenderTree = {};
     $.tag = function (tp, dt, txt, ed) {
         var h = '<' + tp;
         $.loop(dt, function (v, k) {
-            v = v === '' ? null : v;
+            v = v === undefined ? null : v;
             v = v === true ? k : v;
             h += k && v != null ? (' ' + k + '="' + v + '"') : '';
         });
@@ -2612,559 +2612,569 @@ $.ksauiRenderTree = {};
     }
 
     (function () {
-
-        //自动渲染DOM
-        $.render({
-            'input[type="ks-radio"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                var txt = at.text ? '<em>' + at.text + '</em>' : '';
-                t.attr('type', 'radio');
-                t.wrap($.tag('label',{type : 'radio', class : 'ks-radio', 'icon': at.icon, 'style':at.style, color:at.color}));
-                t.after('<i>' + txt + '</i>');
-                t.change(function () {
-                    $(this).trigger('KSADOMchange', ['attr.checked', this.checked]);
+        $.render('select.ks-select, select[type="ks-select"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            if (t[0].tagName != 'SELECT') {
+                return;
+            }
+            t.removeClass('ks-select');
+            //如果控件为展开类型 元素存在open属性
+            if ($.isset(at.open)) {
+                var json = select_html_json(t[0]);
+                var ele = $('<div class="ks-select-list">' + select_json_html(json, json.value, json.multiple) + '</div>');
+                ele.children().listSelect(function (value) {
+                    $(t).val(Object.keys(arguments[2])).trigger('change');
                 });
-            },
-            'input[type="ks-checkbox"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                var txt = at.text ? '<em>' + at.text + '</em>' : '';
-                t.attr('type', 'checkbox');
-                t.wrap($.tag('label',{type : 'checkbox', class : 'ks-checkbox', 'icon': at.icon, 'style':at.style, color:at.color}));
-                t.after('<i>' + txt + '</i>');
-                //最大选择数量支持
-                var area = t.parent().parent();
-                if (area.length && area.attr('max')) {
-                    var max = parseInt(area.attr('max')) || 0;
-                    //最大选择数量限制
-                    if (max > 0) {
-                        t.change(function () {
-                            //域下相同类型的元素
-                            var uN = 'input[type="checkbox"][name="' + t.attr('name') + '"]';
-                            if (area.find(uN + ':checked').length == max && t.checked()) {
-                                area.find(uN + ':not(:checked)').disabled(true);
-                            } else {
-                                area.find(uN + ':not(:checked)').disabled(false);
-                            }
-                        });
+                t.after(ele).hide();
+                ele.prepend(t);
+                t.next().disabled(t.disabled());
+                //绑定一个内部事件 让select表单值改变后通知父级
+                t.DOMchange('val', function () {
+                    var val = $(this).val();
+                    ele.find('ks-list-item').selected(false);
+                    val = !$.isArray(val) ? [val] : val;
+                    $.loop(val, function (v) {
+                        ele.find('ks-list-item[value="' + v + '"]').selected(true);
+                    });
+                });
+
+                t.DOMchange('attr.disabled', function () {
+                    var ts = $(this);
+                    ts.next().disabled(ts.disabled());
+                });
+
+            } else {
+                //获取select已选中文本
+                function _selectText() {
+                    var text = '';
+                    t.find('option:selected').each(function (_, e) {
+                        text += '<span>' + e.text + '</span>';
+                    });
+                    return text ? text : (t.attr('deftext') || '请选择');
+                }
+
+
+                t.attr('type', '');
+                t.wrap($.tag('div',{class:'ks-select', style : at.style}));
+                t.after('<span class="ks-select-title">' + _selectText() + '</span>');
+                t.next().click(function () {
+                    if (t.disabled()) {
+                        return;
                     }
-                }
-                //监听选中状态 并触发change事件
-                t.DOMchange('attr.checked',function () {
-                    $(this).trigger('change');
+                    var optionJson = select_html_json(t[0]);
+                    $(this).showSelect(optionJson, function (val, txt, valdt) {
+                        t.val(Object.keys(valdt)).attr('value', val);
+                        t.next('.ks-select-title').html(_selectText());
+                        t.trigger('change'); //手动触发change事件
+                    });
                 });
-            },
-            'input[type="ks-checkbox-all"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                var txt = at.text ? '<em>' + at.text + '</em>' : '';
-                t.attr({'type' : 'checkbox', 'ischeckall' : 1});
-                t.wrap($.tag('label',{type : 'checkbox', class : 'ks-checkbox', 'icon': at.icon, 'style':at.style, color:at.color}));
-                t.after('<i>' + txt + '</i>');
-
-
-                var name = t.attr('name');
-                //如果没有name则不处理
-                if (!name) {
-                    return this;
-                }
-
-                var selector = $(t.attr('selector') || t.parent()[0].form || t.parent().parent());
-                var tParent = t.parent();
-                var inputs = 'input[type="checkbox"][name="' + name + '"]:not([ischeckall])';
-                var indeterName = 'ks-checkbox-indeter';
-                //全选事件绑定
-                t.change(function () {
-                    //域下相同类型的元素
-                    selector.find(inputs).checked(this.checked);
-                }).DOMchange('attr.checked',function () {
-                    selector.find(inputs).checked(this.checked);
+                //绑定一个内部事件 让select表单值改变后通知父级
+                t.DOMchange('val', function () {
+                    t.parent().children('.ks-select-title').html(_selectText());
+                }).DOMchange('html', function(){
+                    t.parent().children('.ks-select-title').html(_selectText());
                 });
-                t.on('changeALL', function(){
-                    var st = false;
-                    var selectedNum = selector.find(inputs + ':checked').length;
-                    if (selectedNum >= selector.find(inputs).length) {
-                        st = true;
-                        tParent.removeClass(indeterName);
-                    } else if (selectedNum > 0) {
-                        st = false;
-                        tParent.addClass(indeterName);
-                    } else if (!selectedNum) {
-                        st = false;
-                        tParent.removeClass(indeterName);
-                    }
-                    t[0].checked = st;
-                });
+            }
+            //如果在标签属性data-value给定选中值 则处理到内部
+            $.isset(at.value) && t.val($.explode(' ', at.value, ''));
+        });
 
-                //域下 所有的input绑定关联事件
-                selector.on('change', inputs, function () {
-                    t.trigger('changeALL');
-                })
+        $.render('input[type="ks-radio"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            var txt = at.text ? '<em>' + at.text + '</em>' : '';
+            t.attr('type', 'radio');
+            t.wrap($.tag('label',{type : 'radio', class : 'ks-radio', 'icon': at.icon, 'style':at.style, color:at.color}));
+            t.after('<i>' + txt + '</i>');
+            t.change(function () {
+                $(this).trigger('KSADOMchange', ['attr.checked', this.checked]);
+            });
+        });
 
-            },
-            'input[type="ks-switch"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                var val = t.checked() ? 1 : 0,
-                    txt = at.text || '',
-                    name = at.name ? ' name="' + at.name + '"' : '';
-
-                if (txt) {
-                    txt = txt.split('|');
-                    txt = $.isset(txt[1]) ? '<em>' + txt[1] + '</em><em>' + txt[0] + '</em>' : '<em>' + txt[0] + '</em>';
-                }
-                t.attr('type', 'checkbox').removeAttr('name');
-
-                t.wrap($.tag('label',{type : 'switch', class : 'ks-switch', 'icon': at.icon, 'style':at.style, color:at.color}));
-
-                t.after('<i>' + txt + '</i><input type="hidden" ' + name + ' value="' + val + '">');
-
-                //事件绑定
-                t.change(function () {
-                    var cked = this.checked;
-                    $(this).trigger('KSADOMchange', ['attr.checked', cked]).nextAll('input[type=hidden]').val(cked ? 1 : 0)
-                });
-            },
-            'input[type="ks-number"]' : function (ele) {
-                ele = $(ele);
-                var at = ele.attr();
-                ele.attr('type', 'number').addClass('ks-input');
-                ele.wrap($.tag('span',{type : 'number', class : 'ks-input ks-input-arrow', 'icon': at.icon, 'style':at.style}));
-
-                ele.after('<span data-digit="down" icon="subtract"></span><span data-digit="up" icon="add"></span>');
-
-                var attrs = ele.attr();
-                !ele.val().length && !attrs.placeholder && ele.val(attrs.min || 0);
-                var ef = ele.parent();
-                !ef.hasClass('ks-input-arrow') && ef.addClass('ks-input-arrow');
-                var min = $.floatval(attrs.min) || 0, //input最小值
-                    max = $.floatval(attrs.max) || 0, //input最大值
-                    step = $.floatval(attrs.step) || 0, //input步进值
-                    n = step && step.toString().indexOf('.') != -1 ? step.toString().split('.')[1].length : 0; //step有多少小数位 踏马的js精度
-                //计算 并写input  x[0=+ 1=-]
-                function r(x) {
-                    var v =  ele.val();
-                    var isZ = v.length >1 && v.substr(0,1) === '0';
-                    v = $.floatval(v) || 0;
-                    if (x == 'up') {
-                        if (step) {
-                            v = v + step;
+        $.render('input[type="ks-checkbox"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            var txt = at.text ? '<em>' + at.text + '</em>' : '';
+            t.attr('type', 'checkbox');
+            t.wrap($.tag('label',{type : 'checkbox', class : 'ks-checkbox', 'icon': at.icon, 'style':at.style, color:at.color}));
+            t.after('<i>' + txt + '</i>');
+            //最大选择数量支持
+            var area = t.parent().parent();
+            if (area.length && area.attr('max')) {
+                var max = parseInt(area.attr('max')) || 0;
+                //最大选择数量限制
+                if (max > 0) {
+                    t.change(function () {
+                        //域下相同类型的元素
+                        var uN = 'input[type="checkbox"][name="' + t.attr('name') + '"]';
+                        if (area.find(uN + ':checked').length == max && t.checked()) {
+                            area.find(uN + ':not(:checked)').disabled(true);
                         } else {
-                            v++;
+                            area.find(uN + ':not(:checked)').disabled(false);
                         }
-                    } else {
-                        if (step) {
-                            v = v - step;
-                        } else {
-                            v--;
-                        }
-                    }
-                    v = n > 0 ? v.toFixed(n) : v; //去踏马的精度问题 再骂一次加深印象
-                    v = v < min ? min : v; //最小值限制
-                    v = max && v > max ? max : v; //最大值限制
-                    v = v <=9 && isZ ? '0'+v : v;
-                    ele.val(v);
+                    });
                 }
+            }
+            //监听选中状态 并触发change事件
+            t.DOMchange('attr.checked',function () {
+                $(this).trigger('change');
+            });
+        });
 
-                var S, S1;
-                //鼠标按下处理
-                var evn = $.isMobile ? 'touchstart touchend' : 'mousedown mouseup';
-                ef.find('*[data-digit]').on(evn, function (e) {
+        $.render('input[type="ks-checkbox-all"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            var txt = at.text ? '<em>' + at.text + '</em>' : '';
+            t.attr({'type' : 'checkbox', 'ischeckall' : 1});
+            t.wrap($.tag('label',{type : 'checkbox', class : 'ks-checkbox', 'icon': at.icon, 'style':at.style, color:at.color}));
+            t.after('<i>' + txt + '</i>');
 
-                    var i = $(this).data('digit'); //取i标签当前索引
-                    if ($.inArray(e.type, ['mousedown', 'touchstart'])) {
-                        r(i); //按下 计算一次
-                        //x时间内未松开鼠标 则一直计算
-                        S = setTimeout(function () {
-                            S1 = setInterval(function () {
-                                r(i);
-                            }, 60);
-                        }, 250);
 
-                        //鼠标松开后释放自动计算事件
+            var name = t.attr('name');
+            //如果没有name则不处理
+            if (!name) {
+                return this;
+            }
+
+            var selector = $(t.attr('selector') || t.parent()[0].form || t.parent().parent());
+            var tParent = t.parent();
+            var inputs = 'input[type="checkbox"][name="' + name + '"]:not([ischeckall])';
+            var indeterName = 'ks-checkbox-indeter';
+            //全选事件绑定
+            t.change(function () {
+                //域下相同类型的元素
+                selector.find(inputs).checked(this.checked);
+            }).DOMchange('attr.checked',function () {
+                selector.find(inputs).checked(this.checked);
+            });
+            t.on('changeALL', function(){
+                var st = false;
+                var selectedNum = selector.find(inputs + ':checked').length;
+                if (selectedNum >= selector.find(inputs).length) {
+                    st = true;
+                    tParent.removeClass(indeterName);
+                } else if (selectedNum > 0) {
+                    st = false;
+                    tParent.addClass(indeterName);
+                } else if (!selectedNum) {
+                    st = false;
+                    tParent.removeClass(indeterName);
+                }
+                t[0].checked = st;
+            });
+
+            //域下 所有的input绑定关联事件
+            selector.on('change', inputs, function () {
+                t.trigger('changeALL');
+            })
+
+        });
+
+        $.render('input[type="ks-switch"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            var val = t.checked() ? 1 : 0,
+                txt = at.text || '',
+                name = at.name ? ' name="' + at.name + '"' : '';
+
+            if (txt) {
+                txt = txt.split('|');
+                txt = $.isset(txt[1]) ? '<em>' + txt[1] + '</em><em>' + txt[0] + '</em>' : '<em>' + txt[0] + '</em>';
+            }
+            t.attr('type', 'checkbox').removeAttr('name');
+
+            t.wrap($.tag('label',{type : 'switch', class : 'ks-switch', 'icon': at.icon, 'style':at.style, color:at.color}));
+
+            t.after('<i>' + txt + '</i><input type="hidden" ' + name + ' value="' + val + '">');
+
+            //事件绑定
+            t.change(function () {
+                var cked = this.checked;
+                $(this).trigger('KSADOMchange', ['attr.checked', cked]).nextAll('input[type=hidden]').val(cked ? 1 : 0)
+            });
+        });
+
+        $.render('input[type="ks-number"]', function (ele) {
+            ele = $(ele);
+            var at = ele.attr();
+            ele.attr('type', 'number').addClass('ks-input');
+            ele.wrap($.tag('span',{type : 'number', class : 'ks-input ks-input-arrow', 'icon': at.icon, 'style':at.style}));
+
+            ele.after('<span data-digit="down" icon="subtract"></span><span data-digit="up" icon="add"></span>');
+
+            var attrs = ele.attr();
+            !ele.val().length && !attrs.placeholder && ele.val(attrs.min || 0);
+            var ef = ele.parent();
+            !ef.hasClass('ks-input-arrow') && ef.addClass('ks-input-arrow');
+            var min = $.floatval(attrs.min) || 0, //input最小值
+                max = $.floatval(attrs.max) || 0, //input最大值
+                step = $.floatval(attrs.step) || 0, //input步进值
+                n = step && step.toString().indexOf('.') != -1 ? step.toString().split('.')[1].length : 0; //step有多少小数位 踏马的js精度
+            //计算 并写input  x[0=+ 1=-]
+            function r(x) {
+                var v =  ele.val();
+                var isZ = v.length >1 && v.substr(0,1) === '0';
+                v = $.floatval(v) || 0;
+                if (x == 'up') {
+                    if (step) {
+                        v = v + step;
                     } else {
-                        ele.change();
-                        clearInterval(S1);
-                        clearTimeout(S);
+                        v++;
+                    }
+                } else {
+                    if (step) {
+                        v = v - step;
+                    } else {
+                        v--;
+                    }
+                }
+                v = n > 0 ? v.toFixed(n) : v; //去踏马的精度问题 再骂一次加深印象
+                v = v < min ? min : v; //最小值限制
+                v = max && v > max ? max : v; //最大值限制
+                v = v <=9 && isZ ? '0'+v : v;
+                ele.val(v);
+            }
+
+            var S, S1;
+            //鼠标按下处理
+            var evn = $.isMobile ? 'touchstart touchend' : 'mousedown mouseup';
+            ef.find('*[data-digit]').on(evn, function (e) {
+
+                var i = $(this).data('digit'); //取i标签当前索引
+                if ($.inArray(e.type, ['mousedown', 'touchstart'])) {
+                    r(i); //按下 计算一次
+                    //x时间内未松开鼠标 则一直计算
+                    S = setTimeout(function () {
+                        S1 = setInterval(function () {
+                            r(i);
+                        }, 60);
+                    }, 250);
+
+                    //鼠标松开后释放自动计算事件
+                } else {
+                    ele.change();
+                    clearInterval(S1);
+                    clearTimeout(S);
+                }
+            });
+        });
+
+        $.render('input[type="ks-date"]' , function (ele) {
+            var t = $(ele), at = t.attr();
+            t.attr('type', 'text');
+            t.wrap($.tag('span',{type : 'date', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
+            if (!at.icon && !at.iconleft && !at.iconright) {
+                at.iconright = 'calendar';
+            }
+            (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
+            at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
+            $.isMobile && t.after('<i class="ks-input-cover"></i>');
+            //增加事件
+            t.parent().click(function () {
+                $.showDate(t);
+            });
+        });
+
+        $.render('input[type="ks-color"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            t.attr('type', at.type.substr(3));
+            if(at.label){
+                ks_input_group(t);
+            }else{
+                t.wrap($.tag('label',{type : 'color', class : 'ks-input-color', 'icon': at.icon, 'style':at.style}));
+            }
+        });
+
+        $.render('input[type="ks-text"], input[type="ks-tel"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            t.attr('type', at.type.substr(3));
+            if(at.label){
+                ks_input_group(t);
+            }else{
+                t.wrap($.tag('label',{type : 'text', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
+            }
+
+
+            (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
+            at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
+            if($.isset(at.clear)) {
+                var clearbtn = $('<right class="ks-input-clear" icon="close-circle-fill" style="z-index:99"></right>');
+                t.before(clearbtn);
+                clearbtn.click(function () {
+                    t.val('').focus();
+                    clearbtn.active(false);
+                });
+                t.keyup(function () {
+                    if (t.val().length > 0) {
+                        clearbtn.active(true);
+                    } else {
+                        clearbtn.active(false);
                     }
                 });
-            },
-            'select.ks-select, select[type="ks-select"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                if (t[0].tagName != 'SELECT') {
+                t.parent().hover(function () {
+                    $(this).find('input[type=text]').val().length > 0 && clearbtn.active(true);
+                }, function () {
+                    window.setTimeout(function () {
+                        clearbtn.active(false);
+                    }, 10)
+                });
+            }
+            //下拉联想输入框
+            if(at.api){
+                var intxtS;
+                var intxtLayerID;
+                t.blur(function(){
+                    intxtLayerID && $.layerHide(intxtLayerID);
+                    intxtS && window.clearTimeout(intxtS);
+                }).on('input focus', function () {
+                    var inputVal = $(this).val();
+                    intxtLayerID && $.layerHide(intxtLayerID);
+                    intxtS && window.clearTimeout(intxtS);
+                    if(inputVal.length >0){
+                        intxtS = window.setTimeout(function(){
+                            $.layer({
+                                pos : t,
+                                cover : 0,
+                                content : '请稍后...',
+                                closeBtn : 0,
+                                bodyOver : false, //body不需要裁切
+                                init : function (layer) {
+                                    intxtLayerID = layer.layerID;
+                                    $.API(at.api, {keyword:inputVal}, function(res){
+                                        var h = '<div class="ks-input-smart">';
+                                        $.loop(res.list, function(val){
+                                            h += '<p value="'+val.value+'">'+val.title+'</p>';
+                                        });
+                                        h += '</div>';
+                                        h = $(h);
+                                        h.find('p').click(function(){
+                                            t.val($(this).text());
+                                            $.layerHide(intxtLayerID);
+                                        });
+                                        layer.find('.ks-layer-content').html(h);
+                                    });
+                                }
+                            });
+                        },300);
+                    }
+                });
+            }
+        });
+
+        $.render('input[type="ks-password"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            t.attr('type', 'password');
+            t.wrap($.tag('span',{type : 'password', class : 'ks-input ks-password', 'style':at.style})).removeAttr('icon');
+
+            (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
+            at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
+            if (t.active()) {
+                t.before('<right icon="eye-off" active></right>');
+                t.prevAll('right[active]').click(function () {
+                    var ths = $(this);
+                    var input = ths.nextAll('input');
+                    if (input.attr('type') == 'text') {
+                        input.attr('type', 'password');
+                        ths.addClass('ri-eye-off').removeClass('ri-eye-fill');
+                    } else {
+                        input.attr('type', 'text');
+                        ths.addClass('ri-eye-fill').removeClass('ri-eye-off');
+                    }
+                });
+            }
+        });
+
+        $.render('textarea[type="ks-textarea"]', function (ele) {
+            var t = $(ele), at = t.attr();
+            t.removeAttr('type');
+            t.wrap($.tag('ks-textarea', {class:'ks-textarea'}));
+            var maxlength = parseInt(t.attr('maxlength'));
+            if (maxlength) {
+                t.after('<div class="ks-textarea-maxtit"> <span>' + t.val().length + '</span>/' + maxlength + '</div>');
+                t.keyup(function () {
+                    var n = t.val().length;
+                    if (n > maxlength) {
+                        t.val(t.val().substr(0, maxlength));
+                    }
+                    t.next('.ks-textarea-maxtit').children('span').text(t.val().length);
+                });
+            }
+            //高度自适应
+            if($.isset(at.auto)){
+                t.height(t[0].scrollHeight);
+                t.input(function(){
+                    t.height(0);
+                    t.height(t[0].scrollHeight);
+                });
+            }
+        });
+
+        $.render('input[type="ks-area"]' , function (t) {
+
+            var Fd = ['province', 'city', 'area', 'town'];
+            t = $(t);
+            t.attr({
+                'type' : 'hidden',
+                'name' : ''
+            }).wrap('<ks-area ' + (t.disabled() ? 'disabled' : '') + '></ks-area>');
+
+            var attrs = t.attr();
+            var maxlevel = 0;
+            var h = '';
+            var name = attrs.name;
+
+            $.loop(Fd, function (val, k) {
+                var v = attrs[val];
+                var tname = name ? name + '[' + val + ']' : val;
+                if (v) {
+                    v = v.split(':');
+                    h += '<span level="' + k + '">' +
+                         '<input type="hidden" name="' + tname + '[id]" value="' + v[0] + '">' +
+                         '<input type="hidden" name="' + tname + '[name]" value="' + v[1] + '">' +
+                         v[1] +
+                         '</span>';
+                }
+                if ($.isset(v)) {
+                    maxlevel++;
+                }
+            });
+            t.after(h);
+            t.parent().click(function () {
+                var obj = $(this);
+                var input = obj.children('input[type="hidden"]');
+                var attrs = input.attr();
+                //禁用后不做任何操作
+                if (attrs.disabled || obj.disabled()) {
                     return;
                 }
-                t.removeClass('ks-select');
-                //如果控件为展开类型 元素存在open属性
-                if ($.isset(at.open)) {
-                    var json = select_html_json(t[0]);
-                    var ele = $('<div class="ks-select-list">' + select_json_html(json, json.value, json.multiple) + '</div>');
-                    ele.children().listSelect(function (value) {
-                        $(t).val(Object.keys(arguments[2])).trigger('change');
-                    });
-                    t.after(ele).hide();
-                    ele.prepend(t);
-                    t.next().disabled(t.disabled());
-                    //绑定一个内部事件 让select表单值改变后通知父级
-                    t.DOMchange('val', function () {
-                        var val = $(this).val();
-                        ele.find('ks-list-item').selected(false);
-                        val = !$.isArray(val) ? [val] : val;
-                        $.loop(val, function (v) {
-                            ele.find('ks-list-item[value="' + v + '"]').selected(true);
-                        });
-                    });
-
-                    t.DOMchange('attr.disabled', function () {
-                        var ts = $(this);
-                        ts.next().disabled(ts.disabled());
-                    });
-
-                } else {
-                    //获取select已选中文本
-                    function _selectText() {
-                        var text = '';
-                        t.find('option:selected').each(function (_, e) {
-                            text += '<span>' + e.text + '</span>';
-                        });
-                        return text ? text : (t.attr('deftext') || '请选择');
-                    }
-
-
-                    t.attr('type', '');
-                    t.wrap($.tag('div',{class:'ks-select', style : at.style}));
-                    t.after('<span class="ks-select-title">' + _selectText() + '</span>');
-                    t.next().click(function () {
-                        if (t.disabled()) {
-                            return;
-                        }
-
-                        var optionJson = select_html_json(t[0]);
-                        $(this).showSelect(optionJson, function (val, txt, valdt) {
-                            t.val(Object.keys(valdt));
-                            t.next('.ks-select-title').html(_selectText());
-                            t.trigger('change'); //手动触发change事件
-                        });
-                    });
-                    //绑定一个内部事件 让select表单值改变后通知父级
-                    t.DOMchange('val', function () {
-                        t.parent().children('.ks-select-title').html(_selectText());
-                    }).DOMchange('html', function(){
-                        t.parent().children('.ks-select-title').html(_selectText());
-                    });
-                }
-                //如果在标签属性data-value给定选中值 则处理到内部
-                $.isset(at.value) && t.val($.explode(' ', at.value, ''));
-            },
-            'input[type="ks-date"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                t.attr('type', 'text');
-                t.wrap($.tag('span',{type : 'date', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
-                if (!at.icon && !at.iconleft && !at.iconright) {
-                    at.iconright = 'calendar';
-                }
-                (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
-                at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
-                $.isMobile && t.after('<i class="ks-input-cover"></i>');
-                //增加事件
-                t.parent().click(function () {
-                    $.showDate(t);
-                });
-            },
-            'input[type="ks-color"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                t.attr('type', at.type.substr(3));
-                if(at.label){
-                    ks_input_group(t);
-                }else{
-                    t.wrap($.tag('label',{type : 'color', class : 'ks-input-color', 'icon': at.icon, 'style':at.style}));
-                }
-            },
-            'input[type="ks-text"], input[type="ks-tel"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                t.attr('type', at.type.substr(3));
-                if(at.label){
-                    ks_input_group(t);
-                }else{
-                    t.wrap($.tag('label',{type : 'text', class : 'ks-input', 'icon': at.icon, 'style':at.style}));
-                }
-
-
-                (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
-                at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
-                if($.isset(at.clear)) {
-                    var clearbtn = $('<right class="ks-input-clear" icon="close-circle-fill" style="z-index:99"></right>');
-                    t.before(clearbtn);
-                    clearbtn.click(function () {
-                        t.val('').focus();
-                        clearbtn.active(false);
-                    });
-                    t.keyup(function () {
-                        if (t.val().length > 0) {
-                            clearbtn.active(true);
-                        } else {
-                            clearbtn.active(false);
-                        }
-                    });
-                    t.parent().hover(function () {
-                        $(this).find('input[type=text]').val().length > 0 && clearbtn.active(true);
-                    }, function () {
-                        window.setTimeout(function () {
-                            clearbtn.active(false);
-                        }, 10)
-                    });
-                }
-                //下拉联想输入框
-                if(at.api){
-                    var intxtS;
-                    var intxtLayerID;
-                    t.blur(function(){
-                        intxtLayerID && $.layerHide(intxtLayerID);
-                        intxtS && window.clearTimeout(intxtS);
-                    }).on('input focus', function () {
-                        var inputVal = $(this).val();
-                        intxtLayerID && $.layerHide(intxtLayerID);
-                        intxtS && window.clearTimeout(intxtS);
-                        if(inputVal.length >0){
-                            intxtS = window.setTimeout(function(){
-                                $.layer({
-                                    pos : t,
-                                    cover : 0,
-                                    content : '请稍后...',
-                                    closeBtn : 0,
-                                    bodyOver : false, //body不需要裁切
-                                    init : function (layer) {
-                                        intxtLayerID = layer.layerID;
-                                        $.API(at.api, {keyword:inputVal}, function(res){
-                                            var h = '<div class="ks-input-smart">';
-                                            $.loop(res.list, function(val){
-                                                h += '<p value="'+val.value+'">'+val.title+'</p>';
-                                            });
-                                            h += '</div>';
-                                            h = $(h);
-                                            h.find('p').click(function(){
-                                                t.val($(this).text());
-                                                $.layerHide(intxtLayerID);
-                                            });
-                                            layer.find('.ks-layer-content').html(h);
-                                        });
-                                    }
-                                });
-                            },300);
-                        }
-                    });
-                }
-            },
-            'input[type="ks-password"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                t.attr('type', 'password');
-                t.wrap($.tag('span',{type : 'password', class : 'ks-input ks-password', 'style':at.style})).removeAttr('icon');
-
-                (at.icon || at.iconleft) && t.before('<left icon="' + (at.icon || at.iconleft) + '"></left>');
-                at.iconright && t.before('<right icon="' + at.iconright + '"></right>');
-                if (t.active()) {
-                    t.before('<right icon="eye-off" active></right>');
-                    t.prevAll('right[active]').click(function () {
-                        var ths = $(this);
-                        var input = ths.nextAll('input');
-                        if (input.attr('type') == 'text') {
-                            input.attr('type', 'password');
-                            ths.addClass('ri-eye-off').removeClass('ri-eye-fill');
-                        } else {
-                            input.attr('type', 'text');
-                            ths.addClass('ri-eye-fill').removeClass('ri-eye-off');
-                        }
-                    });
-                }
-            },
-            'textarea[type="ks-textarea"]' : function (ele) {
-                var t = $(ele), at = t.attr();
-                t.removeAttr('type');
-                t.wrap($.tag('ks-textarea', {class:'ks-textarea'}));
-                var maxlength = parseInt(t.attr('maxlength'));
-                if (maxlength) {
-                    t.after('<div class="ks-textarea-maxtit"> <span>' + t.val().length + '</span>/' + maxlength + '</div>');
-                    t.keyup(function () {
-                        var n = t.val().length;
-                        if (n > maxlength) {
-                            t.val(t.val().substr(0, maxlength));
-                        }
-                        t.next('.ks-textarea-maxtit').children('span').text(t.val().length);
-                    });
-                }
-                //高度自适应
-                if($.isset(at.auto)){
-                    t.height(t[0].scrollHeight);
-                    t.input(function(){
-                        t.height(0);
-                        t.height(t[0].scrollHeight);
-                    });
-                }
-            },
-            'input[type="ks-area"]' : function (t) {
-
-                var Fd = ['province', 'city', 'area', 'town'];
-                t = $(t);
-                t.attr({
-                    'type' : 'hidden',
-                    'name' : ''
-                }).wrap('<ks-area ' + (t.disabled() ? 'disabled' : '') + '></ks-area>');
-
-                var attrs = t.attr();
-                var maxlevel = 0;
-                var h = '';
-                var name = attrs.name;
+                var defDt = {};
 
                 $.loop(Fd, function (val, k) {
                     var v = attrs[val];
-                    var tname = name ? name + '[' + val + ']' : val;
                     if (v) {
                         v = v.split(':');
-                        h += '<span level="' + k + '">' +
-                             '<input type="hidden" name="' + tname + '[id]" value="' + v[0] + '">' +
-                             '<input type="hidden" name="' + tname + '[name]" value="' + v[1] + '">' +
-                             v[1] +
-                             '</span>';
-                    }
-                    if ($.isset(v)) {
-                        maxlevel++;
+                        defDt[k] = {id : v[0], name : v[1], level : k, field : val};
                     }
                 });
-                t.after(h);
-                t.parent().click(function () {
-                    var obj = $(this);
-                    var input = obj.children('input[type="hidden"]');
-                    var attrs = input.attr();
-                    //禁用后不做任何操作
-                    if (attrs.disabled || obj.disabled()) {
+                obj.area(attrs.title, defDt, function (dt) {
+                    if (!dt.isEnd) {
                         return;
                     }
-                    var defDt = {};
+                    obj.removeAttr('province city area town');
 
-                    $.loop(Fd, function (val, k) {
-                        var v = attrs[val];
-                        if (v) {
-                            v = v.split(':');
-                            defDt[k] = {id : v[0], name : v[1], level : k, field : val};
-                        }
+                    var valueAttr = {};
+                    $.loop(dt.data, function (val) {
+                        var tname = name ? name + '[' + val.field + ']' : val.field;
+                        valueAttr[val.field] = val.id + ':' + val.name;
+                        obj.children('span[level="' + val.level + '"]').html(val.name + '<input type="hidden" name="' + tname + '[id]" value="' + val.id + '"><input type="hidden" name="' + tname + '[name]" value="' + val.name + '">');
                     });
-                    obj.area(attrs.title, defDt, function (dt) {
-                        if (!dt.isEnd) {
-                            return;
-                        }
-                        obj.removeAttr('province city area town');
+                    input.attr(valueAttr);
+                }, maxlevel, attrs.api);
+            });
 
-                        var valueAttr = {};
-                        $.loop(dt.data, function (val) {
-                            var tname = name ? name + '[' + val.field + ']' : val.field;
-                            valueAttr[val.field] = val.id + ':' + val.name;
-                            obj.children('span[level="' + val.level + '"]').html(val.name + '<input type="hidden" name="' + tname + '[id]" value="' + val.id + '"><input type="hidden" name="' + tname + '[name]" value="' + val.name + '">');
-                        });
-                        input.attr(valueAttr);
-                    }, maxlevel, attrs.api);
-                });
+            //监听属性禁用变化事件
+            t.DOMchange('attr.disabled', function () {
+                t.parent().disabled($(this).disabled());
+            });
 
-                //监听属性禁用变化事件
-                t.DOMchange('attr.disabled', function () {
-                    t.parent().disabled($(this).disabled());
-                });
+        });
 
-            },
-            'input[type="ks-pic"]' : function(t){
-                var t = $(t), attrs = t.attr();
-                t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
-                //多图片上传模式 name最后存在[]
-                var isMultiple = /^.+\[\]$/g.test(attrs.name);
-                var multipleMax = isMultiple ? parseInt(attrs.maxlength || 0) : 0;
-                t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
-                var picObj = t.parent().parent();
-                if(attrs.value){
-                    try {
-                        //多图模式
-                        if(isMultiple){
-                            //解析value值 必须传入(必须单引号) {'id'123, src:'图片地址'}
-                            attrs.value = JSON.parse(attrs.value.replace(/'/g,'"'));
-                            var addI = 0;
-                            $.loop(attrs.value, function(val){
-                                if(val.id){
-                                    t.parent().parent().before('<ks-pic><ks-pic-thumb>'+
-                                             '<img src="'+val.src+'">'+
-                                             '<span icon="delete-bin-2-fill"></span>'+
-                                             '<input type="hidden" name="'+attrs.name+'" value="'+val.id+'">'+
-                                             '</ks-pic-thumb></ks-pic>');
-                                    addI ++;
-                                }
-                                if(multipleMax >0 && addI >= multipleMax){
-                                    picObj.hide();
-                                }
-                            });
-                        //单图模式
-                        }else{
-                            t.parent().before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
-                        }
-                    }catch (e) {
-                    }
-
-                }
-
-                function _inset(picList){
-                    var h = '';
+        $.render('input[type="ks-pic"]', function(t){
+            var t = $(t), attrs = t.attr();
+            t.attr({type:'file', 'name':'',  accept:'image/*', value:''});
+            //多图片上传模式 name最后存在[]
+            var isMultiple = /^.+\[\]$/g.test(attrs.name);
+            var multipleMax = isMultiple ? parseInt(attrs.maxlength || 0) : 0;
+            t.wrap('<ks-pic></ks-pic>').wrap('<label icon="add"></label>');
+            var picObj = t.parent().parent();
+            if(attrs.value){
+                try {
+                    //多图模式
                     if(isMultiple){
-
-                        $.loop(picList,function(value){
-                            h += '<ks-pic><ks-pic-thumb>'+
-                                 '<img src="'+value.src+'">'+
-                                 '<input type="hidden" name="'+attrs.name+'" value="tmp:'+value.aid+'">'+
-                                 '<span icon="delete-bin-2-fill" delapi="'+attrs.api+'Del?aid='+value.aid+'"></span>'+
-                                 '</ks-pic-thumb></ks-pic>';
+                        //解析value值 必须传入(必须单引号) {'id'123, src:'图片地址'}
+                        attrs.value = JSON.parse(attrs.value.replace(/'/g,'"'));
+                        var addI = 0;
+                        $.loop(attrs.value, function(val){
+                            if(val.id){
+                                t.parent().parent().before('<ks-pic><ks-pic-thumb>'+
+                                                           '<img src="'+val.src+'">'+
+                                                           '<span icon="delete-bin-2-fill"></span>'+
+                                                           '<input type="hidden" name="'+attrs.name+'" value="'+val.id+'">'+
+                                                           '</ks-pic-thumb></ks-pic>');
+                                addI ++;
+                            }
+                            if(multipleMax >0 && addI >= multipleMax){
+                                picObj.hide();
+                            }
                         });
-                        picObj.before(h);
-                        if(multipleMax >0 && picObj.prevAll('ks-pic').length == multipleMax){
-                            picObj.hide();
-                        }
+                        //单图模式
                     }else{
-                        $.loop(picList,function(value){
-                            h += '<ks-pic-thumb>'+
-                                 '<img src="'+value.src+'">'+
-                                 '<input type="hidden" name="'+attrs.name+'" value="'+value.aid+'">'+
-                                 '</ks-pic-thumb>';
-                        });
-                        var label = t.parent();
-                        label.prev().remove();
-                        label.before(h);
+                        t.parent().before('<ks-pic-thumb><img src="'+attrs.value+'"></ks-pic-thumb>');
                     }
-                    t.val('');
+                }catch (e) {
                 }
 
-                t.change(function(){
-                    if(!attrs.api){
-                        $.toast('组件缺少api属性');
-                        return false;
+            }
+
+            function _inset(picList){
+                var h = '';
+                if(isMultiple){
+
+                    $.loop(picList,function(value){
+                        h += '<ks-pic><ks-pic-thumb>'+
+                             '<img src="'+value.src+'">'+
+                             '<input type="hidden" name="'+attrs.name+'" value="tmp:'+value.aid+'">'+
+                             '<span icon="delete-bin-2-fill" delapi="'+attrs.api+'Del?aid='+value.aid+'"></span>'+
+                             '</ks-pic-thumb></ks-pic>';
+                    });
+                    picObj.before(h);
+                    if(multipleMax >0 && picObj.prevAll('ks-pic').length == multipleMax){
+                        picObj.hide();
                     }
-                    //如果存在缩放属性时 则缩放后再上传
-                    if(attrs.zoomhidth || attrs.zoomheight || attrs.zoom){
-                        $.imgZoom(this, (attrs.zoomwidth || 1920), (attrs.zoomweight || 1080), function(blob){
-                            $.upload('upload', blob, attrs.api, function(dt){
-                                _inset(dt.List);
-                            });
-                        });
-                    }else{
-                        $.upload('upload', t[0], attrs.api, function(dt){
+                }else{
+                    $.loop(picList,function(value){
+                        h += '<ks-pic-thumb>'+
+                             '<img src="'+value.src+'">'+
+                             '<input type="hidden" name="'+attrs.name+'" value="'+value.aid+'">'+
+                             '</ks-pic-thumb>';
+                    });
+                    var label = t.parent();
+                    label.prev().remove();
+                    label.before(h);
+                }
+                t.val('');
+            }
+
+            t.change(function(){
+                if(!attrs.api){
+                    $.toast('组件缺少api属性');
+                    return false;
+                }
+                //如果存在缩放属性时 则缩放后再上传
+                if(attrs.zoomhidth || attrs.zoomheight || attrs.zoom){
+                    $.imgZoom(this, (attrs.zoomwidth || 1920), (attrs.zoomweight || 1080), function(blob){
+                        $.upload('upload', blob, attrs.api, function(dt){
                             _inset(dt.List);
                         });
-                    }
-                });
-            },
-            'input[type="ks-file"]' : function(t){
-                var t = $(t), attrs = t.attr();
-                t.attr('type', 'file').css('display','none');
-                t.wrap('<ks-btn upload></ks-btn>').wrap('<label icon="upload-cloud-fill" style="display:block"></label>');
-            },
-            'input[type="ks-files"]' : function(t){
-                var t = $(t), attrs = t.attr();
-                var fname = attrs.name;
-                fname = fname ? fname+'[]' : '';
-                t.attr('type', 'file').css('display','none').attr('name', fname+'[]');
-                t.wrap('<ks-btn upload></ks-btn>').wrap('<label icon="upload-cloud-fill" style="display:block"></label>');
-            }
+                    });
+                }else{
+                    $.upload('upload', t[0], attrs.api, function(dt){
+                        _inset(dt.List);
+                    });
+                }
+            });
         });
+
+        $.render('input[type="ks-file"]', function(t){
+            var t = $(t), attrs = t.attr();
+            t.attr('type', 'file').css('display','none');
+            t.wrap('<ks-btn upload></ks-btn>').wrap('<label icon="upload-cloud-fill" style="display:block"></label>');
+        });
+
+        $.render('input[type="ks-files"]', function(t){
+            var t = $(t), attrs = t.attr();
+            var fname = attrs.name;
+            fname = fname ? fname+'[]' : '';
+            t.attr('type', 'file').css('display','none').attr('name', fname+'[]');
+            t.wrap('<ks-btn upload></ks-btn>').wrap('<label icon="upload-cloud-fill" style="display:block"></label>');
+        });
+
         //上传文件删除按钮绑定事件
         $(document).on('click', 'ks-pic-thumb > span[icon*=delete]', function(){
             var ths = $(this), delApi = ths.attr('delapi');

@@ -234,7 +234,7 @@ $.table = function (options) {
                     if (options.toolBtn.left) {
                         html += '<div class="ks-fl ks-mr1-sub">' + ths.createBtn(options.toolBtn.left, 'toolBtn.left', 'getSelect()') + '</div>';
                     }
-                    html += '<div class="ks-fr"><ks-btn data-key="_refresh" size="small" icon="refresh" @click="refresh()">刷新</ks-btn><ks-btn-group class="ks-ml1">' + ths.createBtn(options.toolBtn.right, 'toolBtn.right', 'this') + '</ks-btn-group></div>';
+                    html += '<div class="ks-fr"><span class="ks-mr ks-text-gray ks-f1">共{{count}}条</span><ks-btn data-key="_refresh" size="small" icon="refresh" @click="refresh()">刷新</ks-btn><ks-btn-group class="ks-ml1">' + ths.createBtn(options.toolBtn.right, 'toolBtn.right', 'this') + '</ks-btn-group></div>';
                 } else if ($.isString(options.toolBtn)) {
                     html += options.toolBtn;
                 }
