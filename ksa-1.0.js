@@ -2784,11 +2784,11 @@ function debugTime(key) {
                     str = str.replace('&lt;', '<');
                     str = str.replace('&gt;', '>');
                     str = str.replace('&amp;', '&');
-                    str = str.replace('&amp;', '&');
                     str = str.replace('&quot;', '"');
                     str = str.replace('&nbsp;', ' ');
                     return '{{' + str + '}}';
                 });
+
 
                 code = code.replace(/{{(((if|loop)(\s+.*?))|(\/(if|loop)))}}/g, function () {
                     var arg = arguments;

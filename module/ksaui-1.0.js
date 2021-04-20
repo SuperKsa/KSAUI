@@ -69,10 +69,10 @@ $.ksauiRenderTree = {};
     function _KSArenderStart() {
         //回调渲染函数
         function _documentRenderFun(option, ele, selector, update) {
+
             if (!ele._KSAUIRENDER_) {
                 ele._KSAUIRENDER_ = {};
             }
-
             //监听属性变化
             if(option.monitor.length) {
                 $.loop(option.monitor, function (val) {
@@ -82,6 +82,7 @@ $.ksauiRenderTree = {};
                     }else if(val == 'html' && update.type === 'childList'){
                         isCall = 1;
                     }
+
                     if (isCall) {
                         option.callback && option.callback.call(ele, ele, true);
                     }
@@ -101,8 +102,8 @@ $.ksauiRenderTree = {};
             }
             ele = $(ele);
             $.loop($.ksauiRenderTree, function (option, selector) {
-                ele.find(selector).map(function (ele) {
-                    _documentRenderFun(option, ele, selector, update);
+                ele.find(selector).map(function (el) {
+                    _documentRenderFun(option, el, selector, update);
                 });
                 var thisEl = ele.filter(selector);
                 thisEl.length && _documentRenderFun(option, thisEl[0], selector, update);
@@ -157,6 +158,7 @@ $.ksauiRenderTree = {};
                 newMonitor.push(val);
             }
         });
+
         if ($.isObject(selector) && !func) {
             $.loop(selector, function (val, key) {
                 $.ksauiRenderTree[key] = {callback : val, monitor : newMonitor};
@@ -1349,7 +1351,7 @@ $.ksauiRenderTree = {};
             }
             var T = $(this);
             //如果当前已选择或禁用状态则不做任何响应
-            if (T.hasClass('ks-select-optgroup-title') || (!isMultiple && T.selected()) || T.disabled()) {
+            if (T.hasClass('ks-select-optgroup-title') || T.disabled()) {
                 return false;
             }
 
@@ -2612,36 +2614,35 @@ $.ksauiRenderTree = {};
     }
 
     (function () {
-        $.render('select.ks-select, select[type="ks-select"]', function (ele) {
+        $.render('select.ks-select, select[type="ks-select"], select[ks-render-type="select"]', function (ele, isAttrUp) {
             var t = $(ele), at = t.attr();
             if (t[0].tagName != 'SELECT') {
                 return;
             }
-            t.removeClass('ks-select');
+            t.removeClass('ks-select').attr({'type': '', 'ks-render-type':'select'});
             //如果控件为展开类型 元素存在open属性
             if ($.isset(at.open)) {
-                var json = select_html_json(t[0]);
-                var ele = $('<div class="ks-select-list">' + select_json_html(json, json.value, json.multiple) + '</div>');
-                ele.children().listSelect(function (value) {
-                    $(t).val(Object.keys(arguments[2])).trigger('change');
-                });
-                t.after(ele).hide();
-                ele.prepend(t);
-                t.next().disabled(t.disabled());
-                //绑定一个内部事件 让select表单值改变后通知父级
-                t.DOMchange('val', function () {
-                    var val = $(this).val();
-                    ele.find('ks-list-item').selected(false);
-                    val = !$.isArray(val) ? [val] : val;
-                    $.loop(val, function (v) {
-                        ele.find('ks-list-item[value="' + v + '"]').selected(true);
+                if(isAttrUp) {
+                    t.next().disabled(t.disabled());
+                }else{
+                    var json = select_html_json(t[0]);
+                    selectList = $('<div class="ks-select-list">' + select_json_html(json, json.value, json.multiple) + '</div>');
+                    selectList.children().listSelect(function (value) {
+                        $(t).val(Object.keys(arguments[2])).trigger('change');
                     });
-                });
-
-                t.DOMchange('attr.disabled', function () {
-                    var ts = $(this);
-                    ts.next().disabled(ts.disabled());
-                });
+                    t.after(selectList).hide();
+                    selectList.prepend(t);
+                    t.next().disabled(t.disabled());
+                    //绑定一个内部事件 让select表单值改变后通知父级
+                    t.DOMchange('val', function () {
+                        var val = $(this).val();
+                        selectList.find('ks-list-item').selected(false);
+                        val = !$.isArray(val) ? [val] : val;
+                        $.loop(val, function (v) {
+                            selectList.find('ks-list-item[value="' + v + '"]').selected(true);
+                        });
+                    });
+                }
 
             } else {
                 //获取select已选中文本
@@ -2653,36 +2654,41 @@ $.ksauiRenderTree = {};
                     return text ? text : (t.attr('deftext') || '请选择');
                 }
 
+                if(isAttrUp){
+                    t.parent().children('.ks-select-title').html(_selectText());
+                }else{
 
-                t.attr('type', '');
-                t.wrap($.tag('div',{class:'ks-select', style : at.style}));
-                t.after('<span class="ks-select-title">' + _selectText() + '</span>');
-                t.next().click(function () {
-                    if (t.disabled()) {
-                        return;
-                    }
-                    var optionJson = select_html_json(t[0]);
-                    $(this).showSelect(optionJson, function (val, txt, valdt) {
-                        t.val(Object.keys(valdt)).attr('value', val);
-                        t.next('.ks-select-title').html(_selectText());
-                        t.trigger('change'); //手动触发change事件
+                    t.wrap($.tag('div',{class:'ks-select', style : at.style}));
+                    t.after('<span class="ks-select-title">' + _selectText() + '</span>');
+                    t.next().click(function () {
+                        if (t.disabled()) {
+                            return;
+                        }
+                        var optionJson = select_html_json(t[0]);
+                        $(this).showSelect(optionJson, function (val, txt, valdt) {
+                            t.val(Object.keys(valdt)).attr('value', val);
+                            t.next('.ks-select-title').html(_selectText());
+                            t.trigger('change'); //手动触发change事件
+                        });
                     });
-                });
-                //绑定一个内部事件 让select表单值改变后通知父级
-                t.DOMchange('val', function () {
-                    t.parent().children('.ks-select-title').html(_selectText());
-                }).DOMchange('html', function(){
-                    t.parent().children('.ks-select-title').html(_selectText());
-                });
+                }
+
+
+
             }
-            //如果在标签属性data-value给定选中值 则处理到内部
-            $.isset(at.value) && t.val($.explode(' ', at.value, ''));
-        });
+            if(isAttrUp){
+                if(!$.isset(at.value) && at['data-value']){
+                    at.value = at['data-value'];
+                }
+                //如果在标签属性data-value给定选中值 则处理到内部
+                $.isset(at.value) && t.val($.explode(' ', at.value, ''));
+            }
+        },'attr.value attr.data-value attr.disabled');
 
         $.render('input[type="ks-radio"]', function (ele) {
             var t = $(ele), at = t.attr();
             var txt = at.text ? '<em>' + at.text + '</em>' : '';
-            t.attr('type', 'radio');
+            t.attr({'type': 'radio'});
             t.wrap($.tag('label',{type : 'radio', class : 'ks-radio', 'icon': at.icon, 'style':at.style, color:at.color}));
             t.after('<i>' + txt + '</i>');
             t.change(function () {
@@ -2693,7 +2699,7 @@ $.ksauiRenderTree = {};
         $.render('input[type="ks-checkbox"]', function (ele) {
             var t = $(ele), at = t.attr();
             var txt = at.text ? '<em>' + at.text + '</em>' : '';
-            t.attr('type', 'checkbox');
+            t.attr({'type': 'checkbox'});
             t.wrap($.tag('label',{type : 'checkbox', class : 'ks-checkbox', 'icon': at.icon, 'style':at.style, color:at.color}));
             t.after('<i>' + txt + '</i>');
             //最大选择数量支持
@@ -2722,7 +2728,7 @@ $.ksauiRenderTree = {};
         $.render('input[type="ks-checkbox-all"]', function (ele) {
             var t = $(ele), at = t.attr();
             var txt = at.text ? '<em>' + at.text + '</em>' : '';
-            t.attr({'type' : 'checkbox', 'ischeckall' : 1});
+            t.attr({'type': 'checkbox', 'ischeckall': 1});
             t.wrap($.tag('label',{type : 'checkbox', class : 'ks-checkbox', 'icon': at.icon, 'style':at.style, color:at.color}));
             t.after('<i>' + txt + '</i>');
 
