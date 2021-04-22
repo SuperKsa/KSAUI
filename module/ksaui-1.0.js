@@ -76,15 +76,14 @@ $.ksauiRenderTree = {};
             //监听属性变化
             if(option.monitor.length) {
                 $.loop(option.monitor, function (val) {
-                    var isCall = 0;
+                    var isCall;
                     if (update.type === 'attributes') {
-                        isCall = val == 'attr.' + update.attributeName;
+                        isCall = val == ('attr.' + update.attributeName) ? update.attributeName : null;
                     }else if(val == 'html' && update.type === 'childList'){
-                        isCall = 1;
+                        isCall =val;
                     }
-
                     if (isCall) {
-                        option.callback && option.callback.call(ele, ele, true);
+                        option.callback && option.callback.call(ele, ele, true, val);
                     }
                 });
             }
@@ -1622,6 +1621,7 @@ $.ksauiRenderTree = {};
                 });
             },
             show : function (layer) {
+                layerID = layer.layerID;
                 if(!$.isMobile){
                     //监听点击事件 自动关闭
                     $(document).on('click.KSAUI-select', function (e) {
@@ -1635,7 +1635,9 @@ $.ksauiRenderTree = {};
             hide : _close
         }, layerOption, {class : 'ks-layer-select'});
 
-        return $.layer(layerOption);
+        var Lay = $.layer(layerOption);
+        layerID = Lay.id;
+        return Lay;
     };
 
     /**
@@ -2614,12 +2616,19 @@ $.ksauiRenderTree = {};
     }
 
     (function () {
-        $.render('select.ks-select, select[type="ks-select"], select[ks-render-type="select"]', function (ele, isAttrUp) {
+        $.render('select.ks-select, select[type="ks-select"], select[ks-render-type="select"]', function (ele, isAttrUp, update) {
             var t = $(ele), at = t.attr();
             if (t[0].tagName != 'SELECT') {
                 return;
             }
             t.removeClass('ks-select').attr({'type': '', 'ks-render-type':'select'});
+            //是否存在默认值
+            if(!$.isset(at.value) && at['data-value']){
+                at.value = at['data-value'];
+            }
+            //如果在标签属性data-value给定选中值 则处理到内部
+            $.isset(at.value) && t.val(at.value);
+
             //如果控件为展开类型 元素存在open属性
             if ($.isset(at.open)) {
                 if(isAttrUp) {
@@ -2672,17 +2681,9 @@ $.ksauiRenderTree = {};
                         });
                     });
                 }
-
-
-
             }
-            if(isAttrUp){
-                if(!$.isset(at.value) && at['data-value']){
-                    at.value = at['data-value'];
-                }
-                //如果在标签属性data-value给定选中值 则处理到内部
-                $.isset(at.value) && t.val($.explode(' ', at.value, ''));
-            }
+
+
         },'attr.value attr.data-value attr.disabled');
 
         $.render('input[type="ks-radio"]', function (ele) {
@@ -2890,7 +2891,7 @@ $.ksauiRenderTree = {};
         $.render('input[type="ks-text"], input[type="ks-tel"]', function (ele) {
             var t = $(ele), at = t.attr();
             t.attr('type', at.type.substr(3));
-            if(at.label){
+            if(at.label || at.unit){
                 ks_input_group(t);
             }else{
                 t.wrap($.tag('label',{type : 'text', class : 'ks-input', 'icon': at.icon, 'style':at.style}));

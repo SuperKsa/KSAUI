@@ -37,7 +37,7 @@ $.table = function (options) {
                             icon : val.icon,
                             style : val.style,
                             event : function () {
-                                val.event.apply(ths, [lineValue, ths.el, ths]);
+                                val.event.apply(ths, [ths.$data.list[ele.data('line-key')], ths.el, ths]);
                             }
                         });
                     }
