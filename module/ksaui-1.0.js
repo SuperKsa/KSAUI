@@ -1126,6 +1126,7 @@ $.ksauiRenderTree = {};
         return w == 0 ? 7 : w; //周日序号为7
     };
 
+
     /**
      * AJAX请求
      * @param {url} url 请求地址（末尾自动追加ajax=1）
