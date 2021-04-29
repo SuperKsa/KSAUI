@@ -17,35 +17,59 @@ $.table = function (options) {
     }
 
     var endFunCall = function(){
-        var ths = this;
-        //行右侧按钮 menu菜单绑定
-        ths.el.find('td[data-linebtn-key] *[data-table-btnindex]').each(function(_, ele){
-            ele = $(ele);
-            var btnIndex = ele.attr('data-table-btnindex');
-            var obj = options;
-            $.loop(btnIndex.split('.'), function(v){
-                obj = obj[v];
-            });
-            //hover菜单处理
-            if(obj.menu){
-                var hoverEvn = [];
-                var lineValue = ths.$data.list[ele.data('line-key')];
-                $.loop(obj.menu, function(val){
-                    if(!val.if || ($.isFunction(val.if) && val.if(lineValue))) {
-                        hoverEvn.push({
-                            label : val.text,
-                            icon : val.icon,
-                            style : val.style,
-                            event : function () {
-                                val.event.apply(ths, [ths.$data.list[ele.data('line-key')], ths.el, ths]);
-                            }
-                        });
-                    }
-                });
-                hoverEvn.length && ele.showMenu(obj.menuHover ? 'hover' : 'click', hoverEvn);
+        options.endFun && options.endFun.call(options, options.el);
+    }
+
+    //行操作按钮事件触发组合
+    function linBtnMenuEvent(conf, lineValue){
+        var e = event || window.event;
+        var btns = $(e.target);
+        var content = '';
+        $.loop(conf, function (val, key) {
+            if(!val.if || ($.isFunction(val.if) && val.if(lineValue))) {
+                content += $.tag('p', {
+                    style : val.style,
+                    href : val.url,
+                    icon : val.icon,
+                    'dropdown-event-key' : key
+                }, val.text);
             }
         });
-        options.endFun && options.endFun.call(options, options.el);
+        content = $(content);
+        content.filter('[dropdown-event-key]').map(function (ele) {
+            ele = $(ele);
+            var key = ele.attr('dropdown-event-key');
+            conf[key] && ele.click(function(){
+                conf[key].event(lineValue);
+            });
+        });
+
+        if (btns.active()) {
+            return;
+        }
+        btns.active(true);
+        $.layer({
+            pos : btns,
+            cover : 0,
+            content : content,
+            closeBtn : 0,
+            bodyOver : false, //body不需要裁切
+            init : function (layer) {
+                layer.addClass('ks-layer-showmenu');
+            },
+            show : function (layer) {
+                    //监听点击事件 自动关闭
+                    $(document).on('click.KSAUI-dropdown', function (e) {
+                        if (e.target !== layer[0]) {
+                            $.layerHide(layer.layerID);
+                            $(document).off('click.KSAUI-dropdown');
+                        }
+                    });
+            },
+            close : function () {
+                btns.active(false);
+            }
+        });
     }
 
     $._tableID++;
@@ -85,6 +109,7 @@ $.table = function (options) {
                         fun = $.isObject(fun) && fun.event ? fun.event : fun;
                         $.isFunction(fun) && fun.apply(ths, [value, ths.el, ths]);
                         if($.strpos(key, ['lineBtn', 'lineSelect'])){
+                            fun.menu && linBtnMenuEvent(fun.menu, value);
                             return false;
                         }
                     },
@@ -110,6 +135,9 @@ $.table = function (options) {
                     //转分页
                     toPages : function (val) {
                         ths.get(window.event.target.value);
+                    },
+                    lineBtn : function(){
+                      debug(arguments);
                     },
                     _KSA_TABLE_END_ : function(){
                         if(!this.$data.ksauiLoading){
