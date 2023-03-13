@@ -1,7 +1,7 @@
 /**
  * KSAUI v1.0
  * Create：2014-01-23
- * Update：2020-4-24
+ * Update：2023-03-13
  */
 ks-list-item,
 ks-list,
@@ -1173,7 +1173,8 @@ ks-avatar[square] {
   background: rgba(255, 255, 255, 0.8);
   color: inherit;
 }
-ks {
+ks,
+.ks {
   display: flex;
   width: 100%;
   height: 100%;
@@ -1181,11 +1182,17 @@ ks {
   position: relative;
   flex-direction: column;
 }
-ks > ks-side {
+ks > ks-side,
+.ks > ks-side,
+ks > .ks-side,
+.ks > .ks-side {
   width: 220px;
   flex: 0 0 auto;
 }
-ks > ks-content {
+ks > ks-content,
+.ks > ks-content,
+ks > .ks-content,
+.ks > .ks-content {
   flex: 1;
   flex-basis: auto;
   overflow: hidden;
@@ -1193,20 +1200,41 @@ ks > ks-content {
   width: 100%;
   height: 100%;
 }
-ks > ks-content ks-navbar-content {
+ks > ks-content ks-navbar-content,
+.ks > ks-content ks-navbar-content,
+ks > .ks-content ks-navbar-content,
+.ks > .ks-content ks-navbar-content,
+ks > ks-content .ks-navbar-content,
+.ks > ks-content .ks-navbar-content,
+ks > .ks-content .ks-navbar-content,
+.ks > .ks-content .ks-navbar-content {
   display: block;
   width: 100%;
   height: 100%;
   overflow: auto;
 }
-ks > ks-content ks-navbar-content[active] {
+ks > ks-content ks-navbar-content[active],
+.ks > ks-content ks-navbar-content[active],
+ks > .ks-content ks-navbar-content[active],
+.ks > .ks-content ks-navbar-content[active],
+ks > ks-content .ks-navbar-content[active],
+.ks > ks-content .ks-navbar-content[active],
+ks > .ks-content .ks-navbar-content[active],
+.ks > .ks-content .ks-navbar-content[active] {
   display: block;
 }
 ks > ks-footer,
-ks > ks-header {
+.ks > ks-footer,
+ks > ks-header,
+.ks > ks-header,
+ks > .ks-footer,
+.ks > .ks-footer,
+ks > .ks-header,
+.ks > .ks-header {
   flex: 0 0 auto;
 }
-ks[navbar] {
+ks[navbar],
+.ks[navbar] {
   padding-bottom: 1.1rem;
   display: block;
   height: auto;
@@ -1498,6 +1526,10 @@ ks-empty:before {
 }
 .ks-table ~ page {
   margin-top: 20px;
+}
+.ks-table[small] th,
+.ks-table[small] td {
+  padding: 5px;
 }
 .ks-table-toolbar {
   margin-bottom: 10px;
@@ -2746,6 +2778,25 @@ textarea.ks-input {
   padding: 0;
   position: relative;
   display: inline-block;
+}
+/* flex处理 */
+ks-flex,
+.ks-flex {
+  display: flex;
+}
+ks-flex[vertical],
+.ks-flex[vertical] {
+  flex-direction: column;
+  height: 100%;
+  flex-flow: column;
+}
+/* 禁止鼠标选中 */
+.ks-noselect {
+  user-select: none;
+}
+/* 鼠标 - 手型 */
+.ks-pointer {
+  cursor: pointer;
 }
 .ks-input-arrow {
   position: relative;

@@ -95,11 +95,22 @@ $.table = function (options) {
                 data : ths.$data,
                 init : function(){
                     ths.el = $(this.el);
+
                 },
                 render : function(){
                     ths.el = $(this.el);
                 },
                 methods : {
+                    options : function(){
+                        let arg = arguments;
+                        let res = ths.options;
+                        if(arg.length > 0){
+                            $.loop(arg, function(k){
+                                res = res[k];
+                            })
+                        }
+                        return res;
+                    },
                     btnEvent : function (key, value) {
                         var arg = [].slice.call(arguments);
                         var fun = options;
@@ -145,7 +156,7 @@ $.table = function (options) {
                                 endFunCall.call(ths);
                             })
                         }
-                    }
+                    },
                 }
             });
 
@@ -199,7 +210,7 @@ $.table = function (options) {
                 }
                 ths.$data.ksauiLoading = 0;
                 callFun && callFun.call(ths, dt);
-                options.render && options.render(ths);
+                options.render && options.render(ths, dt);
 
 
 
@@ -309,9 +320,12 @@ $.table = function (options) {
                     value.tpl = $.tag('ks-price',  {color:value.color, style : value.style, unit:value.unit, ':value': 'value.'+key+''}, '');
                 }else if(value.type == 'tag'){
                     value.tpl = $.tag('ks-tag', {color:value.color, icon:value.icon, style : value.style}, '{{value.'+key+'}}');
+                }else if(value.type == 'switch'){
+                    value.tpl = $.tag('input', {type:'ks-switch', color:value.color, icon:value.icon, style : value.style, ':checked':'value.'+key+' > 0 || value.'+key+' == true ? true : false', ':text':'options(\'colData\', \''+key+'\', \'text\')'});
                 }
+                let h = value.option ? '{{options("colData", "'+key+'", "option", value.' + key + ')}}' : '{{value.' + key + '}}';
                 //展示的列数据合入
-                html += $.tag('td', {style : value.style}, value.tpl ? value.tpl : '{{value.' + key + '}}');
+                html += $.tag('td', {style : value.style}, value.tpl ? value.tpl : h);
             });
             //行操作按钮
             if (options.lineBtn) {
@@ -331,6 +345,7 @@ $.table = function (options) {
             if (options.search) {
                 $(options.search).submit(function () {
                     ths.get(1);
+                    return false;
                 });
             }
         }

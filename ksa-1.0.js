@@ -928,12 +928,18 @@ function debugTime(key) {
                         case 'SELECT':
                             value = $.isArray(value) ? value : [value];
                             if (ele.options) {
-                                $.loop(ele.options, function (e) {
-                                    var r = $.inArray(e.value, value);
-                                    if (r != e.selected) {
-                                        e.selected = r;
-                                    }
-                                });
+                                if(value.length == 1){
+                                    ele.value = value[0];
+
+                                }else{
+                                    $.loop(ele.options, function (e) {
+                                        var r = $.inArray(e.value, value);
+                                        if (r != e.selected) {
+                                            e.selected = r;
+                                            $(e).attr('selected', 'selected');
+                                        }
+                                    });
+                                }
                             }
                             $(ele).trigger('ksachange');//触发内部事件
                             break;
@@ -1075,21 +1081,40 @@ function debugTime(key) {
             $(ele).find('input, textarea, select').each(function (i, el) {
                 el = $(el);
                 var name = el.attr('name');
-                var val = el.val();
-                var type = el.attr('type');
+                name = name ? name.trim() : '';
                 if (name) {
-                    if (type === 'file') {
-                        formData[name] = el[0].files.length ? el[0].files[0] : '';
-                    } else if ($.inArray(type, ['radio', 'checkbox'])) {
-                        if (el.checked()) {
-                            formData[name] = val;
-                        }
-                    } else {
-                        if ($.isArray(val)) {
+                    var val = el.val();
+                    var type = el.attr('type');
+                    let isArr = /\[\]$/.test(name);
+                    if(isArr){
+                        name = name.replace(/(.*?)\[\]&/ig, '$1');
+                    }
+                    if(isArr){
+                        if(!formData[name]){
                             formData[name] = [];
-                            $.loop(val, function (v) {
-                                formData[name].push(v);
-                            })
+                        }
+                        if (type === 'file') {
+                            formData[name].push(el[0].files.length ? el[0].files[0] : '');
+                        } else if ($.inArray(type, ['radio', 'checkbox'])) {
+                            if (el.checked()) {
+                                formData[name].push(val);
+                            }
+                        } else {
+                            if ($.isArray(val)) {
+                                $.loop(val, function (v) {
+                                    formData[name].push(v);
+                                })
+                            } else {
+                                formData[name].push(val);
+                            }
+                        }
+                    }else{
+                        if (type === 'file') {
+                            formData[name] = el[0].files.length ? el[0].files[0] : '';
+                        } else if ($.inArray(type, ['radio', 'checkbox'])) {
+                            if (el.checked()) {
+                                formData[name] = val;
+                            }
                         } else {
                             formData[name] = val;
                         }

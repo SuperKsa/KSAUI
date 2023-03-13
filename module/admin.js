@@ -205,8 +205,8 @@ function KSAadminIframe(homeUrl){
             //切换iframe为活动状态
             var dt = ths.data[url];
             if(dt){
-                if(!dt.content){
-                    ths.createIframe(url); //切换前可能还没有创建内容框架
+                if(!dt.content || dt.param != param){
+                    ths.createIframe(url, param); //切换前可能还没有创建内容框架
                 }
 
                 $(dt.content).active(true).siblings().active(false);
@@ -257,12 +257,20 @@ function KSAadminIframe(homeUrl){
             }
             return cache;
         },
-        createIframe : function(url){
+        createIframe : function(url, param){
             var ths = this;
+            let iframeUrl = url;
+            if(param && $.isObject(param)){
+                iframeUrl = $.urlAdd(url, param);
+            }
             if(ths.data[url] && ths.data[url].content){
+                let iframes = $(ths.data[url].content).find('iframe');
+                if(param && iframes.attr('src') != iframeUrl){
+                    iframes.attr('src', $.adminUrl(iframeUrl))
+                }
                 return ths.data[url].content;
             }
-            var iframe = $('<div class="ks-admin-iframe" data-url="'+url+'"><iframe src="'+$.adminUrl(url)+'" width="100%" height="100%"></iframe></div>');
+            var iframe = $('<div class="ks-admin-iframe" data-url="'+url+'"><iframe src="'+$.adminUrl(iframeUrl)+'" width="100%" height="100%"></iframe></div>');
             ths.data[url].content =  iframe[0];
             this.dom.append(iframe);
             this.currentIframe = iframe.find('iframe');
