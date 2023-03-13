@@ -633,7 +633,7 @@ $.ksauiRenderTree = {};
                 if (option.btn) {
                     dom.find('.ks-layer-bottom > ks-btn').click(function () {
                         var t = $(this);
-                        if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(this, t.data('btn-index'), dom) !== false))) {
+                        if (!t.disabled() && (!option.btnFun || (typeof (option.btnFun) == 'function' && option.btnFun.call(_this, t.data('btn-index'), dom) !== false))) {
                             option.cancel = t.data('btn-index') ==='cancel';
                             _this.close();
                         }
@@ -905,7 +905,10 @@ $.ksauiRenderTree = {};
                     if (a == 'confirm') {
                         if(submitConfirm){
                             submitConfirm = submitConfirm === true ? '确认要进行该操作吗？' : submitConfirm;
-                            $.Dialog('confirm', submitConfirm,  '', callf);
+                            $.Dialog('confirm', submitConfirm,  '', function(){
+                                callf();
+                                return true;
+                            });
                             return false;
                         }else{
                             return callf();
@@ -1152,7 +1155,17 @@ $.ksauiRenderTree = {};
                     //成功回调函数 只在API返回result字段时回调
                     if ($.isset(s.result)) {
                         if (s.result.KSAUI) {
-                            $[s.result.KSAUI.type].apply('', s.result.KSAUI.param)
+                            if(s.result.KSAUI.type == 'Dialog'){
+
+                                s.result.KSAUI.param.push(function(s){
+                                    return fun ? fun(s) : true;
+                                });
+
+                                $.Dialog.apply('', s.result.KSAUI.param)
+                            }else{
+                                $[s.result.KSAUI.type].apply('', s.result.KSAUI.param)
+                            }
+
                         }
                         if ($.isset(s.msg) && s.msg) {
                             if(s.confirm){
@@ -1503,14 +1516,12 @@ $.ksauiRenderTree = {};
             } else {
                 v = $(el).attr() || {};
                 v.n = Nums;
-                v.selected = el.selected;
+                v.selected = !!el.selected;
                 v.content = el.text;
                 Nums++;
             }
-            json.option = json.option || [];
             json.option.push(v);
         });
-
         return json;
     };
 
@@ -1611,10 +1622,11 @@ $.ksauiRenderTree = {};
                         });
                         txt = txt ? txt : '请选择';
                     }
-                    //选择后回调函数
-                    callFun && callFun.call(T, val, txt, valdt, T, e);
+
                     //触发按钮输出text
                     isBtnInput && btn.val(txt);
+                    //选择后回调函数
+                    callFun && callFun.call(T, val, txt, valdt, T, e);
                     //单选框选择后关闭pop层
                     if (!multiple) {
                         _close();
@@ -2166,7 +2178,10 @@ $.ksauiRenderTree = {};
         var tip = $('.ks-ftip');
         tip.show();
         var ht = tip.height(true) + tip.find('.ks-ftip-x').height(true) / 2;
-        tip.css({left : (obj.offset().left - 10), top : (obj.offset().top - ht)});
+
+        var left = Math.min(obj.offset().left - 10, window.innerWidth - tip.width(true) - 10);
+        tip.find('.ks-ftip-x').css({left: obj.offset().left - left + 5});
+        tip.css({left : left, top : (obj.offset().top - ht)});
         var s;
         obj.hover(function () {
             s && clearTimeout(s);
@@ -2618,17 +2633,19 @@ $.ksauiRenderTree = {};
 
     (function () {
         $.render('select.ks-select, select[type="ks-select"], select[ks-render-type="select"]', function (ele, isAttrUp, update) {
-            var t = $(ele), at = t.attr();
+            let t = $(ele), at = t.attr();
             if (t[0].tagName != 'SELECT') {
                 return;
             }
-            t.removeClass('ks-select').attr({'type': '', 'ks-render-type':'select'});
-            //是否存在默认值
-            if(!$.isset(at.value) && at['data-value']){
-                at.value = at['data-value'];
+            if(!isAttrUp){
+                t.removeClass('ks-select').attr({'type': '', 'ks-render-type':'select'});
+                //是否存在默认值
+                if(!$.isset(at.value) && at['data-value']){
+                    at.value = at['data-value'];
+                }
+                //如果在标签属性data-value给定选中值 则处理到内部
+                $.isset(at.value) && t.val(at.value);
             }
-            //如果在标签属性data-value给定选中值 则处理到内部
-            $.isset(at.value) && t.val(at.value);
 
             //如果控件为展开类型 元素存在open属性
             if ($.isset(at.open)) {
@@ -2636,7 +2653,7 @@ $.ksauiRenderTree = {};
                     t.next().disabled(t.disabled());
                 }else{
                     var json = select_html_json(t[0]);
-                    selectList = $('<div class="ks-select-list">' + select_json_html(json, json.value, json.multiple) + '</div>');
+                    let selectList = $('<div class="ks-select-list">' + select_json_html(json, json.value, json.multiple) + '</div>');
                     selectList.children().listSelect(function (value) {
                         $(t).val(Object.keys(arguments[2])).trigger('change');
                     });
@@ -2659,7 +2676,7 @@ $.ksauiRenderTree = {};
                 function _selectText() {
                     var text = '';
                     t.find('option:selected').each(function (_, e) {
-                        text += '<span>' + e.text + '</span>';
+                        text += e.text ? '<span>' + e.text + '</span>' : '';
                     });
                     return text ? text : (t.attr('deftext') || '请选择');
                 }
@@ -2677,9 +2694,14 @@ $.ksauiRenderTree = {};
                         var optionJson = select_html_json(t[0]);
                         $(this).showSelect(optionJson, function (val, txt, valdt) {
                             t.val(Object.keys(valdt)).attr('value', val);
-                            t.next('.ks-select-title').html(_selectText());
-                            t.trigger('change'); //手动触发change事件
+                            //t.next('.ks-select-title').html(_selectText());
+                            //t.trigger('change'); //手动触发change事件
                         });
+                    });
+                    //绑定一个内部事件 让select表单值改变后通知父级
+                    t.DOMchange('val', function () {
+                        t.next('.ks-select-title').html(_selectText());
+                        t.trigger('change'); //手动触发change事件
                     });
                 }
             }
@@ -3314,6 +3336,12 @@ $.ksauiRenderTree = {};
                 dom.click(function () {
                     !dom.disabled() && form.submit();
                 });
+                //如果监听到确认键 直接提交
+                form.keyup(function(e){
+                    if(e.keyCode == 13){
+                        form.submit();
+                    }
+                });
             }
         });
 
@@ -3329,6 +3357,7 @@ $.ksauiRenderTree = {};
             if (form.length) {
                 dom.click(function () {
                     form.find('input:not([type="hidden"]), select, textarea').val('');
+                    form.find('select').attr('value', '');
                 });
             }
         });
