@@ -3186,6 +3186,9 @@ function debugTime(key) {
         return this.height(true, true);
     }
 
+    //插件钩子 $.plugin.xxx = xxx;
+    $.plugin = $.prototype;
+    window.KSA = window.$ = $;
 
     var requireScript = document.currentScript ? document.currentScript : document.scripts[document.scripts.length - 1];
     var requireDir = requireScript.src.substr(0, requireScript.src.lastIndexOf('/') + 1);
@@ -3225,11 +3228,6 @@ function debugTime(key) {
         });
     }
     $.require(requireScript.getAttribute('module'));
-
-
-
-    //插件钩子 $.plugin.xxx = xxx;
-    $.plugin = $.prototype;
-    window.KSA = window.$ = $;
+    
     return $;
 })(document);
