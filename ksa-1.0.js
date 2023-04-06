@@ -1276,14 +1276,14 @@ function debugTime(key) {
             if (dom === window || dom === document) {
                 return document.documentElement.clientHeight || document.body.clientHeight;
             } else {
-                var size = dom.offsetHeight;
-                var css = $.intval(this.css('paddingBottom paddingTop borderBottomWidth borderTopWidth marginBottom marginTop'));
+                let styleObj = getComputedStyle(dom);
+                var size = parseFloat(styleObj.getPropertyValue('width'));
                 //真实尺寸
                 if (val !== true) {
-                    size -= (css.paddingBottom + css.paddingTop + css.borderBottomWidth + css.borderTopWidth);
+                    size -= parseFloat(styleObj.getPropertyValue('padding-top')) + parseFloat(styleObj.getPropertyValue('padding-bottom')) + parseFloat(styleObj.getPropertyValue('border-top-width')) + parseFloat(styleObj.getPropertyValue('border-bottom-width'))
                 }
                 if (isMargin === true) {
-                    size += (css.marginBottom + css.marginTop);
+                    size += parseFloat(styleObj.getPropertyValue('margin-top')) + parseFloat(styleObj.getPropertyValue('margin-bottom'));
                 }
                 return size;
             }
@@ -1305,14 +1305,14 @@ function debugTime(key) {
             if (dom === window || dom === document) {
                 return document.documentElement.clientWidth || document.body.clientWidth;
             } else {
-                var size = dom.offsetWidth;
-                var css = $.intval(this.css('paddingLeft paddingRight borderLeftWidth borderRightWidth marginLeft marginRight'));
+                let styleObj = getComputedStyle(dom);
+                var size = parseFloat(styleObj.getPropertyValue('width'));
                 //真实尺寸
                 if (val !== true) {
-                    size -= (css.paddingLeft + css.paddingRight + css.borderLeftWidth + css.borderRightWidth);
+                    size -= parseFloat(styleObj.getPropertyValue('padding-left')) + parseFloat(styleObj.getPropertyValue('padding-right')) + parseFloat(styleObj.getPropertyValue('border-left-width')) + parseFloat(styleObj.getPropertyValue('border-right-width'))
                 }
                 if (isMargin === true) {
-                    size += (css.marginLeft + css.marginRight);
+                    size += parseFloat(styleObj.getPropertyValue('margin-left')) + parseFloat(styleObj.getPropertyValue('margin-right'));
                 }
                 return size;
             }
