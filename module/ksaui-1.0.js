@@ -2614,6 +2614,129 @@ $.ksauiRenderTree = {};
 
     };
 
+    /**
+     * 元素拖拽
+     * 同一个父级下所有一级子元素拖拽
+     * 父元素回调事件：
+     *      开始=dragStart
+     *      确认=dragEnter
+     *      离开=dragLeave
+     *      结束=dragEnd
+     *      所有回调事件请读取event._KSA_Drop_Arg_属性，得到开始和结束的元素
+     * @param dom 父元素选择器
+     */
+    $.Drop = function(dom){
+        dom = $(dom);
+        let debug = dom.data('debug') ? true : false;
+        var events = {
+            Ele_start : null, //触发拖拽元素
+            Ele_In : null, //目标元素
+            Ele_Parent : null, //拖拽的父级
+            //拖拽 开始
+            dragstart(e, ele, parent){
+                if(this.Ele_start){
+                    return;
+                }
+                this.Ele_start = ele;
+                this.Ele_Parent = parent;
+
+                ele = $(ele);
+                debug && console.log('拖拽开始', ele.text());
+
+                ele.addClass('_drag');
+                e._KSA_Drop_Arg_ = {start:this.Ele_start, end:null};
+                dom.trigger('dragStart');
+            },
+            drag(e, ele, parent){
+                //console.log('handleDrag', e)
+            },
+            dragend(e, ele, parent){
+                debug && console.log('拖拽结束', e, this)
+                this.Ele_start && $(this.Ele_start).removeClass('_drag');
+                this.Ele_In && $(this.Ele_In).removeClass('_drag_in').css('margin-left', 0);
+                if(this.Ele_start && this.Ele_In && this.Ele_start != this.Ele_In) {
+                    debug && console.log('拖拽了', this.Ele_start, '放到', this.Ele_In);
+                    e._KSA_Drop_Arg_ = {start:this.Ele_start, end:this.Ele_In};
+                    dom.trigger('dragEnd');
+                }
+                this.Ele_start = null;
+                this.Ele_In = null;
+                this.Ele_Parent = null;
+            },
+            drop(e, ele, parent){
+                debug && console.log('handleDrop', e.target);
+            },
+            //拖拽 确认目标
+            dragenter(e, ele, parent){
+                if(!this.Ele_start){
+                    return;
+                }
+                if(this.Ele_In == ele){
+                    return;
+                }
+                ele = $(ele);
+                //不是同一个父级下
+                if(parent != this.Ele_Parent){
+                    debug && console.log('不是同一个父级')
+                    return;
+                }
+                //如果拖拽到自己 或 目标是紧挨的下一个 则不处理
+                if(this.Ele_start == ele[0] || ele.prev()[0] == this.Ele_start){
+                    return;
+                }
+
+                if(this.Ele_In && this.Ele_In != ele[0]){
+                    $(this.Ele_In).removeClass('_drag_in').css('margin-left', 0);
+                    debug && console.log('拖拽释放', this.Ele_In.innerText);
+                    e._KSA_Drop_Arg_ = {start:this.Ele_start, end:this.Ele_In};
+                    dom.trigger('dragLeave');
+                }
+                debug && console.log('拖拽确认', ele.text());
+            },
+            //拖拽 经过目标
+            dragover(e, ele, parent){
+                if(!this.Ele_start){
+                    return;
+                }
+                if(this.Ele_In == ele){
+                    return;
+                }
+                ele = $(ele);
+                //不是同一个父级下
+                if(parent != this.Ele_Parent){
+                    debug && console.log('不是同一个父级')
+                    return;
+                }
+                //如果拖拽到自己 或 目标是紧挨的下一个 则不处理
+                if(this.Ele_start == ele[0] || ele.prev()[0] == this.Ele_start){
+                    return;
+                }
+
+                //释放之前被选中的
+                if(this.Ele_In && this.Ele_In != ele[0]){
+                    $(this.Ele_In).removeClass('_drag_in').css('margin-left', 0);
+                    debug && console.log('拖拽释放', this.Ele_In.innerText);
+                }
+
+                debug && console.log('拖拽经过', ele.text());
+                this.Ele_In = ele[0];
+                ele.addClass('_drag_in').css('margin-left', $(this.Ele_start).width(true));
+                e._KSA_Drop_Arg_ = {start:this.Ele_start, end:this.Ele_In};
+                dom.trigger('dragEnter');
+            },
+            //拖拽 离开目标
+            dragleave(e, ele, parent){
+                if(!this.Ele_In){
+                    return;
+                }
+            }
+        }
+        let eventName = 'dragstart drag dragend drop dragenter dragover dragleave';
+        dom.find('> *').attr('draggable', 'true').on(eventName, function(e){
+            events[e.type] && events[e.type](e, this, dom[0]);
+        });
+    }
+
     function ks_input_group(ele){
         ele = $(ele);
         var attr = ele.attr();
