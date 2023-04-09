@@ -2062,7 +2062,8 @@ function debugTime(key) {
                     //如果存在选择器则遍历所有触发路径
                     if(selector){
                         var els = selectorAll(ele, selector);
-                        $.loop(e.path, function(val){
+                        var path = (e.composedPath && e.composedPath()) || e.path;
+                        $.loop(path, function(val){
                             if($.inArray(val, els)){
                                 if (callback.apply(val, args) === false) {
                                     e.stop();
@@ -2091,6 +2092,7 @@ function debugTime(key) {
 				 */
                 var realEvn = evn.replace(/\..*/, '');
                 ele.addEventListener(realEvn, handler.call, useCapture);
+
             })
         });
     };
@@ -3144,6 +3146,75 @@ function debugTime(key) {
         }
         return this;
     }
+    
+    /**
+     * 提取一个循环列表中指定字段 值集合
+     * 用法：
+     *      const [uids, goodsIDs] = loopFieldValue(list, ['uid','goodsID']);
+     *
+     * @param {Array|Object} data 循环列表数据
+     * @param {Array|String} keys 需要提取的字段 key 或 [key1,key2]
+     * @return {Object} 根据keys参数 顺序返回
+     */
+    $.loopFieldValue = function (data=[], keys=[]){
+        var dt = {};
+        if(Array.isArray(data)){
+            data.forEach(value => {
+                if(Array.isArray(keys)){
+                    keys.forEach((v, k) => {
+                        if(value[v]){
+                            dt[k][value[v]] = value[v];
+                        }
+                    });
+                }else if(value[keys]){
+                    dt[value[keys]] = value[keys];
+                }
+            });
+        }else if(typeof data === 'object'){
+            Object.values(data).forEach(value => {
+                if(Array.isArray(keys)){
+                    keys.forEach((v, k) => {
+                        if(value[v]){
+                            dt[k][value[v]] = value[v];
+                        }
+                    });
+                }else if(value[keys]){
+                    dt[value[keys]] = value[keys];
+                }
+            });
+        }
+        return dt;
+    }
+
+    /**
+     * 提取一个数组中的键值对
+     * 用法：
+     *      const uids = ArrayFieldValue(list, 'uid', 'name');
+     *
+     * @param {Array|Object} data 循环列表数据
+     * @param {String} key key对应的字段名
+     * @param {String} valueKey value对应的字段名
+     * @return {Array} 根据key参数 顺序返回
+     */
+    $.ArrayFieldValue = function (data=[], key='', valueKey=''){
+        const dt = {};
+        if(Array.isArray(data)){
+            data.forEach(value => {
+                if(value[key] && value[valueKey]){
+                    dt[value[key]] = value[valueKey];
+                }
+            });
+        }else if(typeof data === 'object'){
+            Object.values(data).forEach(value => {
+                if(value[key] && value[valueKey]){
+                    dt[value[key]] = value[valueKey];
+                }
+            });
+        }
+        return dt;
+    }
+
+
 
     /**
      * 触发一个JS字符串代码

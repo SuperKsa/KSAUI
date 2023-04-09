@@ -117,7 +117,6 @@ $.ksauiRenderTree = {};
                     if (val.type === 'childList' && val.addedNodes.length) {
                         $.loop(val.addedNodes, function (ele) {
                             if (ele.nodeType === 1 && $.isIndom(ele)) {
-                                //debug(ele, ele.clientWidth);
                                 _documentRender(ele, val);
                             }
                         });
@@ -3907,10 +3906,17 @@ $.ksauiRenderTree = {};
         //图标转换
         $.render('[icon]', function (ele) {
             var icon = ele.attributes.icon.value;
+            var cls = [];
+            $.loop(ele.classList, function(val){
+                if(val.indexOf('ri-') === -1){
+                    cls.push(val);
+                }
+            });
             if (icon) {
-                ele.className += ' ri-' + icon;
+                cls.push(' ri-' + icon)
             }
-        });
+            ele.className = $.implode(' ', cls);
+        }, 'attr.icon');
     })();
 
     //开始渲染流程
